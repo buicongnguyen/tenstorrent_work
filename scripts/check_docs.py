@@ -20,6 +20,71 @@ STATUS_RE = re.compile(r"<!--\s*rewrite-status:\s*([a-z-]+)\s*-->")
 ALLOWED_STATUSES = {"seed", "improved-draft", "improved", "review-needed"}
 
 
+def check_navigation_and_structure(errors: list[str]) -> None:
+    navigation = (ROOT / "mkdocs.yml").read_text(encoding="utf-8")
+    nav_paths = re.findall(r"(?<![\w/-])([\w./-]+\.md)", navigation)
+    nav_counts = {path: nav_paths.count(path) for path in set(nav_paths)}
+    docs_paths = {
+        path.relative_to(DOCS).as_posix() for path in markdown_files(DOCS)
+    }
+
+    for path in sorted(docs_paths - set(nav_counts)):
+        errors.append(f"navigation is missing docs/{path}")
+    for path in sorted(set(nav_counts) - docs_paths):
+        errors.append(f"navigation references unknown docs/{path}")
+    for path, count in sorted(nav_counts.items()):
+        if count != 1:
+            errors.append(f"navigation references docs/{path} {count} times")
+
+    raw_html_markdown_link = re.compile(
+        r'<a\s+[^>]*href="(?!https?://|mailto:|#)([^"]+\.md(?:#[^"]*)?)"',
+        flags=re.IGNORECASE,
+    )
+    for page in markdown_files(DOCS):
+        content = page.read_text(encoding="utf-8")
+        headings: list[tuple[int, int]] = []
+        fence_count = 0
+        in_fence = False
+        for line_number, line in enumerate(content.splitlines(), start=1):
+            stripped = line.lstrip()
+            if stripped.startswith("```"):
+                fence_count += 1
+                if not in_fence and not stripped[3:].strip():
+                    errors.append(
+                        f"{page.relative_to(ROOT)}:{line_number}: fenced block "
+                        "is missing a language"
+                    )
+                in_fence = not in_fence
+                continue
+            if in_fence:
+                continue
+            match = re.match(r"^(#{1,6})\s+", line)
+            if match:
+                headings.append((line_number, len(match.group(1))))
+
+        if fence_count % 2:
+            errors.append(f"{page.relative_to(ROOT)}: unbalanced fenced code block")
+        h1_count = sum(level == 1 for _, level in headings)
+        if h1_count != 1:
+            errors.append(
+                f"{page.relative_to(ROOT)}: expected one top-level heading, "
+                f"found {h1_count}"
+            )
+        for (previous_line, previous_level), (line_number, level) in zip(
+            headings, headings[1:]
+        ):
+            if level > previous_level + 1:
+                errors.append(
+                    f"{page.relative_to(ROOT)}:{line_number}: heading jumps from "
+                    f"level {previous_level} at line {previous_line} to level {level}"
+                )
+        for match in raw_html_markdown_link.finditer(content):
+            errors.append(
+                f"{page.relative_to(ROOT)}: raw HTML link to {match.group(1)!r} "
+                "will not be rewritten by MkDocs; use Markdown link syntax"
+            )
+
+
 def markdown_files(path: Path) -> list[Path]:
     return sorted(path.rglob("*.md"), key=lambda item: item.as_posix().lower())
 
@@ -219,6 +284,7 @@ def check_required_sections(errors: list[str]) -> None:
     total_questions = 0
     total_answers = 0
     improvement_sections: list[tuple[Path, str]] = []
+    code_sections: list[tuple[Path, str]] = []
     improvement_labels = (
         "**Architecture pressure.**",
         "**Flow to make explicit.**",
@@ -235,6 +301,10 @@ def check_required_sections(errors: list[str]) -> None:
         "Add a small verification exercise with an expected observation.",
         "SOURCE-SPECIFIC PLAN REQUIRED",
     )
+    forbidden_code_text = (
+        "During the full rewrite, each important symbol will be mapped",
+        "SOURCE-SPECIFIC CODE CONNECTION REQUIRED",
+    )
     for rewrite in markdown_files(DOCS / "rewrites"):
         content = rewrite.read_text(encoding="utf-8")
         for heading in required:
@@ -250,6 +320,13 @@ def check_required_sections(errors: list[str]) -> None:
             if forbidden in content:
                 errors.append(
                     f"{rewrite.relative_to(ROOT)}: contains generic improvement-plan "
+                    f"text {forbidden!r}"
+                )
+
+        for forbidden in forbidden_code_text:
+            if forbidden in content:
+                errors.append(
+                    f"{rewrite.relative_to(ROOT)}: contains generic code-connection "
                     f"text {forbidden!r}"
                 )
 
@@ -276,6 +353,26 @@ def check_required_sections(errors: list[str]) -> None:
                 if word_count < 120:
                     errors.append(
                         f"{rewrite.relative_to(ROOT)}: source-specific Improvement plan "
+                        f"is too shallow; found {word_count} words"
+                    )
+
+            if "## Code connection" in content:
+                code_section = content.split("## Code connection", maxsplit=1)[1].split(
+                    "\n## ", maxsplit=1
+                )[0]
+                code_sections.append((rewrite, code_section))
+                bullets = len(
+                    re.findall(r"^- \*\*[^*]+\.\*\*", code_section, flags=re.MULTILINE)
+                )
+                if bullets != 2:
+                    errors.append(
+                        f"{rewrite.relative_to(ROOT)}: Code connection must contain "
+                        f"two named implementation boundaries; found {bullets}"
+                    )
+                word_count = len(re.findall(r"\b[\w'-]+\b", code_section))
+                if word_count < 70:
+                    errors.append(
+                        f"{rewrite.relative_to(ROOT)}: source-specific Code connection "
                         f"is too shallow; found {word_count} words"
                     )
 
@@ -333,6 +430,21 @@ def check_required_sections(errors: list[str]) -> None:
         if len(duplicates) > 1:
             paths = ", ".join(str(path.relative_to(ROOT)) for path in duplicates)
             errors.append(f"duplicate Improvement plans found: {paths}")
+
+    if len(code_sections) != 49:
+        errors.append(
+            "rewrite curriculum must retain 49 source-specific Code connections; "
+            f"found {len(code_sections)}"
+        )
+
+    normalized_connections: dict[str, list[Path]] = {}
+    for rewrite, section in code_sections:
+        normalized = re.sub(r"\s+", " ", section).strip()
+        normalized_connections.setdefault(normalized, []).append(rewrite)
+    for duplicates in normalized_connections.values():
+        if len(duplicates) > 1:
+            paths = ", ".join(str(path.relative_to(ROOT)) for path in duplicates)
+            errors.append(f"duplicate Code connections found: {paths}")
 
 
 def check_diagrams(errors: list[str]) -> None:
@@ -556,6 +668,7 @@ def check_status_summary(errors: list[str]) -> None:
 
 def main() -> int:
     errors: list[str] = []
+    check_navigation_and_structure(errors)
     check_upstream(errors)
     check_report_layers(errors)
     check_layer_guides(errors)

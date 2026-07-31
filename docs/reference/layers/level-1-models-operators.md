@@ -1,9 +1,9 @@
 # Level 1 — Solve model and operator architecture problems
 
-<p class="source-note">
+<p class="source-note" markdown>
 <strong>Source class:</strong> Atlas architecture synthesis ·
 <strong>Report set:</strong>
-<a href="../report-catalog.md#level-1-models-operators">Level 1 catalog</a> ·
+[Level 1 catalog](../report-catalog.md#level-1-models-operators) ·
 <strong>Use this page for:</strong> deciding what work the accelerator should execute
 </p>
 

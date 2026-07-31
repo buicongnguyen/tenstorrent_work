@@ -10,8 +10,9 @@
 !!! info "What ‘seed’ means"
     The official report and its assets are preserved verbatim under
     <code>upstream/tt-metal/tech_reports/NamedKernelArgs/kernel_args_as_parameters.md</code>. This learner page
-    establishes provenance, a reading map, and an improvement plan; its technical
-    explanation is still queued for a full visual rewrite.
+    establishes provenance, a reading map, a report-specific architecture plan,
+    concrete code boundaries, and answered reasoning checks; a full visual rewrite
+    remains queued.
 
 ## Original report map
 
@@ -54,9 +55,18 @@
 
 ## Code connection
 
-Code references remain in the [pinned official report](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/NamedKernelArgs/kernel_args_as_parameters.md). During
-the full rewrite, each important symbol will be mapped to its role in the
-host → data-movement → compute → data-movement path.
+Review these concrete implementation boundaries against the
+[pinned source](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/NamedKernelArgs/kernel_args_as_parameters.md):
+
+- **Generated ABI.** The host description generates `kernel_args_generated.h`, named
+  indices such as `args::start_tile_id`, and the `kernel_main()` wrapper. Host
+  serialization order and generated device declarations are one ABI; editing either side
+  independently changes the meaning of every following argument.
+
+- **Device access.** `get_arg(args::<name>)` retrieves runtime values, while `constexpr`
+  template parameters specialize compile-time values. Review width, signedness, offset,
+  and lifetime for each named field before replacing positional access; a name does not
+  repair a mismatched representation.
 
 ## Verify your understanding
 
@@ -103,6 +113,6 @@ architecture reasoning explicit; generation-sensitive facts remain scoped to tha
 
 - **Original source:** [`tech_reports/NamedKernelArgs/kernel_args_as_parameters.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/NamedKernelArgs/kernel_args_as_parameters.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/NamedKernelArgs/kernel_args_as_parameters.md`
-- **Current delta:** provenance, source metrics, outline, improvement checklist,
-  and source-grounded verification answers. Generation-sensitive claims remain
-  scoped to the pinned source snapshot.
+- **Current delta:** provenance, source metrics, outline, report-specific architecture
+  plan, two source-linked implementation-boundary reviews, and answered reasoning
+  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.

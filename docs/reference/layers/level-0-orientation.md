@@ -1,9 +1,9 @@
 # Level 0 — Reason across the whole stack
 
-<p class="source-note">
+<p class="source-note" markdown>
 <strong>Source class:</strong> Atlas architecture synthesis ·
 <strong>Report set:</strong>
-<a href="../report-catalog.md#level-0-orientation">Level 0 catalog</a> ·
+[Level 0 catalog](../report-catalog.md#level-0-orientation) ·
 <strong>Use this page for:</strong> locating ownership before debugging or optimizing
 </p>
 

@@ -91,9 +91,9 @@ concrete TT-Metal evidence, and a falsifiable experiment with its expected resul
 
 ## Code connection
 
-Code references remain in the [pinned official report]({source_url}). During
-the full rewrite, each important symbol will be mapped to its role in the
-host → data-movement → compute → data-movement path.
+SOURCE-SPECIFIC CODE CONNECTION REQUIRED. Replace this marker with concrete
+host/runtime/device boundaries, named symbols or files from the pinned report,
+and the invariant each boundary must preserve.
 
 ## Source and delta
 

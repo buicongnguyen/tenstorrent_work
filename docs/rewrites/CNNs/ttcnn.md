@@ -10,8 +10,9 @@
 !!! info "What ‘seed’ means"
     The official report and its assets are preserved verbatim under
     <code>upstream/tt-metal/tech_reports/CNNs/ttcnn.md</code>. This learner page
-    establishes provenance, a reading map, and review prompts; its technical
-    explanation is still queued for a full visual rewrite.
+    establishes provenance, a reading map, a report-specific architecture plan,
+    concrete code boundaries, and answered reasoning checks; a full visual rewrite
+    remains queued.
 
 ## Original report map
 
@@ -66,9 +67,18 @@
 
 ## Code connection
 
-Code references remain in the [pinned official report](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/CNNs/ttcnn.md). During
-the full rewrite, each important symbol will be mapped to its role in the
-host → data-movement → compute → data-movement path.
+Review these concrete implementation boundaries against the
+[pinned source](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/CNNs/ttcnn.md):
+
+- **Host configuration.** The TT-NN convolution configuration fixes stride, padding,
+  dilation, groups, channel order, shard geometry, and output memory config. Those
+  values determine the sliding-window dependency map and the halo that must be
+  materialized before compute.
+
+- **Device pipeline.** Reader circular buffers consume local and haloed activation
+  sticks, compute blocks perform the lowered matrix accumulation, and pack/output
+  post-processing restores the declared tensor contract. Review the source's input,
+  weight, bias, and output shapes at every boundary.
 
 ## Verify your understanding
 
@@ -211,7 +221,6 @@ headings.
 
 - **Original source:** [`tech_reports/CNNs/ttcnn.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/CNNs/ttcnn.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/CNNs/ttcnn.md`
-- **Current delta:** provenance, source metrics, outline, improvement checklist,
-  and four source-grounded expert answers covering the bottleneck, invariants,
-  producer-to-consumer flow, and architecture boundaries. A full visual rewrite
-  of the report remains pending.
+- **Current delta:** provenance, source metrics, outline, report-specific architecture
+  plan, two source-linked implementation-boundary reviews, and answered reasoning
+  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.

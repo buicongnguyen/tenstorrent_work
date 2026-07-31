@@ -10,8 +10,9 @@
 !!! info "What ‘seed’ means"
     The official report and its assets are preserved verbatim under
     <code>upstream/tt-metal/tech_reports/tensor_accessor/tensor_accessor_iterator.md</code>. This learner page
-    establishes provenance, a reading map, and an improvement plan; its technical
-    explanation is still queued for a full visual rewrite.
+    establishes provenance, a reading map, a report-specific architecture plan,
+    concrete code boundaries, and answered reasoning checks; a full visual rewrite
+    remains queued.
 
 ## Original report map
 
@@ -67,9 +68,17 @@
 
 ## Code connection
 
-Code references remain in the [pinned official report](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/tensor_accessor/tensor_accessor_iterator.md). During
-the full rewrite, each important symbol will be mapped to its role in the
-host → data-movement → compute → data-movement path.
+Review these concrete implementation boundaries against the
+[pinned source](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/tensor_accessor/tensor_accessor_iterator.md):
+
+- **Traversal bounds.** `start_page_id`, `end_page_id`, and `tensor_volume()` define the
+  half-open page interval. Direct `TA.get_noc_addr(...)` output is the correctness
+  oracle for the same logical traversal before iterator performance is compared.
+
+- **Cached iterator state.** Page and shard-page iterators cache bank, offset, shard,
+  and coordinate progress between increments. Test transitions at bank and shard
+  boundaries; a fast contiguous interior loop can still carry stale state when crossing
+  either boundary.
 
 ## Verify your understanding
 
@@ -115,6 +124,6 @@ architecture reasoning explicit; generation-sensitive facts remain scoped to tha
 
 - **Original source:** [`tech_reports/tensor_accessor/tensor_accessor_iterator.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/tensor_accessor/tensor_accessor_iterator.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/tensor_accessor/tensor_accessor_iterator.md`
-- **Current delta:** provenance, source metrics, outline, improvement checklist,
-  and source-grounded verification answers. Generation-sensitive claims remain
-  scoped to the pinned source snapshot.
+- **Current delta:** provenance, source metrics, outline, report-specific architecture
+  plan, two source-linked implementation-boundary reviews, and answered reasoning
+  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.

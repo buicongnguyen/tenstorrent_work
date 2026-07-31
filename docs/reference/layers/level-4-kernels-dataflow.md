@@ -1,9 +1,9 @@
 # Level 4 — Solve kernel and dataflow problems
 
-<p class="source-note">
+<p class="source-note" markdown>
 <strong>Source class:</strong> Atlas architecture synthesis ·
 <strong>Report set:</strong>
-<a href="../report-catalog.md#level-4-kernels-dataflow">Level 4 catalog</a> ·
+[Level 4 catalog](../report-catalog.md#level-4-kernels-dataflow) ·
 <strong>Use this page for:</strong> designing reader–compute–writer pipelines that stay busy and correct
 </p>
 

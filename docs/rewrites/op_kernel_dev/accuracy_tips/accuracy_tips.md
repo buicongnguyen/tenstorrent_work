@@ -10,8 +10,9 @@
 !!! info "What ‘seed’ means"
     The official report and its assets are preserved verbatim under
     <code>upstream/tt-metal/tech_reports/op_kernel_dev/accuracy_tips/accuracy_tips.md</code>. This learner page
-    establishes provenance, a reading map, and an improvement plan; its technical
-    explanation is still queued for a full visual rewrite.
+    establishes provenance, a reading map, a report-specific architecture plan,
+    concrete code boundaries, and answered reasoning checks; a full visual rewrite
+    remains queued.
 
 ## Original report map
 
@@ -51,9 +52,18 @@
 
 ## Code connection
 
-Code references remain in the [pinned official report](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/op_kernel_dev/accuracy_tips/accuracy_tips.md). During
-the full rewrite, each important symbol will be mapped to its role in the
-host → data-movement → compute → data-movement path.
+Review these concrete implementation boundaries against the
+[pinned source](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/op_kernel_dev/accuracy_tips/accuracy_tips.md):
+
+- **Comparator selection.** Use `comp_equal`/`assert_equal` for exact discrete results,
+  `comp_ulp`/`assert_with_ulp` for representation-distance bounds,
+  `comp_allclose`/`assert_allclose` for absolute/relative elementwise error, and
+  relative-Frobenius helpers for aggregate tensor error.
+
+- **Failure diagnosis.** Run the selected comparator on adversarial magnitudes, zeros,
+  signs, and special values. Record both the accepted threshold and the first
+  mismatching elements; a passing aggregate score can hide a localized indexing error,
+  while exact equality can reject an expected low-precision rounding change.
 
 ## Verify your understanding
 
@@ -99,6 +109,6 @@ architecture reasoning explicit; generation-sensitive facts remain scoped to tha
 
 - **Original source:** [`tech_reports/op_kernel_dev/accuracy_tips/accuracy_tips.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/op_kernel_dev/accuracy_tips/accuracy_tips.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/op_kernel_dev/accuracy_tips/accuracy_tips.md`
-- **Current delta:** provenance, source metrics, outline, improvement checklist,
-  and source-grounded verification answers. Generation-sensitive claims remain
-  scoped to the pinned source snapshot.
+- **Current delta:** provenance, source metrics, outline, report-specific architecture
+  plan, two source-linked implementation-boundary reviews, and answered reasoning
+  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.

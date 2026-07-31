@@ -10,8 +10,9 @@
 !!! info "What ‘seed’ means"
     The official report and its assets are preserved verbatim under
     <code>upstream/tt-metal/tech_reports/SubDevices/SubDevices.md</code>. This learner page
-    establishes provenance, a reading map, and an improvement plan; its technical
-    explanation is still queued for a full visual rewrite.
+    establishes provenance, a reading map, a report-specific architecture plan,
+    concrete code boundaries, and answered reasoning checks; a full visual rewrite
+    remains queued.
 
 ## Original report map
 
@@ -62,9 +63,18 @@
 
 ## Code connection
 
-Code references remain in the [pinned official report](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/SubDevices/SubDevices.md). During
-the full rewrite, each important symbol will be mapped to its role in the
-host → data-movement → compute → data-movement path.
+Review these concrete implementation boundaries against the
+[pinned source](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/SubDevices/SubDevices.md):
+
+- **Manager lifecycle.** `device.load_sub_device_manager`,
+  `clear_loaded_sub_device_manager`, and `remove_sub_device_manager` change the
+  partition state used by later allocations and queues. Handles and sub-device IDs are
+  valid only within the manager lifetime that created them.
+
+- **Scoped progress.** `CreateBuffer(..., sub_device_id)` binds storage, while
+  `set_sub_device_stall_group`, `Synchronize`, and `EnqueueRecordEvent` scope ordering
+  or observation. Confirm which sub-devices each call waits for; a global-looking host
+  sequence need not imply global device synchronization.
 
 ## Verify your understanding
 
@@ -111,6 +121,6 @@ architecture reasoning explicit; generation-sensitive facts remain scoped to tha
 
 - **Original source:** [`tech_reports/SubDevices/SubDevices.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/SubDevices/SubDevices.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/SubDevices/SubDevices.md`
-- **Current delta:** provenance, source metrics, outline, improvement checklist,
-  and source-grounded verification answers. Generation-sensitive claims remain
-  scoped to the pinned source snapshot.
+- **Current delta:** provenance, source metrics, outline, report-specific architecture
+  plan, two source-linked implementation-boundary reviews, and answered reasoning
+  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.

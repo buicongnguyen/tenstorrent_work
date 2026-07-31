@@ -107,8 +107,8 @@ different program. The exact identity is operation-specific; inspect the
 operation's `compute_program_hash`/attributes and tests rather than assuming a
 universal key.
 
-The official [TT-NN program-cache example](https://docs.tenstorrent.com/tt-metal/latest/ttnn/ttnn/usage.html#enabling-program-cache)
-demonstrates why first-run and later-run timings must be reported separately.
+The official [TT-NN program-cache measurement guidance](https://docs.tenstorrent.com/tt-metal/latest/ttnn/ttnn/profiling_ttnn_operations.html)
+explains why first-run and later-run timings must be reported separately.
 The current [operation-development guide](https://docs.tenstorrent.com/tt-metal/latest/ttnn/ttnn/adding_new_ttnn_operation.html)
 is the place to re-check cache-hit callbacks and address/runtime-argument
 updates for new code.

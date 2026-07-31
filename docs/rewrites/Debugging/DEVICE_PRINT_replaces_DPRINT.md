@@ -10,8 +10,9 @@
 !!! info "What ‘seed’ means"
     The official report and its assets are preserved verbatim under
     <code>upstream/tt-metal/tech_reports/Debugging/DEVICE_PRINT_replaces_DPRINT.md</code>. This learner page
-    establishes provenance, a reading map, and an improvement plan; its technical
-    explanation is still queued for a full visual rewrite.
+    establishes provenance, a reading map, a report-specific architecture plan,
+    concrete code boundaries, and answered reasoning checks; a full visual rewrite
+    remains queued.
 
 ## Original report map
 
@@ -63,9 +64,18 @@
 
 ## Code connection
 
-Code references remain in the [pinned official report](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/Debugging/DEVICE_PRINT_replaces_DPRINT.md). During
-the full rewrite, each important symbol will be mapped to its role in the
-host → data-movement → compute → data-movement path.
+Review these concrete implementation boundaries against the
+[pinned source](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/Debugging/DEVICE_PRINT_replaces_DPRINT.md):
+
+- **Compile-time surface.** The old `DPRINT << value << ENDL()` stream syntax and the
+  replacement `DEVICE_PRINT` macros generate different device-side records. Use the
+  include and invocation form that belongs to the pinned runtime; mixing the two
+  surfaces can fail at compilation before any device output exists.
+
+- **Runtime transport.** `TT_METAL_DEVICE_PRINT=1` selected the new backend only during
+  the documented transition; the report says the flag was later removed when
+  `DEVICE_PRINT` became the sole backend. For the pinned phase being studied, separate
+  backend selection from core/thread filtering, device-buffer transport, and host drain.
 
 ## Verify your understanding
 
@@ -112,6 +122,6 @@ architecture reasoning explicit; generation-sensitive facts remain scoped to tha
 
 - **Original source:** [`tech_reports/Debugging/DEVICE_PRINT_replaces_DPRINT.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/Debugging/DEVICE_PRINT_replaces_DPRINT.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/Debugging/DEVICE_PRINT_replaces_DPRINT.md`
-- **Current delta:** provenance, source metrics, outline, improvement checklist,
-  and source-grounded verification answers. Generation-sensitive claims remain
-  scoped to the pinned source snapshot.
+- **Current delta:** provenance, source metrics, outline, report-specific architecture
+  plan, two source-linked implementation-boundary reviews, and answered reasoning
+  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.

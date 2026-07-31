@@ -34,7 +34,7 @@ matches the hardware you are studying.
 - [`Dst` state](https://github.com/tenstorrent/tt-isa-documentation/blob/main/WormholeB0/TensixTile/TensixCoprocessor/Dst.md)
 - [Backend configuration](https://github.com/tenstorrent/tt-isa-documentation/blob/main/WormholeB0/TensixTile/TensixCoprocessor/BackendConfiguration.md)
 
-The Unpackers page the user identified is the right anchor: it explains that
+The Unpackers page is the right anchor: it explains that
 two unpackers move data from L1 toward `SrcA`, `SrcB`, or `Dst`, along with
 conversion, decompression, upsampling, and transposition features. Read the
 Packers overview immediately after it to close the L1 → compute → L1 loop.

@@ -10,8 +10,9 @@
 !!! info "What ‘seed’ means"
     The official report and its assets are preserved verbatim under
     <code>upstream/tt-metal/tech_reports/LLMs/vLLM_integration.md</code>. This learner page
-    establishes provenance, a reading map, and an improvement plan; its technical
-    explanation is still queued for a full visual rewrite.
+    establishes provenance, a reading map, a report-specific architecture plan,
+    concrete code boundaries, and answered reasoning checks; a full visual rewrite
+    remains queued.
 
 ## Original report map
 
@@ -55,9 +56,19 @@
 
 ## Code connection
 
-Code references remain in the [pinned official report](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/LLMs/vLLM_integration.md). During
-the full rewrite, each important symbol will be mapped to its role in the
-host → data-movement → compute → data-movement path.
+Review these concrete implementation boundaries against the
+[pinned source](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/LLMs/vLLM_integration.md):
+
+- **Lifecycle adapter.** `TTModelLoader::load_model`, `initialize_vllm_model`, and
+  `LlamaForCausalLM` connect vLLM construction to Tenstorrent weights, devices, and
+  model state. Their ownership rules must keep cached tensors and mesh resources alive
+  across requests.
+
+- **Prefill/decode boundary.** `forward_prefill` and `paged_fill_cache` create prompt
+  state; `forward_decode`, `paged_update_cache`, and
+  `paged_scaled_dot_product_attention_decode` consume and extend it. Page tables, token
+  positions, batch slots, and KV ownership must agree between the scheduler and device
+  calls.
 
 ## Verify your understanding
 
@@ -104,6 +115,6 @@ architecture reasoning explicit; generation-sensitive facts remain scoped to tha
 
 - **Original source:** [`tech_reports/LLMs/vLLM_integration.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/LLMs/vLLM_integration.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/LLMs/vLLM_integration.md`
-- **Current delta:** provenance, source metrics, outline, improvement checklist,
-  and source-grounded verification answers. Generation-sensitive claims remain
-  scoped to the pinned source snapshot.
+- **Current delta:** provenance, source metrics, outline, report-specific architecture
+  plan, two source-linked implementation-boundary reviews, and answered reasoning
+  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.

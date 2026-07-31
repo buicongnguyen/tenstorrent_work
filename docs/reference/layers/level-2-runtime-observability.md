@@ -1,9 +1,9 @@
 # Level 2 — Reason about runtime state and observability
 
-<p class="source-note">
+<p class="source-note" markdown>
 <strong>Source class:</strong> Atlas architecture synthesis ·
 <strong>Report set:</strong>
-<a href="../report-catalog.md#level-2-ttnn-runtime">Level 2 catalog</a> ·
+[Level 2 catalog](../report-catalog.md#level-2-ttnn-runtime) ·
 <strong>Use this page for:</strong> explaining when and why an operation executes
 </p>
 

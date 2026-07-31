@@ -9,6 +9,7 @@ python scripts/seed_rewrites.py
 python scripts/build_catalog.py
 python scripts/check_docs.py
 mkdocs build --strict
+python scripts/check_site.py
 ```
 
 Do not edit `upstream/tt-metal/` by hand. A source update must be a mechanical

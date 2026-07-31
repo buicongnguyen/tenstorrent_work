@@ -1,9 +1,9 @@
 # Level 7 — Reason from hardware constraints and ISA evidence
 
-<p class="source-note">
+<p class="source-note" markdown>
 <strong>Source class:</strong> Atlas architecture synthesis · architecture-qualified ·
 <strong>Report set:</strong>
-<a href="../report-catalog.md#level-7-hardware-isa">Level 7 catalog</a> ·
+[Level 7 catalog](../report-catalog.md#level-7-hardware-isa) ·
 <strong>Use this page for:</strong> explaining a proven engine, format, or instruction-level limit
 </p>
 

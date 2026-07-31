@@ -5,7 +5,8 @@ This index covers all **57** Markdown reports in the pinned
 The snapshot also includes each report's images, media, and helper scripts.
 
 Every source has a one-to-one learner page. Status is intentionally
-conservative: `seed` means provenance and a reading map exist, while
+conservative: `seed` means provenance, a reading map, a report-specific
+architecture plan, and answered reasoning checks exist, while
 `improved-draft` means a substantive rewrite still awaits final review.
 
 ## Read from high level to low level

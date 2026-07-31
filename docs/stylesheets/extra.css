@@ -2,7 +2,7 @@
   --atlas-ink: #102a2d;
   --atlas-teal: #007f7b;
   --atlas-teal-dark: #005f5c;
-  --atlas-coral: #f16d4b;
+  --atlas-coral: #c4492d;
   --atlas-paper: #f4f1e9;
   --atlas-grid: rgba(0, 127, 123, 0.10);
 }
@@ -13,7 +13,7 @@
   --md-default-bg-color: #fbfaf6;
   --md-default-fg-color: var(--atlas-ink);
   --md-default-fg-color--light: #345054;
-  --md-default-fg-color--lighter: #667d7f;
+  --md-default-fg-color--lighter: #5b7274;
   --md-default-fg-color--lightest: #d6dfdc;
   --md-code-bg-color: #eef4f1;
   --md-typeset-color: var(--atlas-ink);

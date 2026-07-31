@@ -65,7 +65,9 @@ Before marking a rewrite complete:
 - [ ] Distinguish current API behavior from the durable mental model.
 - [ ] Follow one concrete page/tile/message end to end.
 - [ ] Search the pinned source revision for every named symbol.
-- [ ] Check relative links and regenerate every static diagram.
+- [ ] Check source and rendered links, fragments, IDs, image alt text, and assets.
+- [ ] Regenerate every static diagram and run `python scripts/check_site.py`
+      after the strict MkDocs build.
 - [ ] Ask whether the new explanation accidentally implies more than upstream.
 
 ## Status values
@@ -73,7 +75,7 @@ Before marking a rewrite complete:
 | Status | Meaning |
 |---|---|
 | `source-only` | Upstream copy exists; no learner page yet |
-| `seed` | Source-linked reading map exists; technical rewrite is queued |
+| `seed` | Source-linked reading map, report-specific plan, and answered reasoning checks exist; full visual rewrite is queued |
 | `improved-draft` | Substantive rewrite exists but review is incomplete |
 | `improved` | Rewrite passed the checklist against the pinned revision |
 | `review-needed` | Upstream changed after the last completed review |

@@ -10,8 +10,9 @@
 !!! info "What ‘seed’ means"
     The official report and its assets are preserved verbatim under
     <code>upstream/tt-metal/tech_reports/ttnn/graph-tracing.md</code>. This learner page
-    establishes provenance, a reading map, and an improvement plan; its technical
-    explanation is still queued for a full visual rewrite.
+    establishes provenance, a reading map, a report-specific architecture plan,
+    concrete code boundaries, and answered reasoning checks; a full visual rewrite
+    remains queued.
 
 ## Original report map
 
@@ -75,9 +76,18 @@
 
 ## Code connection
 
-Code references remain in the [pinned official report](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/ttnn/graph-tracing.md). During
-the full rewrite, each important symbol will be mapped to its role in the
-host → data-movement → compute → data-movement path.
+Review these concrete implementation boundaries against the
+[pinned source](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/ttnn/graph-tracing.md):
+
+- **Capture mode.** `full_graph_capture(..., slow_dispatch=True)` temporarily selects
+  `enable_fast_runtime_mode=False` and captures nested `Operation` subgraphs;
+  `slow_dispatch=False` retains `FastOperation` records and synthetic subgraphs. Record
+  the chosen mode because the two graphs carry different evidence.
+
+- **Node semantics.** Examples such as `ttnn::add` and `ttnn::matmul` should be traced
+  from Python/C++ operation through nested fast operation and tensor edges. Validate
+  node IDs, input/output shapes, and ordering before using the graph to infer fusion or
+  device timing.
 
 ## Verify your understanding
 
@@ -124,6 +134,6 @@ architecture reasoning explicit; generation-sensitive facts remain scoped to tha
 
 - **Original source:** [`tech_reports/ttnn/graph-tracing.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/ttnn/graph-tracing.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/ttnn/graph-tracing.md`
-- **Current delta:** provenance, source metrics, outline, improvement checklist,
-  and source-grounded verification answers. Generation-sensitive claims remain
-  scoped to the pinned source snapshot.
+- **Current delta:** provenance, source metrics, outline, report-specific architecture
+  plan, two source-linked implementation-boundary reviews, and answered reasoning
+  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.

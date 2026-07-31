@@ -9,7 +9,7 @@ Every report has a one-to-one learner URL and exact original-source link, but a
 | Status | Count | Meaning |
 |---|---:|---|
 | `improved-draft` | 8 | Substantive explanation, diagram, code connection, and verification prompts; practitioner review remains |
-| `seed` | 49 | Provenance, source outline, and improvement checklist exist; technical rewrite is queued |
+| `seed` | 49 | Provenance, source outline, report-specific architecture plan, and answered reasoning checks exist; full visual rewrite is queued |
 | **Total** | **57** | One learner page for every pinned official report |
 
 The [report catalog](report-catalog.md) is the authoritative per-document status

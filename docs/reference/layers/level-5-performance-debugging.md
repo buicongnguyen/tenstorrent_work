@@ -1,9 +1,9 @@
 # Level 5 — Diagnose performance and correctness with evidence
 
-<p class="source-note">
+<p class="source-note" markdown>
 <strong>Source class:</strong> Atlas architecture synthesis ·
 <strong>Report set:</strong>
-<a href="../report-catalog.md#level-5-performance-debugging">Level 5 catalog</a> ·
+[Level 5 catalog](../report-catalog.md#level-5-performance-debugging) ·
 <strong>Use this page for:</strong> turning a symptom into a falsifiable bottleneck hypothesis
 </p>
 

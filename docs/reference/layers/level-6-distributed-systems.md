@@ -1,9 +1,9 @@
 # Level 6 — Solve multi-device and distributed problems
 
-<p class="source-note">
+<p class="source-note" markdown>
 <strong>Source class:</strong> Atlas architecture synthesis ·
 <strong>Report set:</strong>
-<a href="../report-catalog.md#level-6-distributed-systems">Level 6 catalog</a> ·
+[Level 6 catalog](../report-catalog.md#level-6-distributed-systems) ·
 <strong>Use this page for:</strong> extending ownership, routing, and synchronization beyond one device
 </p>
 

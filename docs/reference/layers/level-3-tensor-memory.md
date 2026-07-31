@@ -1,9 +1,9 @@
 # Level 3 — Solve tensor representation and memory problems
 
-<p class="source-note">
+<p class="source-note" markdown>
 <strong>Source class:</strong> Atlas architecture synthesis ·
 <strong>Report set:</strong>
-<a href="../report-catalog.md#level-3-tensor-memory">Level 3 catalog</a> ·
+[Level 3 catalog](../report-catalog.md#level-3-tensor-memory) ·
 <strong>Use this page for:</strong> predicting where every byte lives and how it is addressed
 </p>
 
