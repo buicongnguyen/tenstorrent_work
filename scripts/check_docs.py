@@ -14,6 +14,8 @@ DOCS = ROOT / "docs"
 UPSTREAM = ROOT / "upstream" / "tt-metal" / "tech_reports"
 EXPECTED_COMMIT = "992f3ca634aac8733c70e48da395aab5361b4166"
 LINK_RE = re.compile(r"!?\[[^\]]*\]\(([^)]+)\)")
+STATUS_RE = re.compile(r"<!--\s*rewrite-status:\s*([a-z-]+)\s*-->")
+ALLOWED_STATUSES = {"seed", "improved-draft", "improved", "review-needed"}
 
 
 def markdown_files(path: Path) -> list[Path]:
@@ -47,6 +49,13 @@ def check_rewrite_sources(errors: list[str]) -> None:
         if expected_url not in content:
             errors.append(
                 f"{rewrite.relative_to(ROOT)}: missing commit-pinned original source link"
+            )
+        status = STATUS_RE.search(content)
+        if not status:
+            errors.append(f"{rewrite.relative_to(ROOT)}: missing rewrite-status marker")
+        elif status.group(1) not in ALLOWED_STATUSES:
+            errors.append(
+                f"{rewrite.relative_to(ROOT)}: invalid rewrite status {status.group(1)!r}"
             )
 
 
@@ -86,9 +95,10 @@ def check_diagrams(errors: list[str]) -> None:
     sources = sorted(source_dir.glob("*.mmd"))
     assets = sorted(asset_dir.glob("*.svg"))
 
-    if len(sources) != 14 or len(assets) != 14:
+    if len(sources) < 14 or len(assets) != len(sources):
         errors.append(
-            f"expected 14 diagram sources and assets, found {len(sources)} and {len(assets)}"
+            "expected one rendered asset per diagram source and at least 14 diagrams, "
+            f"found {len(sources)} sources and {len(assets)} assets"
         )
 
     for source in sources:
@@ -96,8 +106,16 @@ def check_diagrams(errors: list[str]) -> None:
             errors.append(f"missing rendered diagram for {source.relative_to(ROOT)}")
 
     for page in markdown_files(DOCS):
-        if "```mermaid" in page.read_text(encoding="utf-8"):
+        content = page.read_text(encoding="utf-8")
+        if "```mermaid" in content:
             errors.append(f"{page.relative_to(ROOT)}: runtime Mermaid fence is not allowed")
+        diagram_count = content.count("{ .atlas-diagram }")
+        full_size_count = content.count("[Open full-size diagram]")
+        if diagram_count != full_size_count:
+            errors.append(
+                f"{page.relative_to(ROOT)}: {diagram_count} diagrams but "
+                f"{full_size_count} full-size links"
+            )
 
 
 def main() -> int:
@@ -117,7 +135,7 @@ def main() -> int:
     print(
         "Documentation validation passed: "
         f"{len(markdown_files(UPSTREAM))} upstream reports, "
-        f"{len(markdown_files(DOCS / 'rewrites'))} learner rewrite."
+        f"{len(markdown_files(DOCS / 'rewrites'))} learner rewrites."
     )
     return 0
 

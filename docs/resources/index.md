@@ -6,7 +6,7 @@ properties.
 
 ![How the official and community sources relate](../assets/diagrams/source-map.svg){ .atlas-diagram }
 
-<small>[Diagram source](https://github.com/buicongnguyen/tenstorrent_work/blob/main/diagram_sources/source-map.mmd)</small>
+<small>[Open full-size diagram](../assets/diagrams/source-map.svg) · [Diagram source](https://github.com/buicongnguyen/tenstorrent_work/blob/main/diagram_sources/source-map.mmd)</small>
 
 ## Choose the source for the question
 

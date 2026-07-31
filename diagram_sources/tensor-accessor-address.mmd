@@ -1,0 +1,10 @@
+flowchart LR
+    H["Host TensorAccessorArgs"] --> C["Compile-time args<br/>static rank, shapes, banks"]
+    H --> R["Common runtime args<br/>selected dynamic fields"]
+    C --> A["Device TensorAccessor"]
+    R --> A
+    A --> D["DistributionSpec<br/>shape, shard, banks, strides"]
+    P["Page or shard id / coordinate"] --> D
+    D --> M["Bank id + bank offset"]
+    M --> N["NoC address"]
+    N --> IO["async page/shard read or write"]

@@ -1,0 +1,8 @@
+flowchart LR
+    A["Higher-precision values"] --> B["Choose one shared exponent<br/>for each 16-value block"]
+    B --> C["Normalize each mantissa<br/>to the shared exponent"]
+    C --> D["Round retained mantissa bits<br/>to nearest, ties to even"]
+    D --> E{"Rounding overflow?"}
+    E -->|"No"| F["Store block-float mantissas<br/>with shared exponent"]
+    E -->|"Yes"| G["Clamp mantissa to all 1s<br/>do not recompute block exponent"]
+    G --> F

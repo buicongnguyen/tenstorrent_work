@@ -5,6 +5,7 @@ Start with the [rewrite playbook](docs/contributing/rewrite-playbook.md).
 Before opening a change:
 
 ```console
+python scripts/seed_rewrites.py
 python scripts/build_catalog.py
 python scripts/check_docs.py
 mkdocs build --strict

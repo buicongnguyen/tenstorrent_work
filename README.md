@@ -24,8 +24,12 @@ official source, and upstream updates never silently overwrite learner notes.
 
 - 57 upstream Markdown reports copied at commit
   `992f3ca634aac8733c70e48da395aab5361b4166`
-- 1 report rewritten as the pilot:
-  [Tensor and Memory Layouts](docs/rewrites/tensor_layouts/tensor_layouts.md)
+- 57 source-linked learner pages: 7 substantive improved drafts and 50
+  explicitly labeled seeds awaiting deeper technical review
+- Foundational improved drafts cover tensor layouts, data formats, the matrix
+  engine, TensorAccessor, allocation, NoC tile transfer, and kernel indexing
+- A phased [rewrite roadmap](docs/reference/rewrite-roadmap.md) orders the
+  remaining kernel, performance, model, and distributed-system work
 - GitHub Pages-ready MkDocs Material site
 - Automated link/content checks and deployment workflow
 - Sidebar resource guides for the Corsix series and the official ISA hierarchy

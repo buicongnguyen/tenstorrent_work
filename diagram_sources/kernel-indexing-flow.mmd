@@ -1,0 +1,11 @@
+flowchart TB
+    H["Host C++"] --> HC["CMake export<br/>compile_commands.json"]
+    K["JIT device kernels"] --> Q{"Choose fidelity"}
+    Q -->|"Fast setup"| F["Fake CMake kernel target"]
+    Q -->|"Exact observed flags"| L["Run target workload with<br/>kernel compile logging"]
+    L --> B["Bear captures commands"]
+    B --> P["Postprocess wrapper TRISC/BRISC entries<br/>and merge database"]
+    F --> DB["Compilation database"]
+    P --> DB
+    HC --> DB
+    DB --> IDE["clangd / VS Code<br/>definitions, references, highlighting"]

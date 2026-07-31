@@ -15,7 +15,7 @@ matches the hardware you are studying.
 
 ![Suggested route through the ISA documentation](../assets/diagrams/isa-route.svg){ .atlas-diagram }
 
-<small>[Diagram source](https://github.com/buicongnguyen/tenstorrent_work/blob/main/diagram_sources/isa-route.mmd)</small>
+<small>[Open full-size diagram](../assets/diagrams/isa-route.svg) · [Diagram source](https://github.com/buicongnguyen/tenstorrent_work/blob/main/diagram_sources/isa-route.mmd)</small>
 
 ### 1. Chip and tile
 

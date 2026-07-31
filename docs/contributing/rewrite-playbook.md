@@ -65,17 +65,18 @@ Before marking a rewrite complete:
 - [ ] Distinguish current API behavior from the durable mental model.
 - [ ] Follow one concrete page/tile/message end to end.
 - [ ] Search the pinned source revision for every named symbol.
-- [ ] Check relative links and render every Mermaid diagram.
+- [ ] Check relative links and regenerate every static diagram.
 - [ ] Ask whether the new explanation accidentally implies more than upstream.
 
 ## Status values
 
 | Status | Meaning |
 |---|---|
-| `source-only` | Upstream copy exists; no learner edition yet |
-| `draft` | Rewrite exists but technical/visual review is incomplete |
+| `source-only` | Upstream copy exists; no learner page yet |
+| `seed` | Source-linked reading map exists; technical rewrite is queued |
+| `improved-draft` | Substantive rewrite exists but review is incomplete |
 | `improved` | Rewrite passed the checklist against the pinned revision |
 | `review-needed` | Upstream changed after the last completed review |
 
-The pilot layout chapter starts as `draft`: its structure is ready, but a
+The pilot layout chapter starts as `improved-draft`: its structure is ready, but a
 hardware practitioner should still validate architecture-sensitive nuances.

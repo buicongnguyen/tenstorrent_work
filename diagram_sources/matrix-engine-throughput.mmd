@@ -1,0 +1,10 @@
+flowchart LR
+    A["SrcA<br/>8×16 minimum"] --> U["Unpack"]
+    B["SrcB<br/>16×16 minimum"] --> U
+    U --> P{"Math-fidelity<br/>passes"}
+    P -->|"LoFi · 1"| M["Matrix engine<br/>8×16 × 16×16 per cycle"]
+    P -->|"HiFi2 · 2"| M
+    P -->|"HiFi3 · 3"| M
+    P -->|"HiFi4 · 4"| M
+    M --> D["Dst accumulator"]
+    D --> K["Pack<br/>optional L1 accumulation"]

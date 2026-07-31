@@ -7,7 +7,7 @@ start thinking about **where data lives and who moves it**.
 
 ![Simplified Tensix tile data path](../assets/diagrams/tensix-tile.svg){ .atlas-diagram }
 
-<small>[Diagram source](https://github.com/buicongnguyen/tenstorrent_work/blob/main/diagram_sources/tensix-tile.mmd)</small>
+<small>[Open full-size diagram](../assets/diagrams/tensix-tile.svg) · [Diagram source](https://github.com/buicongnguyen/tenstorrent_work/blob/main/diagram_sources/tensix-tile.mmd)</small>
 
 Treat this as a coordination problem:
 
@@ -24,7 +24,7 @@ transforming data.
 
 ![Host-to-device program lifecycle](../assets/diagrams/program-lifecycle.svg){ .atlas-diagram }
 
-<small>[Diagram source](https://github.com/buicongnguyen/tenstorrent_work/blob/main/diagram_sources/program-lifecycle.mmd)</small>
+<small>[Open full-size diagram](../assets/diagrams/program-lifecycle.svg) · [Diagram source](https://github.com/buicongnguyen/tenstorrent_work/blob/main/diagram_sources/program-lifecycle.mmd)</small>
 
 Host code describes resources and schedules work. Device kernels execute
 concurrently and must coordinate through explicit mechanisms. This is why the
@@ -55,7 +55,7 @@ with concrete examples.
 
 ![Performance triage decision tree](../assets/diagrams/performance-triage.svg){ .atlas-diagram }
 
-<small>[Diagram source](https://github.com/buicongnguyen/tenstorrent_work/blob/main/diagram_sources/performance-triage.mmd)</small>
+<small>[Open full-size diagram](../assets/diagrams/performance-triage.svg) · [Diagram source](https://github.com/buicongnguyen/tenstorrent_work/blob/main/diagram_sources/performance-triage.mmd)</small>
 
 Do not optimize from the API surface alone. First locate the waiting:
 host, command queue, memory path, synchronization, or compute engine.

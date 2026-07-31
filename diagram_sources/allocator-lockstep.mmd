@@ -1,0 +1,11 @@
+flowchart TB
+    C["Buffer configuration"] --> P["Compute aligned bytes per bank"]
+    P --> F["First-fit free-list search"]
+    F --> D{"Memory class"}
+    D -->|"DRAM user data"| BU["Allocate bottom-up"]
+    D -->|"Program binaries"| TD["Allocate top-down"]
+    D -->|"L1 buffers"| LU["Allocate top-down<br/>away from reserved + CB region"]
+    BU --> L["Reserve the same address span<br/>in every bank"]
+    TD --> L
+    LU --> L
+    L --> A["Simple per-page address calculation<br/>at cost of internal fragmentation"]

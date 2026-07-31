@@ -17,7 +17,7 @@
 
 ![Tenstorrent software-to-hardware stack](assets/diagrams/stack.svg){ .atlas-diagram }
 
-<small>[Diagram source](https://github.com/buicongnguyen/tenstorrent_work/blob/main/diagram_sources/stack.mmd)</small>
+<small>[Open full-size diagram](assets/diagrams/stack.svg) · [Diagram source](https://github.com/buicongnguyen/tenstorrent_work/blob/main/diagram_sources/stack.mmd)</small>
 
 You do not need to learn every API before understanding the system. Start with
 the recurring data path and add detail only where it explains correctness or
@@ -27,7 +27,7 @@ performance.
 
 ![Reader-compute-writer kernel pipeline](assets/diagrams/kernel-pipeline.svg){ .atlas-diagram }
 
-<small>[Diagram source](https://github.com/buicongnguyen/tenstorrent_work/blob/main/diagram_sources/kernel-pipeline.mmd)</small>
+<small>[Open full-size diagram](assets/diagrams/kernel-pipeline.svg) · [Diagram source](https://github.com/buicongnguyen/tenstorrent_work/blob/main/diagram_sources/kernel-pipeline.mmd)</small>
 
 This picture is deliberately simplified. It gives you a stable set of
 questions for any operator:
@@ -72,8 +72,9 @@ questions for any operator:
 
 !!! warning "Project status"
     The upstream snapshot is complete, but the learner-focused rewrite is a
-    work in progress. The catalog clearly marks what is original, improved,
-    or still awaiting a rewrite.
+    work in progress. Every report now has a source-linked learner page; the
+    catalog distinguishes substantive `improved-draft` chapters from `seed`
+    reading maps that still await a full rewrite.
 
 ## Recommended next page
 

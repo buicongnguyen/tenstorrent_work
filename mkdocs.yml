@@ -77,8 +77,15 @@ nav:
       - Architecture mental model: start/architecture-mental-model.md
   - Improved reports:
       - Tensor and memory layouts: rewrites/tensor_layouts/tensor_layouts.md
+      - Data formats: rewrites/data_formats/data_formats.md
+      - Matrix engine: rewrites/matrix_engine/matrix_engine.md
+      - TensorAccessor: rewrites/tensor_accessor/tensor_accessor.md
+      - Device allocator: rewrites/memory/allocator.md
+      - NoC tile transfer: rewrites/prog_examples/NoC_tile_transfer/NoC_tile_transfer.md
+      - Kernel code indexing: rewrites/code-indexing/kernel-code-indexing.md
   - Upstream reference:
       - Report catalog: reference/report-catalog.md
+      - Rewrite roadmap: reference/rewrite-roadmap.md
       - Provenance and updates: reference/provenance.md
   - External & ISA:
       - Resource guide: resources/index.md

@@ -1,3 +1,4 @@
+<!-- rewrite-status: improved-draft -->
 # Tensor and memory layouts
 
 <p class="source-note">
@@ -11,7 +12,7 @@ separate is the key to this chapter:
 
 ![Logical tensor to physical storage layers](../../assets/diagrams/tensor-layout-layers.svg){ .atlas-diagram }
 
-<small>[Diagram source](https://github.com/buicongnguyen/tenstorrent_work/blob/main/diagram_sources/tensor-layout-layers.mmd)</small>
+<small>[Open full-size diagram](../../assets/diagrams/tensor-layout-layers.svg) · [Diagram source](https://github.com/buicongnguyen/tenstorrent_work/blob/main/diagram_sources/tensor-layout-layers.mmd)</small>
 
 - **Tensor layout** answers: how do elements become addressable pages?
 - **Memory layout** answers: how are those pages distributed?
@@ -43,7 +44,7 @@ This is a representation step, not a transpose. Element order does not change.
 
     ![Rows become pages](../../assets/diagrams/row-pages.svg){ .atlas-diagram }
 
-    <small>[Diagram source](https://github.com/buicongnguyen/tenstorrent_work/blob/main/diagram_sources/row-pages.mmd)</small>
+    <small>[Open full-size diagram](../../assets/diagrams/row-pages.svg) · [Diagram source](https://github.com/buicongnguyen/tenstorrent_work/blob/main/diagram_sources/row-pages.mmd)</small>
 
     This representation is intuitive for host-style indexing and operations
     that consume rows directly.
@@ -118,7 +119,7 @@ stays intact.
 
     ![Pages interleaved over banks](../../assets/diagrams/interleaved-banks.svg){ .atlas-diagram }
 
-    <small>[Diagram source](https://github.com/buicongnguyen/tenstorrent_work/blob/main/diagram_sources/interleaved-banks.mmd)</small>
+    <small>[Open full-size diagram](../../assets/diagrams/interleaved-banks.svg) · [Diagram source](https://github.com/buicongnguyen/tenstorrent_work/blob/main/diagram_sources/interleaved-banks.mmd)</small>
 
     This is the simple general-purpose choice. It spreads sequential pages,
     but the consumer may need NoC traffic to gather them.
@@ -130,7 +131,7 @@ stays intact.
 
     ![Tensor pages sharded over core-local L1](../../assets/diagrams/sharded-cores.svg){ .atlas-diagram }
 
-    <small>[Diagram source](https://github.com/buicongnguyen/tenstorrent_work/blob/main/diagram_sources/sharded-cores.mmd)</small>
+    <small>[Open full-size diagram](../../assets/diagrams/sharded-cores.svg) · [Diagram source](https://github.com/buicongnguyen/tenstorrent_work/blob/main/diagram_sources/sharded-cores.mmd)</small>
 
     Sharding can improve locality and parallelism, but only when the shard
     geometry matches how the next kernels consume data.
@@ -148,7 +149,7 @@ stays intact.
 
 ![Tensor layout decision flow](../../assets/diagrams/tensor-layout-decision.svg){ .atlas-diagram }
 
-<small>[Diagram source](https://github.com/buicongnguyen/tenstorrent_work/blob/main/diagram_sources/tensor-layout-decision.mmd)</small>
+<small>[Open full-size diagram](../../assets/diagrams/tensor-layout-decision.svg) · [Diagram source](https://github.com/buicongnguyen/tenstorrent_work/blob/main/diagram_sources/tensor-layout-decision.mmd)</small>
 
 ## Common mistakes
 

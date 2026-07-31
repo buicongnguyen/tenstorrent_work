@@ -6,7 +6,7 @@ explain the checkpoint for the current stage.
 
 ![Recommended TT-Metal learning sequence](../assets/diagrams/learning-path.svg){ .atlas-diagram }
 
-<small>[Diagram source](https://github.com/buicongnguyen/tenstorrent_work/blob/main/diagram_sources/learning-path.mmd)</small>
+<small>[Open full-size diagram](../assets/diagrams/learning-path.svg) · [Diagram source](https://github.com/buicongnguyen/tenstorrent_work/blob/main/diagram_sources/learning-path.mmd)</small>
 
 ## Stage 0 — orient yourself
 

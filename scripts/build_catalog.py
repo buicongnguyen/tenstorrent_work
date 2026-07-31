@@ -12,12 +12,19 @@ UPSTREAM = ROOT / "upstream" / "tt-metal" / "tech_reports"
 REWRITES = ROOT / "docs" / "rewrites"
 OUTPUT = ROOT / "docs" / "reference" / "report-catalog.md"
 COMMIT = "992f3ca634aac8733c70e48da395aab5361b4166"
+STATUS_RE = re.compile(r"<!--\s*rewrite-status:\s*([a-z-]+)\s*-->")
 
 
 def title_for(path: Path) -> str:
     text = path.read_text(encoding="utf-8", errors="replace")
     match = re.search(r"^#\s+(.+?)\s*$", text, flags=re.MULTILINE)
     return match.group(1).replace("|", r"\|") if match else path.stem.replace("_", " ")
+
+
+def status_for(path: Path) -> str:
+    text = path.read_text(encoding="utf-8", errors="replace")
+    match = STATUS_RE.search(text)
+    return match.group(1) if match else "draft"
 
 
 def main() -> None:
@@ -29,8 +36,9 @@ def main() -> None:
         f"[official snapshot](https://github.com/tenstorrent/tt-metal/tree/{COMMIT}/tech_reports).",
         "The snapshot also includes each report's images, media, and helper scripts.",
         "",
-        "Status is intentionally conservative: a page remains `source-only` until a",
-        "one-to-one learner edition exists and review is explicit.",
+        "Every source has a one-to-one learner page. Status is intentionally",
+        "conservative: `seed` means provenance and a reading map exist, while",
+        "`improved-draft` means a substantive rewrite still awaits final review.",
         "",
         "| # | Report | Upstream path | Learner edition | Status |",
         "|---:|---|---|---|---|",
@@ -47,7 +55,7 @@ def main() -> None:
         if rewrite.exists():
             rewrite_link = Path("..", "rewrites", relative).as_posix()
             learner = f"[Open rewrite]({rewrite_link})"
-            status = "`draft`"
+            status = f"`{status_for(rewrite)}`"
         else:
             learner = "—"
             status = "`source-only`"

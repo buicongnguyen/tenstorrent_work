@@ -19,7 +19,7 @@ document.
 
 ![Upstream snapshot update workflow](../assets/diagrams/provenance-update.svg){ .atlas-diagram }
 
-<small>[Diagram source](https://github.com/buicongnguyen/tenstorrent_work/blob/main/diagram_sources/provenance-update.mmd)</small>
+<small>[Open full-size diagram](../assets/diagrams/provenance-update.svg) · [Diagram source](https://github.com/buicongnguyen/tenstorrent_work/blob/main/diagram_sources/provenance-update.mmd)</small>
 
 Editing copied files directly would make it hard to tell which statements are
 official and which are interpretation. Instead:

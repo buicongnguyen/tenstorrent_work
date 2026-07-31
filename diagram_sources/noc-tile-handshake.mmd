@@ -1,0 +1,20 @@
+sequenceDiagram
+    participant R0 as Core 0 reader
+    participant W0 as Core 0 writer
+    participant R1 as Core 1 reader
+    participant W1 as Core 1 writer
+    participant D as DRAM
+
+    R0->>D: async read tile
+    D-->>R0: tile in Core 0 L1
+    R0->>W0: push Core 0 CB
+    R1->>R1: reserve Core 1 CB
+    R1->>W0: increment ready semaphore
+    W0->>W0: wait for ready
+    W0->>R1: NoC async L1-to-L1 write
+    W0->>W0: write barrier
+    W0->>R1: increment received semaphore
+    R1->>R1: wait, reset, push Core 1 CB
+    R1->>W1: tile available
+    W1->>D: async write tile
+    W1->>W1: barrier and pop CB
