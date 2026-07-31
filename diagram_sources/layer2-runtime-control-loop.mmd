@@ -1,0 +1,25 @@
+flowchart TB
+    subgraph Identity["Resolve program identity"]
+        direction LR
+        A["TT-NN call"] --> B{"Program identity stable?"}
+        C["Construct + compile"]
+        D["Reuse cached program"]
+        E["Patch runtime values"]
+    end
+    subgraph Execute["Execute with explicit order"]
+        direction LR
+        F["Enqueue dependencies"] --> G["Device execution"]
+        G --> H["Trace structure + profile time"]
+    end
+    subgraph Validate["Validate meaning"]
+        direction LR
+        I["Compare with reference"] --> J["Publish stable execution path"]
+        I -->|"wrong / variable"| K["Revise identity or ordering"]
+    end
+    B -->|"no"| C["Construct + compile"]
+    B -->|"yes"| D["Reuse cached program"]
+    C --> E["Patch runtime values"]
+    D --> E
+    E --> F
+    H --> I["Compare with reference"]
+    I -->|"correct + stable"| J

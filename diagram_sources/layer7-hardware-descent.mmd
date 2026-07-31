@@ -1,0 +1,20 @@
+flowchart TB
+    subgraph Trace["Trace the supported path"]
+        direction LR
+        A["Localized profiler symptom"] --> B["Supported kernel API"]
+        B --> C["TT-LLK wrapper"]
+        C --> D["Official ISA + engine state"]
+    end
+    subgraph Test["Test one mechanism"]
+        direction LR
+        E["Minimal qualified benchmark"] --> F["Predict values, hazards, cycles"]
+        F --> G["Measure / simulate"]
+    end
+    subgraph Apply["Return to the real problem"]
+        direction LR
+        H{"Model explains symptom?"} -->|"yes"| I["Apply via supported layer"]
+        I --> J["Verify end-to-end metric"]
+        H -->|"no"| K["Revise the qualified model"]
+    end
+    D --> E
+    G --> H

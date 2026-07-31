@@ -1,0 +1,23 @@
+flowchart TB
+    subgraph Define["Define the workload"]
+        direction LR
+        A["Model requirement + accuracy target"] --> B["Workload shape distribution"]
+        B --> C["Graph dependencies + tensor lifetimes"]
+    end
+    subgraph Choose["Choose the boundary"]
+        direction LR
+        D{"Costly boundary?"}
+        E["Fuse or keep data resident"]
+        F["Keep operators separate"]
+    end
+    subgraph Validate["Validate the architecture"]
+        direction LR
+        G["Choose format and specialized regimes"] --> H["Validate values + end-to-end latency"]
+        H -->|"target met"| I["Publish with reference fallback"]
+        H -->|"target missed"| R["Revise the graph boundary"]
+    end
+    C --> D
+    D -->|"movement / launch dominates"| E["Fuse or keep data resident"]
+    D -->|"reuse / flexibility dominates"| F["Keep operators separate"]
+    E --> G["Choose format and specialized regimes"]
+    F --> G

@@ -1,0 +1,19 @@
+flowchart TB
+    subgraph Map["Map global meaning to topology"]
+        direction LR
+        A["Global tensor + operation"] --> B["Partition / replicate ranks"]
+        B --> C["Map devices, hosts, links"]
+    end
+    subgraph Execute["Execute with ownership"]
+        direction LR
+        D["Route / collective + chunks"] --> E["Buffer + event ownership"]
+        E --> F["Overlap ready chunks"]
+    end
+    subgraph Verify["Find the distributed critical path"]
+        direction LR
+        G["Per-rank + per-link timeline"] --> H{"Correct and balanced?"}
+        H -->|"yes"| I["Publish topology-qualified result"]
+        H -->|"no"| R["Revise topology or collective"]
+    end
+    C --> D
+    F --> G

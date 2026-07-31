@@ -14,22 +14,30 @@ Levels 0–4 form the main descent from stack vocabulary to device-kernel
 dataflow. Levels 5 and 6 are advanced branches for measurement and scale.
 Level 7 is the lowest layer and should be architecture-qualified.
 
-| Level | Abstraction | Main question | Reports |
-|---:|---|---|---:|
-| [0](#level-0-orientation) | Whole stack | Vocabulary, boundaries, and the TT-NN to hardware mental model. | 1 |
-| [1](#level-1-models-operators) | Highest | See how complete workloads and operators use TT-NN. | 11 |
-| [2](#level-2-ttnn-runtime) | High | Devices, tracing, comparison, serialization, and runtime behavior. | 5 |
-| [3](#level-3-tensor-memory) | Middle | Tiles, formats, layouts, sharding, allocation, and addressing. | 8 |
-| [4](#level-4-kernels-dataflow) | Low | Host programs, reader/compute/writer kernels, NoC, and multicore flows. | 8 |
-| [5](#level-5-performance-debugging) | Advanced cross-layer | Measure bottlenecks, debug kernels, and optimize with evidence. | 10 |
-| [6](#level-6-distributed-systems) | Advanced system scale | Meshes, Ethernet, collectives, fabric, and multi-host execution. | 9 |
-| [7](#level-7-hardware-isa) | Lowest | Tensix engines, formats at the hardware boundary, and architecture-specific details. | 5 |
+The catalog tells you **what to read**. Each expert guide teaches **how to reason** at that layer through contracts, a worked problem, tradeoffs, evidence, and fully explained answers.
+
+| Level | Abstraction | Main question | Expert guide | Reports |
+|---:|---|---|---|---:|
+| [0](#level-0-orientation) | Whole stack | Vocabulary, boundaries, and the TT-NN to hardware mental model. | [Reason through Level 0](layers/level-0-orientation.md) | 1 |
+| [1](#level-1-models-operators) | Highest | See how complete workloads and operators use TT-NN. | [Reason through Level 1](layers/level-1-models-operators.md) | 11 |
+| [2](#level-2-ttnn-runtime) | High | Devices, tracing, comparison, serialization, and runtime behavior. | [Reason through Level 2](layers/level-2-runtime-observability.md) | 5 |
+| [3](#level-3-tensor-memory) | Middle | Tiles, formats, layouts, sharding, allocation, and addressing. | [Reason through Level 3](layers/level-3-tensor-memory.md) | 8 |
+| [4](#level-4-kernels-dataflow) | Low | Host programs, reader/compute/writer kernels, NoC, and multicore flows. | [Reason through Level 4](layers/level-4-kernels-dataflow.md) | 8 |
+| [5](#level-5-performance-debugging) | Advanced cross-layer | Measure bottlenecks, debug kernels, and optimize with evidence. | [Reason through Level 5](layers/level-5-performance-debugging.md) | 10 |
+| [6](#level-6-distributed-systems) | Advanced system scale | Meshes, Ethernet, collectives, fabric, and multi-host execution. | [Reason through Level 6](layers/level-6-distributed-systems.md) | 9 |
+| [7](#level-7-hardware-isa) | Lowest | Tensix engines, formats at the hardware boundary, and architecture-specific details. | [Reason through Level 7](layers/level-7-hardware-isa.md) | 5 |
 
 ## Level 0 — Orientation and stack { #level-0-orientation }
 
 Vocabulary, boundaries, and the TT-NN to hardware mental model.
 
 **Start this level when:** you are new to Tenstorrent or cannot yet place TT-NN, TT-Metalium, kernels, and Tensix on one diagram.
+
+**Architect's task:** Locate the first broken contract and assign the problem to the layer that owns it.
+
+**Reasoning path:** `symptom → invariant → owning layer → evidence above/below → one change → original metric`
+
+[Open the Level 0 expert reasoning guide →](layers/level-0-orientation.md){ .md-button .md-button--primary }
 
 | Step | Report | Upstream original | Learner edition | Status |
 |---:|---|---|---|---|
@@ -40,6 +48,12 @@ Vocabulary, boundaries, and the TT-NN to hardware mental model.
 See how complete workloads and operators use TT-NN.
 
 **Start this level when:** you can name the major stack layers and want an application-level reason for the lower-level machinery.
+
+**Architect's task:** Partition the graph so accuracy is preserved while movement, fallback, and repeated work are minimized.
+
+**Reasoning path:** `workload distribution → tensor lifetimes → fusion/residency choices → accuracy budget → end-to-end validation`
+
+[Open the Level 1 expert reasoning guide →](layers/level-1-models-operators.md){ .md-button .md-button--primary }
 
 | Step | Report | Upstream original | Learner edition | Status |
 |---:|---|---|---|---|
@@ -61,6 +75,12 @@ Devices, tracing, comparison, serialization, and runtime behavior.
 
 **Start this level when:** you understand what an operator does and now need to see how TT-NN schedules, records, and checks it.
 
+**Architect's task:** Preserve identity, lifetime, and order while removing construction and submission overhead.
+
+**Reasoning path:** `cold/warm/replay split → cache identity → queue ownership → trace structure + profile time → comparison`
+
+[Open the Level 2 expert reasoning guide →](layers/level-2-runtime-observability.md){ .md-button .md-button--primary }
+
 | Step | Report | Upstream original | Learner edition | Status |
 |---:|---|---|---|---|
 | 13 | Sub-Devices | [`SubDevices/SubDevices.md`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/SubDevices/SubDevices.md) | [Open learner page](../rewrites/SubDevices/SubDevices.md) | `seed` |
@@ -74,6 +94,12 @@ Devices, tracing, comparison, serialization, and runtime behavior.
 Tiles, formats, layouts, sharding, allocation, and addressing.
 
 **Start this level when:** you can follow an operator call but cannot yet predict where its bytes live or how a kernel addresses them.
+
+**Architect's task:** Choose one physical tensor contract that balances accuracy, capacity, locality, parallelism, and conversion cost.
+
+**Reasoning path:** `access pattern → format/layout → placement/sharding → address proof → bytes and balance measurement`
+
+[Open the Level 3 expert reasoning guide →](layers/level-3-tensor-memory.md){ .md-button .md-button--primary }
 
 | Step | Report | Upstream original | Learner edition | Status |
 |---:|---|---|---|---|
@@ -92,6 +118,12 @@ Host programs, reader/compute/writer kernels, NoC, and multicore flows.
 
 **Start this level when:** you understand tensor storage and want to trace pages and tiles through actual device kernels.
 
+**Architect's task:** Build a correct bounded reader–compute–writer pipeline and keep its limiting stage supplied.
+
+**Reasoning path:** `core ownership → input reuse → circular-buffer protocol → stage timeline → wait-state evidence`
+
+[Open the Level 4 expert reasoning guide →](layers/level-4-kernels-dataflow.md){ .md-button .md-button--primary }
+
 | Step | Report | Upstream original | Learner edition | Status |
 |---:|---|---|---|---|
 | 26 | NoC Tile Transfer | [`prog_examples/NoC_tile_transfer/NoC_tile_transfer.md`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/prog_examples/NoC_tile_transfer/NoC_tile_transfer.md) | [Open learner page](../rewrites/prog_examples/NoC_tile_transfer/NoC_tile_transfer.md) | `improved-draft` |
@@ -108,6 +140,12 @@ Host programs, reader/compute/writer kernels, NoC, and multicore flows.
 Measure bottlenecks, debug kernels, and optimize with evidence.
 
 **Start this level when:** a program is correct and you need to explain its latency, bandwidth, utilization, or failure mode.
+
+**Architect's task:** Turn a symptom into a falsifiable bottleneck hypothesis and prove the optimization moved the critical path.
+
+**Reasoning path:** `metric → bounds → timeline/counters → competing hypotheses → one-variable experiment → correctness`
+
+[Open the Level 5 expert reasoning guide →](layers/level-5-performance-debugging.md){ .md-button .md-button--primary }
 
 | Step | Report | Upstream original | Learner edition | Status |
 |---:|---|---|---|---|
@@ -128,6 +166,12 @@ Meshes, Ethernet, collectives, fabric, and multi-host execution.
 
 **Start this level when:** you can reason about one device and are ready to extend ownership, routing, and synchronization across devices or hosts.
 
+**Architect's task:** Maintain global tensor meaning while mapping work, routes, events, and lifetimes onto a physical topology.
+
+**Reasoning path:** `global partition → rank/topology map → collective/link cost → ownership/events → per-rank critical path`
+
+[Open the Level 6 expert reasoning guide →](layers/level-6-distributed-systems.md){ .md-button .md-button--primary }
+
 | Step | Report | Upstream original | Learner edition | Status |
 |---:|---|---|---|---|
 | 44 | Programming Mesh of Devices with TT-NN | [`Programming_Mesh_of_Devices/Programming_Mesh_of_Devices_with_TT-NN.md`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/Programming_Mesh_of_Devices/Programming_Mesh_of_Devices_with_TT-NN.md) | [Open learner page](../rewrites/Programming_Mesh_of_Devices/Programming_Mesh_of_Devices_with_TT-NN.md) | `seed` |
@@ -145,6 +189,12 @@ Meshes, Ethernet, collectives, fabric, and multi-host execution.
 Tensix engines, formats at the hardware boundary, and architecture-specific details.
 
 **Start this level when:** kernel-level behavior is no longer enough and you need to explain an engine, register, instruction, or architecture constraint.
+
+**Architect's task:** Explain a localized engine-level limit without confusing documented behavior with inferred microarchitecture.
+
+**Reasoning path:** `localized symptom → supported API → TT-LLK → official ISA → microbenchmark → end-to-end proof`
+
+[Open the Level 7 expert reasoning guide →](layers/level-7-hardware-isa.md){ .md-button .md-button--primary }
 
 | Step | Report | Upstream original | Learner edition | Status |
 |---:|---|---|---|---|

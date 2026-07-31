@@ -11,6 +11,9 @@ LAYERS = (
         "abstraction": "Whole stack",
         "focus": "Vocabulary, boundaries, and the TT-NN to hardware mental model.",
         "start_when": "you are new to Tenstorrent or cannot yet place TT-NN, TT-Metalium, kernels, and Tensix on one diagram",
+        "guide": "level-0-orientation.md",
+        "architect_task": "Locate the first broken contract and assign the problem to the layer that owns it.",
+        "reasoning_path": "symptom → invariant → owning layer → evidence above/below → one change → original metric",
         "paths": (
             "ttnn/ttnn.md",
         ),
@@ -22,6 +25,9 @@ LAYERS = (
         "abstraction": "Highest",
         "focus": "See how complete workloads and operators use TT-NN.",
         "start_when": "you can name the major stack layers and want an application-level reason for the lower-level machinery",
+        "guide": "level-1-models-operators.md",
+        "architect_task": "Partition the graph so accuracy is preserved while movement, fallback, and repeated work are minimized.",
+        "reasoning_path": "workload distribution → tensor lifetimes → fusion/residency choices → accuracy budget → end-to-end validation",
         "paths": (
             "ttnn/TTNN-model-bringup.md",
             "CNNs/ttcnn.md",
@@ -43,6 +49,9 @@ LAYERS = (
         "abstraction": "High",
         "focus": "Devices, tracing, comparison, serialization, and runtime behavior.",
         "start_when": "you understand what an operator does and now need to see how TT-NN schedules, records, and checks it",
+        "guide": "level-2-runtime-observability.md",
+        "architect_task": "Preserve identity, lifetime, and order while removing construction and submission overhead.",
+        "reasoning_path": "cold/warm/replay split → cache identity → queue ownership → trace structure + profile time → comparison",
         "paths": (
             "SubDevices/SubDevices.md",
             "tensor_serialization/tensor_serialization.md",
@@ -58,6 +67,9 @@ LAYERS = (
         "abstraction": "Middle",
         "focus": "Tiles, formats, layouts, sharding, allocation, and addressing.",
         "start_when": "you can follow an operator call but cannot yet predict where its bytes live or how a kernel addresses them",
+        "guide": "level-3-tensor-memory.md",
+        "architect_task": "Choose one physical tensor contract that balances accuracy, capacity, locality, parallelism, and conversion cost.",
+        "reasoning_path": "access pattern → format/layout → placement/sharding → address proof → bytes and balance measurement",
         "paths": (
             "tensor_layouts/tensor_layouts.md",
             "data_formats/data_formats.md",
@@ -76,6 +88,9 @@ LAYERS = (
         "abstraction": "Low",
         "focus": "Host programs, reader/compute/writer kernels, NoC, and multicore flows.",
         "start_when": "you understand tensor storage and want to trace pages and tiles through actual device kernels",
+        "guide": "level-4-kernels-dataflow.md",
+        "architect_task": "Build a correct bounded reader–compute–writer pipeline and keep its limiting stage supplied.",
+        "reasoning_path": "core ownership → input reuse → circular-buffer protocol → stage timeline → wait-state evidence",
         "paths": (
             "prog_examples/NoC_tile_transfer/NoC_tile_transfer.md",
             "prog_examples/multicast/multicast.md",
@@ -94,6 +109,9 @@ LAYERS = (
         "abstraction": "Advanced cross-layer",
         "focus": "Measure bottlenecks, debug kernels, and optimize with evidence.",
         "start_when": "a program is correct and you need to explain its latency, bandwidth, utilization, or failure mode",
+        "guide": "level-5-performance-debugging.md",
+        "architect_task": "Turn a symptom into a falsifiable bottleneck hypothesis and prove the optimization moved the critical path.",
+        "reasoning_path": "metric → bounds → timeline/counters → competing hypotheses → one-variable experiment → correctness",
         "paths": (
             "Debugging/Kernel_Debugging_Tips.md",
             "Debugging/DEVICE_PRINT_replaces_DPRINT.md",
@@ -114,6 +132,9 @@ LAYERS = (
         "abstraction": "Advanced system scale",
         "focus": "Meshes, Ethernet, collectives, fabric, and multi-host execution.",
         "start_when": "you can reason about one device and are ready to extend ownership, routing, and synchronization across devices or hosts",
+        "guide": "level-6-distributed-systems.md",
+        "architect_task": "Maintain global tensor meaning while mapping work, routes, events, and lifetimes onto a physical topology.",
+        "reasoning_path": "global partition → rank/topology map → collective/link cost → ownership/events → per-rank critical path",
         "paths": (
             "Programming_Mesh_of_Devices/Programming_Mesh_of_Devices_with_TT-NN.md",
             "Programming_Mesh_of_Devices/CCL_Performance_Best_Practices.md",
@@ -133,6 +154,9 @@ LAYERS = (
         "abstraction": "Lowest",
         "focus": "Tensix engines, formats at the hardware boundary, and architecture-specific details.",
         "start_when": "kernel-level behavior is no longer enough and you need to explain an engine, register, instruction, or architecture constraint",
+        "guide": "level-7-hardware-isa.md",
+        "architect_task": "Explain a localized engine-level limit without confusing documented behavior with inferred microarchitecture.",
+        "reasoning_path": "localized symptom → supported API → TT-LLK → official ISA → microbenchmark → end-to-end proof",
         "paths": (
             "matrix_engine/matrix_engine.md",
             "data_formats/reconfig_data_format.md",

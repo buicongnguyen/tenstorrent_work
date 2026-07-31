@@ -1,0 +1,16 @@
+flowchart TB
+    subgraph Intent["Intent and policy"]
+        direction LR
+        A["Model graph + target"] --> B["TT-NN operators"]
+    end
+    subgraph Execution["Execution mechanisms"]
+        direction LR
+        C["Runtime programs + queues"] --> D["Reader / compute / writer kernels"]
+        D --> E["TT-LLK + engines"]
+    end
+    B -->|"tensor and operation contract"| C
+    E --> F["Observed output + timing"]
+    F -. "evidence climbs back up" .-> A
+    G["Find first broken invariant"] -.-> B
+    G -.-> C
+    G -.-> D

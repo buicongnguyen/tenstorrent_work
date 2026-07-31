@@ -1,0 +1,19 @@
+flowchart TB
+    subgraph Bound["Define and bound"]
+        direction LR
+        A["End-to-end metric + correctness"] --> B["Compute / memory / pipeline bounds"]
+        B --> C["Cold, warm, replay separately"]
+    end
+    subgraph Diagnose["Diagnose the critical path"]
+        direction LR
+        D["Partition time and resources"] --> E["Dominant term + competing hypothesis"]
+        E --> F["Change one mechanism"]
+    end
+    subgraph Verify["Verify the causal story"]
+        direction LR
+        G["Check predicted profiler response"] --> H{"Faster and correct?"}
+        H -->|"yes"| I["Document evidence + tradeoff"]
+        H -->|"no"| R["Revise the bottleneck hypothesis"]
+    end
+    C --> D
+    F --> G

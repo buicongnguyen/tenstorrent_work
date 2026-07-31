@@ -1,0 +1,17 @@
+flowchart TB
+    subgraph Consume["Supply compute"]
+        direction LR
+        R["Reader\nDRAM/NoC → input CBs"] -->|"reserve + push"| A["Input circular buffers"]
+        A -->|"wait + pop"| C["Compute\nMatrix / SFPU"]
+    end
+    subgraph Drain["Drain results"]
+        direction LR
+        O["Output circular buffer"] -->|"wait + pop"| W["Writer\noutput → NoC/L1/DRAM"]
+        W --> F["Verify output + stage balance"]
+    end
+    C -->|"reserve + push"| O
+    B["Buffer capacity + loop counts"] -.-> A
+    B -.-> O
+    P["Profile active vs wait time"] -.-> R
+    P -.-> C
+    P -.-> W

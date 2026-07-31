@@ -1,0 +1,21 @@
+flowchart TB
+    subgraph Represent["Represent values"]
+        direction LR
+        A["Logical tensor + accuracy"] --> B["Format + padded shape"]
+        B --> C["Row-major or tiled pages"]
+    end
+    subgraph Place["Place and address pages"]
+        direction LR
+        D["DRAM/L1 + interleaved/sharded"] --> E["Core or bank ownership"]
+        E --> F["Page offset"]
+        F --> G["Physical byte address"]
+    end
+    subgraph Verify["Verify the choice"]
+        direction LR
+        J["Measure bytes and stalls"] --> K["Revise if movement dominates"]
+    end
+    C --> D
+    H["Producer/consumer access pattern"] -.-> C
+    H -.-> D
+    I["Capacity + balance + reuse"] -.-> D
+    G --> J["Measure bytes and stalls"]

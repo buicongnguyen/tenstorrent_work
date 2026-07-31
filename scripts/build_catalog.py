@@ -62,14 +62,20 @@ def main() -> None:
         "dataflow. Levels 5 and 6 are advanced branches for measurement and scale.",
         "Level 7 is the lowest layer and should be architecture-qualified.",
         "",
-        "| Level | Abstraction | Main question | Reports |",
-        "|---:|---|---|---:|",
+        "The catalog tells you **what to read**. Each expert guide teaches "
+        "**how to reason** at that layer through contracts, a worked problem, "
+        "tradeoffs, evidence, and fully explained answers.",
+        "",
+        "| Level | Abstraction | Main question | Expert guide | Reports |",
+        "|---:|---|---|---|---:|",
     ]
 
     for layer in LAYERS:
         lines.append(
             f"| [{layer['number']}](#level-{layer['number']}-{layer['slug']}) "
-            f"| {layer['abstraction']} | {layer['focus']} | {len(layer['paths'])} |"
+            f"| {layer['abstraction']} | {layer['focus']} "
+            f"| [Reason through Level {layer['number']}](layers/{layer['guide']}) "
+            f"| {len(layer['paths'])} |"
         )
 
     sequence = 0
@@ -83,6 +89,14 @@ def main() -> None:
                 layer["focus"],
                 "",
                 f"**Start this level when:** {layer['start_when']}.",
+                "",
+                f"**Architect's task:** {layer['architect_task']}",
+                "",
+                f"**Reasoning path:** `{layer['reasoning_path']}`",
+                "",
+                f"[Open the Level {layer['number']} expert reasoning guide →]"
+                f"(layers/{layer['guide']})"
+                "{ .md-button .md-button--primary }",
                 "",
                 "| Step | Report | Upstream original | Learner edition | Status |",
                 "|---:|---|---|---|---|",

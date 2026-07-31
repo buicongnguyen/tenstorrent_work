@@ -61,6 +61,58 @@ def check_report_layers(errors: list[str]) -> None:
         anchor = f"#level-{layer['number']}-{layer['slug']}"
         if anchor not in catalog:
             errors.append(f"report catalog is missing layer anchor {anchor}")
+        for field in ("architect_task", "reasoning_path", "guide"):
+            if field not in layer:
+                errors.append(
+                    f"report layer {layer['number']} is missing curriculum field {field!r}"
+                )
+
+
+def check_layer_guides(errors: list[str]) -> None:
+    navigation = (ROOT / "mkdocs.yml").read_text(encoding="utf-8")
+    catalog = (DOCS / "reference" / "report-catalog.md").read_text(
+        encoding="utf-8"
+    )
+    guide_root = DOCS / "reference" / "layers"
+    required_sections = (
+        "## The architecture contract",
+        "## Architecture reasoning loop",
+        "## Worked problem",
+        "## Tradeoffs an architect tracks",
+        "## Questions and expert answers",
+        "## Evidence checklist",
+    )
+
+    for layer in LAYERS:
+        number = layer["number"]
+        filename = layer["guide"]
+        nav_path = f"reference/layers/{filename}"
+        catalog_path = f"layers/{filename}"
+        guide_path = guide_root / filename
+
+        if nav_path not in navigation:
+            errors.append(f"sidebar navigation is missing Level {number} expert guide")
+        if catalog_path not in catalog:
+            errors.append(f"report catalog is missing Level {number} expert guide link")
+        if not guide_path.exists():
+            errors.append(f"Level {number} expert guide is missing")
+            continue
+
+        content = guide_path.read_text(encoding="utf-8")
+        for section in required_sections:
+            if section not in content:
+                errors.append(f"Level {number} expert guide is missing {section!r}")
+
+        questions = len(re.findall(r"^### \d+\.", content, flags=re.MULTILINE))
+        answers = content.count('???+ note "Expert answer — reasoning"')
+        if questions != 4 or answers != 4:
+            errors.append(
+                f"Level {number} expert guide must contain four questions and "
+                f"four expanded answers; found {questions} questions and {answers} answers"
+            )
+
+        if f"layer{number}-" not in content:
+            errors.append(f"Level {number} expert guide is missing its reasoning diagram")
 
 
 def check_rewrite_sources(errors: list[str]) -> None:
@@ -291,6 +343,7 @@ def main() -> int:
     errors: list[str] = []
     check_upstream(errors)
     check_report_layers(errors)
+    check_layer_guides(errors)
     check_rewrite_sources(errors)
     check_links(errors)
     check_required_sections(errors)
