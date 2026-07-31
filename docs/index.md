@@ -8,20 +8,21 @@
   </p>
   <div class="hero-actions">
     <a class="md-button md-button--primary" href="start/learning-path/">Start the learning path</a>
-    <a class="md-button" href="reference/report-catalog/">Browse 57 source reports</a>
+    <a class="md-button" href="reference/report-catalog/">Browse reports by layer</a>
     <a class="md-button" href="resources/">Explore external &amp; ISA sources</a>
   </div>
 </div>
 
-## One stack, three useful levels
+## One stack, eight learning levels
 
 ![Tenstorrent software-to-hardware stack](assets/diagrams/stack.svg){ .atlas-diagram }
 
 <small>[Open full-size diagram](assets/diagrams/stack.svg) · [Diagram source](https://github.com/buicongnguyen/tenstorrent_work/blob/main/diagram_sources/stack.mmd)</small>
 
-You do not need to learn every API before understanding the system. Start with
-the recurring data path and add detail only where it explains correctness or
-performance.
+You do not need to learn every API before understanding the system. The Atlas
+groups all 57 reports into eight levels, from models and TT-NN down through
+tensor storage, kernels, TT-LLK, hardware, and ISA. Start with the recurring
+data path and add detail only where it explains correctness or performance.
 
 ## The recurring data path
 
@@ -55,11 +56,12 @@ questions for any operator:
 
     Graphs explain ownership, movement, ordering, or trade-offs—not decoration.
 
--   :material-map-marker-path:{ .lg .middle } **A prerequisite order**
+-   :material-map-marker-path:{ .lg .middle } **Eight layered groups**
 
     ---
 
-    The catalog becomes a learning path instead of a flat list of reports.
+    The catalog and sidebar move from basic, high-level concepts to advanced,
+    lower-level details instead of presenting one flat list.
 
 -   :material-code-braces:{ .lg .middle } **Code connection**
 

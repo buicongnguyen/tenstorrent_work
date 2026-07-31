@@ -75,16 +75,74 @@ nav:
   - Start here:
       - Learning path: start/learning-path.md
       - Architecture mental model: start/architecture-mental-model.md
-  - Improved reports:
-      - Tensor and memory layouts: rewrites/tensor_layouts/tensor_layouts.md
-      - Data formats: rewrites/data_formats/data_formats.md
-      - Matrix engine: rewrites/matrix_engine/matrix_engine.md
-      - TensorAccessor: rewrites/tensor_accessor/tensor_accessor.md
-      - Device allocator: rewrites/memory/allocator.md
-      - NoC tile transfer: rewrites/prog_examples/NoC_tile_transfer/NoC_tile_transfer.md
-      - Kernel code indexing: rewrites/code-indexing/kernel-code-indexing.md
-  - Upstream reference:
-      - Report catalog: reference/report-catalog.md
+  - Reports by layer:
+      - Layer overview (all 57): reference/report-catalog.md
+      - "Level 0 · Orientation":
+          - TT-NN stack overview: rewrites/ttnn/ttnn.md
+      - "Level 1 · Models and operators":
+          - New model bring-up: rewrites/ttnn/TTNN-model-bringup.md
+          - Convolution networks: rewrites/CNNs/ttcnn.md
+          - CNN bring-up and optimization: rewrites/CNNs/cnn_optimizations.md
+          - LLMs in TT-NN: rewrites/LLMs/llms.md
+          - vLLM integration: rewrites/LLMs/vLLM_integration.md
+          - FlashAttention: rewrites/FlashAttention/FlashAttention.md
+          - FlashDecode: rewrites/FlashAttention/FlashDecode.md
+          - Integral image operator: rewrites/ttnn_operators/intimg.md
+          - ViT in TT-NN: rewrites/ViT-TTNN/vit.md
+          - ViT for Blackhole: rewrites/ViT-TTNN/vit_bh.md
+          - YOLOv4 in TT-NN: rewrites/YoloV4-TTNN/yolov4.md
+      - "Level 2 · TT-NN runtime":
+          - Sub-devices: rewrites/SubDevices/SubDevices.md
+          - Tensor serialization: rewrites/tensor_serialization/tensor_serialization.md
+          - Graph tracing: rewrites/ttnn/graph-tracing.md
+          - Operation tracing: rewrites/ttnn/operation-tracing.md
+          - Comparison mode: rewrites/ttnn/comparison-mode.md
+      - "Level 3 · Tensor and memory":
+          - Tensor and memory layouts: rewrites/tensor_layouts/tensor_layouts.md
+          - Data formats: rewrites/data_formats/data_formats.md
+          - Tensor sharding: rewrites/tensor_sharding/tensor_sharding.md
+          - Device allocator: rewrites/memory/allocator.md
+          - TensorAccessor: rewrites/tensor_accessor/tensor_accessor.md
+          - TensorAccessor iterators: rewrites/tensor_accessor/tensor_accessor_iterator.md
+          - Multicore tensor padding: rewrites/prog_examples/pad_multi_core/pad_multi_core.md
+          - Multicore data sharding: rewrites/prog_examples/shard_data_rm/shard_data_rm.md
+      - "Level 4 · Kernels and dataflow":
+          - NoC tile transfer: rewrites/prog_examples/NoC_tile_transfer/NoC_tile_transfer.md
+          - Data multicasting: rewrites/prog_examples/multicast/multicast.md
+          - Matmul data reuse: rewrites/prog_examples/matmul_multi_core_optimized/data_reuse.md
+          - Matmul data multicast: rewrites/prog_examples/matmul_multi_core_optimized/data_mcast.md
+          - Multicore optimized matmul: rewrites/prog_examples/matmul_multi_core_optimized/matmul_multi_core_optimized.md
+          - SFPU eltwise chain: rewrites/prog_examples/sfpu_eltwise_chain/sfpu_eltwise_chain.md
+          - Named kernel arguments: rewrites/NamedKernelArgs/kernel_args_as_parameters.md
+          - Kernel code indexing: rewrites/code-indexing/kernel-code-indexing.md
+      - "Level 5 · Performance and debugging":
+          - Kernel debugging tips: rewrites/Debugging/Kernel_Debugging_Tips.md
+          - DEVICE_PRINT migration: rewrites/Debugging/DEVICE_PRINT_replaces_DPRINT.md
+          - Kernel accuracy tips: rewrites/op_kernel_dev/accuracy_tips/accuracy_tips.md
+          - Metal profiler: rewrites/MetalProfiler/metal-profiler.md
+          - Real-time profiler: rewrites/real_time_profiler/getting-started.md
+          - Hardware performance counters: rewrites/PerfCounters/perf-counters.md
+          - PCIe bandwidth: rewrites/PCIe_bandwidth/PCIe_bandwidth.md
+          - Saturating DRAM bandwidth: rewrites/Saturating_DRAM_bandwidth/Saturating_DRAM_bandwidth.md
+          - Matrix multiply FLOPS: rewrites/GEMM_FLOPS/GEMM_FLOPS.md
+          - Advanced model optimizations: rewrites/AdvancedPerformanceOptimizationsForModels/AdvancedPerformanceOptimizationsForModels.md
+      - "Level 6 · Multi-device systems":
+          - Programming a mesh with TT-NN: rewrites/Programming_Mesh_of_Devices/Programming_Mesh_of_Devices_with_TT-NN.md
+          - CCL performance practices: rewrites/Programming_Mesh_of_Devices/CCL_Performance_Best_Practices.md
+          - Programming multiple meshes: rewrites/Programming_Multiple_Meshes/Programming_Multiple_Meshes.md
+          - Basic Ethernet multichip: rewrites/EthernetMultichip/BasicEthernetGuide.md
+          - TT-Fabric architecture: rewrites/TT-Fabric/TT-Fabric-Architecture.md
+          - TT-Metalium Distributed: rewrites/TT-Distributed/TT-Distributed-Architecture-1219.md
+          - Multi-host mesh runtime: rewrites/TT-Distributed/MultiHostMeshRuntime.md
+          - Host-device PCIe sockets: rewrites/TT-Distributed/HDSocketsModel.md
+          - Mesh migration guide: rewrites/TT-Distributed/TTMeshMigrationGuide.md
+      - "Level 7 · Hardware, TT-LLK, ISA":
+          - Matrix engine: rewrites/matrix_engine/matrix_engine.md
+          - Hardware data-format reconfiguration: rewrites/data_formats/reconfig_data_format.md
+          - Shared-exponent precision suite: rewrites/data_formats/shared_exponent_precision_testing_suite/Readme.md
+          - Special values in Tensix compute: rewrites/Handling_Special_Value/special_values.md
+          - Blackhole bring-up guide: rewrites/Blackhole/BlackholeBringUpProgrammingGuide.md
+  - Project reference:
       - Rewrite roadmap: reference/rewrite-roadmap.md
       - Provenance and updates: reference/provenance.md
   - External & ISA:

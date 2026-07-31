@@ -8,6 +8,8 @@ import sys
 from pathlib import Path
 from urllib.parse import unquote
 
+from report_layers import LAYERS, report_paths
+
 
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs"
@@ -30,6 +32,35 @@ def check_upstream(errors: list[str]) -> None:
     provenance = (ROOT / "upstream" / "UPSTREAM.md").read_text(encoding="utf-8")
     if EXPECTED_COMMIT not in provenance:
         errors.append("UPSTREAM.md does not contain the expected full commit")
+
+
+def check_report_layers(errors: list[str]) -> None:
+    upstream_paths = {
+        path.relative_to(UPSTREAM).as_posix() for path in markdown_files(UPSTREAM)
+    }
+    ordered_paths = report_paths()
+    duplicates = sorted({path for path in ordered_paths if ordered_paths.count(path) > 1})
+    if duplicates:
+        errors.append(f"report layer map contains duplicates: {duplicates}")
+
+    missing = sorted(upstream_paths - set(ordered_paths))
+    unknown = sorted(set(ordered_paths) - upstream_paths)
+    if missing:
+        errors.append(f"report layer map is missing: {missing}")
+    if unknown:
+        errors.append(f"report layer map contains unknown paths: {unknown}")
+
+    navigation = (ROOT / "mkdocs.yml").read_text(encoding="utf-8")
+    for path in ordered_paths:
+        rewrite_path = f"rewrites/{path}"
+        if rewrite_path not in navigation:
+            errors.append(f"sidebar navigation is missing {rewrite_path}")
+
+    catalog = (DOCS / "reference" / "report-catalog.md").read_text(encoding="utf-8")
+    for layer in LAYERS:
+        anchor = f"#level-{layer['number']}-{layer['slug']}"
+        if anchor not in catalog:
+            errors.append(f"report catalog is missing layer anchor {anchor}")
 
 
 def check_rewrite_sources(errors: list[str]) -> None:
@@ -121,6 +152,7 @@ def check_diagrams(errors: list[str]) -> None:
 def main() -> int:
     errors: list[str] = []
     check_upstream(errors)
+    check_report_layers(errors)
     check_rewrite_sources(errors)
     check_links(errors)
     check_required_sections(errors)

@@ -1,0 +1,150 @@
+"""Canonical high-level-to-low-level ordering for the TT-Metal reports."""
+
+from __future__ import annotations
+
+
+LAYERS = (
+    {
+        "number": 0,
+        "slug": "orientation",
+        "title": "Orientation and stack",
+        "abstraction": "Whole stack",
+        "focus": "Vocabulary, boundaries, and the TT-NN to hardware mental model.",
+        "start_when": "you are new to Tenstorrent or cannot yet place TT-NN, TT-Metalium, kernels, and Tensix on one diagram",
+        "paths": (
+            "ttnn/ttnn.md",
+        ),
+    },
+    {
+        "number": 1,
+        "slug": "models-operators",
+        "title": "Models and operators",
+        "abstraction": "Highest",
+        "focus": "See how complete workloads and operators use TT-NN.",
+        "start_when": "you can name the major stack layers and want an application-level reason for the lower-level machinery",
+        "paths": (
+            "ttnn/TTNN-model-bringup.md",
+            "CNNs/ttcnn.md",
+            "CNNs/cnn_optimizations.md",
+            "LLMs/llms.md",
+            "LLMs/vLLM_integration.md",
+            "FlashAttention/FlashAttention.md",
+            "FlashAttention/FlashDecode.md",
+            "ttnn_operators/intimg.md",
+            "ViT-TTNN/vit.md",
+            "ViT-TTNN/vit_bh.md",
+            "YoloV4-TTNN/yolov4.md",
+        ),
+    },
+    {
+        "number": 2,
+        "slug": "ttnn-runtime",
+        "title": "TT-NN runtime and observability",
+        "abstraction": "High",
+        "focus": "Devices, tracing, comparison, serialization, and runtime behavior.",
+        "start_when": "you understand what an operator does and now need to see how TT-NN schedules, records, and checks it",
+        "paths": (
+            "SubDevices/SubDevices.md",
+            "tensor_serialization/tensor_serialization.md",
+            "ttnn/graph-tracing.md",
+            "ttnn/operation-tracing.md",
+            "ttnn/comparison-mode.md",
+        ),
+    },
+    {
+        "number": 3,
+        "slug": "tensor-memory",
+        "title": "Tensor representation and memory",
+        "abstraction": "Middle",
+        "focus": "Tiles, formats, layouts, sharding, allocation, and addressing.",
+        "start_when": "you can follow an operator call but cannot yet predict where its bytes live or how a kernel addresses them",
+        "paths": (
+            "tensor_layouts/tensor_layouts.md",
+            "data_formats/data_formats.md",
+            "tensor_sharding/tensor_sharding.md",
+            "memory/allocator.md",
+            "tensor_accessor/tensor_accessor.md",
+            "tensor_accessor/tensor_accessor_iterator.md",
+            "prog_examples/pad_multi_core/pad_multi_core.md",
+            "prog_examples/shard_data_rm/shard_data_rm.md",
+        ),
+    },
+    {
+        "number": 4,
+        "slug": "kernels-dataflow",
+        "title": "TT-Metal kernels and dataflow",
+        "abstraction": "Low",
+        "focus": "Host programs, reader/compute/writer kernels, NoC, and multicore flows.",
+        "start_when": "you understand tensor storage and want to trace pages and tiles through actual device kernels",
+        "paths": (
+            "prog_examples/NoC_tile_transfer/NoC_tile_transfer.md",
+            "prog_examples/multicast/multicast.md",
+            "prog_examples/matmul_multi_core_optimized/data_reuse.md",
+            "prog_examples/matmul_multi_core_optimized/data_mcast.md",
+            "prog_examples/matmul_multi_core_optimized/matmul_multi_core_optimized.md",
+            "prog_examples/sfpu_eltwise_chain/sfpu_eltwise_chain.md",
+            "NamedKernelArgs/kernel_args_as_parameters.md",
+            "code-indexing/kernel-code-indexing.md",
+        ),
+    },
+    {
+        "number": 5,
+        "slug": "performance-debugging",
+        "title": "Performance and debugging",
+        "abstraction": "Advanced cross-layer",
+        "focus": "Measure bottlenecks, debug kernels, and optimize with evidence.",
+        "start_when": "a program is correct and you need to explain its latency, bandwidth, utilization, or failure mode",
+        "paths": (
+            "Debugging/Kernel_Debugging_Tips.md",
+            "Debugging/DEVICE_PRINT_replaces_DPRINT.md",
+            "op_kernel_dev/accuracy_tips/accuracy_tips.md",
+            "MetalProfiler/metal-profiler.md",
+            "real_time_profiler/getting-started.md",
+            "PerfCounters/perf-counters.md",
+            "PCIe_bandwidth/PCIe_bandwidth.md",
+            "Saturating_DRAM_bandwidth/Saturating_DRAM_bandwidth.md",
+            "GEMM_FLOPS/GEMM_FLOPS.md",
+            "AdvancedPerformanceOptimizationsForModels/AdvancedPerformanceOptimizationsForModels.md",
+        ),
+    },
+    {
+        "number": 6,
+        "slug": "distributed-systems",
+        "title": "Multi-device and distributed systems",
+        "abstraction": "Advanced system scale",
+        "focus": "Meshes, Ethernet, collectives, fabric, and multi-host execution.",
+        "start_when": "you can reason about one device and are ready to extend ownership, routing, and synchronization across devices or hosts",
+        "paths": (
+            "Programming_Mesh_of_Devices/Programming_Mesh_of_Devices_with_TT-NN.md",
+            "Programming_Mesh_of_Devices/CCL_Performance_Best_Practices.md",
+            "Programming_Multiple_Meshes/Programming_Multiple_Meshes.md",
+            "EthernetMultichip/BasicEthernetGuide.md",
+            "TT-Fabric/TT-Fabric-Architecture.md",
+            "TT-Distributed/TT-Distributed-Architecture-1219.md",
+            "TT-Distributed/MultiHostMeshRuntime.md",
+            "TT-Distributed/HDSocketsModel.md",
+            "TT-Distributed/TTMeshMigrationGuide.md",
+        ),
+    },
+    {
+        "number": 7,
+        "slug": "hardware-isa",
+        "title": "Hardware, TT-LLK, and ISA",
+        "abstraction": "Lowest",
+        "focus": "Tensix engines, formats at the hardware boundary, and architecture-specific details.",
+        "start_when": "kernel-level behavior is no longer enough and you need to explain an engine, register, instruction, or architecture constraint",
+        "paths": (
+            "matrix_engine/matrix_engine.md",
+            "data_formats/reconfig_data_format.md",
+            "data_formats/shared_exponent_precision_testing_suite/Readme.md",
+            "Handling_Special_Value/special_values.md",
+            "Blackhole/BlackholeBringUpProgrammingGuide.md",
+        ),
+    },
+)
+
+
+def report_paths() -> tuple[str, ...]:
+    """Return every report path in curriculum order."""
+
+    return tuple(path for layer in LAYERS for path in layer["paths"])
