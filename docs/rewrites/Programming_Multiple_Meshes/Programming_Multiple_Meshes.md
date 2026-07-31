@@ -67,9 +67,51 @@ Code references remain in the [pinned official report](https://github.com/tensto
 the full rewrite, each important symbol will be mapped to its role in the
 host → data-movement → compute → data-movement path.
 
+## Verify your understanding
+
+The answers below are derived from the
+[pinned original report](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/Programming_Multiple_Meshes/Programming_Multiple_Meshes.md). They make the report's
+architecture reasoning explicit; generation-sensitive facts remain scoped to that source.
+
+### 1. What concrete bottleneck, correctness constraint, or programming task is this report addressing?
+
+???+ note "Expert answer — source-grounded reasoning"
+    The report extends programming from one mesh to several meshes and hosts by
+    describing physical topologies, mesh-graph descriptors, rank bindings, launch,
+    multiprocessing, and fabric configuration. The central difficulty is consistent
+    global identity across independent controllers.
+
+### 2. What is one invariant that must remain true?
+
+???+ note "Expert answer — source-grounded reasoning"
+    Every physical device must have one unambiguous owner/rank, every process must
+    interpret the same mesh graph and bindings, and cross-mesh communication must be
+    configured before dependent work is submitted. Conflicting ownership or collective
+    order can hang the system.
+
+### 3. Trace one unit of data or one control event from producer to consumer.
+
+???+ note "Expert answer — source-grounded reasoning"
+    A mesh-graph descriptor defines logical meshes and connectivity → `tt-run`/the
+    launcher binds ranks and processes to local devices → each process opens its mesh →
+    fabric links and routes are configured → local SPMD work executes → cross-mesh
+    operations synchronize through the shared topology.
+
+### 4. Which claims are architecture-specific, and which form a durable mental model across Tenstorrent generations?
+
+???+ note "Expert answer — source-grounded reasoning"
+    **Snapshot-specific.** Descriptor schema, rank-launch syntax, process model,
+    supported topologies, fabric modes, and resource limits are current-runtime details.
+
+    **Durable model.** Keep topology and rank assignment declarative, enforce single
+    ownership, separate launch/control-plane coordination from data-plane traffic,
+    validate the graph on every process, and make distributed failure diagnostics rank
+    aware.
+
 ## Source and delta
 
 - **Original source:** [`tech_reports/Programming_Multiple_Meshes/Programming_Multiple_Meshes.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/Programming_Multiple_Meshes/Programming_Multiple_Meshes.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/Programming_Multiple_Meshes/Programming_Multiple_Meshes.md`
 - **Current delta:** provenance, source metrics, outline, improvement checklist,
-  and verification prompts. No new technical claims have been introduced yet.
+  and source-grounded verification answers. Generation-sensitive claims remain
+  scoped to the pinned source snapshot.

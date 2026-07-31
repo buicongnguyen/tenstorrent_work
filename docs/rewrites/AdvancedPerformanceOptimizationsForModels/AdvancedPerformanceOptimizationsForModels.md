@@ -262,6 +262,117 @@ Use DeepWiki to discover files, then inspect these official locations:
 `main` links are intentionally living references. For a durable research note,
 replace them with the exact commit being studied and record the access date.
 
+## Verify your understanding
+
+### 1. Why must cold-run and warm-run latency be reported separately?
+
+???+ note "Expert answer — performance reasoning"
+    A cold invocation can include operation validation, program construction,
+    kernel JIT compilation, binary loading, buffer initialization, and the first
+    dispatch. A matching warm invocation can reuse the program-cache entry and
+    pays mainly runtime-argument update, dispatch, and device execution costs.
+
+    Combining them answers neither startup latency nor steady-state throughput.
+    Report at least the first call, stabilized repeated calls, cache state, and
+    synchronization boundary. If trace is evaluated, report trace capture and
+    replay separately as a third regime.
+
+### 2. What does Fast Dispatch's command prefetcher move, and how is that different from a reader kernel prefetching tensor tiles?
+
+???+ note "Expert answer — performance reasoning"
+    Fast Dispatch prefetch moves **command pages** from the host-visible issue
+    queue toward device dispatch firmware. Its consumer is the dispatcher, and
+    its goal is to keep scheduling work available.
+
+    A reader kernel prefetch moves **tensor pages or tiles** from DRAM or another
+    core into worker-local L1/circular buffers. Its consumer is a compute kernel,
+    and its goal is to hide payload latency. Both prepare future work, but they
+    operate on different data, cores, queues, APIs, and bottlenecks.
+
+### 3. Why does a program-cache hit not imply that Metal Trace is active?
+
+???+ note "Expert answer — performance reasoning"
+    A cache hit reuses a previously compiled/specialized program for one
+    operation configuration. Normal host code can still rebuild and enqueue the
+    operation sequence on every iteration.
+
+    Metal Trace is a separate capture/replay lifecycle: after programs are
+    prepared, it records a sequence of dispatch commands into a trace buffer and
+    later replays that sequence. Cache removes compilation/construction work;
+    trace removes repeated sequence construction/submission gaps. A warm cached
+    run is therefore the correct baseline for measuring trace's additional value.
+
+### 4. Which addresses and lifetimes must remain stable for the trace pattern you selected?
+
+???+ note "Expert answer — performance reasoning"
+    Any address encoded by captured commands must still identify compatible
+    storage at replay. In the common persistent-I/O pattern, input and output
+    device tensors keep the same buffer addresses, shape, layout, memory config,
+    and allocation lifetime from capture through the final replay. The trace
+    allocation and trace ID also remain valid.
+
+    Contents may change through a correctly ordered transfer, but captured
+    storage cannot be freed, reallocated, or replaced by an incompatible tensor.
+    Intermediates whose addresses are embedded by captured programs require the
+    same stability even if application code does not name them directly.
+
+### 5. Draw the minimum two events needed for CQ1 to write an input that CQ0 consumes without early read or overwrite.
+
+???+ note "Expert answer — queue-dependency reasoning"
+    Use two directional happens-before edges for a reused input buffer:
+
+    ```text
+    CQ1: write input n ── record input_ready ───────────────┐
+                                                           v
+    CQ0:                 wait input_ready ── consume n ── record consumed
+                                                              │
+    CQ1: wait consumed ── overwrite buffer with input n+1 <───┘
+    ```
+
+    `input_ready` prevents CQ0 from reading bytes still in flight. `consumed`
+    prevents CQ1 from overwriting bytes that CQ0 can still read. Queue-local
+    order supplies the remaining edges; a global synchronization would be
+    correct but would destroy the intended overlap.
+
+### 6. Which timeline signature suggests trace, and which suggests multiple command queues?
+
+???+ note "Expert answer — profiler reasoning"
+    Trace is suggested when replay has a very small host submission zone and a
+    dense, repeated device sequence whose individual kernel durations resemble
+    the warm baseline; the improvement comes from shrinking gaps between those
+    kernels.
+
+    Multiple command queues are suggested when timeline lanes show transfer for
+    iteration `n+1` overlapping compute for iteration `n`, with event waits only
+    at buffer dependencies. If kernels themselves become shorter, another change
+    occurred; trace and queue overlap do not reduce the kernel's arithmetic.
+
+### 7. Give one case where non-blocking execution changes overlap but not total device work.
+
+???+ note "Expert answer — scheduling reasoning"
+    The host can enqueue inference non-blocking, prepare or copy metadata for the
+    next batch, and synchronize only when it needs the current output. Host work
+    then overlaps device execution, so wall-clock application latency can fall.
+
+    The device still executes the same kernels, reads/writes the same tensor
+    bytes, and performs the same FLOPs. If the host immediately performs a
+    blocking read, the wait merely moves later and there is no useful overlap.
+
+### 8. Translate Fast Dispatch, trace, and multiple CQs into vendor-neutral NPU runtime principles.
+
+???+ note "Expert answer — transferable architecture reasoning"
+    **Fast Dispatch:** place repeated scheduling near the accelerator, prefetch
+    command descriptors, and amortize host/device submission latency.
+
+    **Trace:** capture and replay a stable command graph when repeated host graph
+    construction—not device kernels—is the bottleneck; preserve every encoded
+    resource address and dependency.
+
+    **Multiple command queues:** use independent engines/streams concurrently,
+    but represent cross-stream producer, consumer, and reuse edges explicitly.
+    Across vendors, begin with the timeline, name the overhead being removed,
+    state the lifetime invariant, and verify that correctness is unchanged.
+
 ## Source and delta
 
 - **Original source:** [`tech_reports/AdvancedPerformanceOptimizationsForModels/AdvancedPerformanceOptimizationsForModels.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/AdvancedPerformanceOptimizationsForModels/AdvancedPerformanceOptimizationsForModels.md)

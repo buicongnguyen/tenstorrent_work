@@ -63,9 +63,52 @@ Code references remain in the [pinned official report](https://github.com/tensto
 the full rewrite, each important symbol will be mapped to its role in the
 host → data-movement → compute → data-movement path.
 
+## Verify your understanding
+
+The answers below are derived from the
+[pinned original report](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/GEMM_FLOPS/GEMM_FLOPS.md). They make the report's
+architecture reasoning explicit; generation-sensitive facts remain scoped to that source.
+
+### 1. What concrete bottleneck, correctness constraint, or programming task is this report addressing?
+
+???+ note "Expert answer — source-grounded reasoning"
+    The report establishes a defensible GEMM throughput ceiling and a microbenchmark
+    method that distinguishes matrix-engine issue capacity from losses due to shapes,
+    data movement, synchronization, compilation, or profiling. It turns a vague “slow
+    GEMM” claim into separable utilization hypotheses.
+
+### 2. What is one invariant that must remain true?
+
+???+ note "Expert answer — source-grounded reasoning"
+    The FLOP count, dimensions, fidelity, clock assumption, iteration window, and timing
+    boundaries must describe the same work, while output correctness is checked
+    independently. Cold compilation and host setup must not be counted as steady-state
+    device GEMM time.
+
+### 3. Trace one unit of data or one control event from producer to consumer.
+
+???+ note "Expert answer — source-grounded reasoning"
+    Input tiles are read and unpacked → the matrix engine issues multiply-accumulate
+    work across the K dimension → destination state accumulates → pack emits output
+    tiles → a device profiler measures the steady kernel interval → host code converts
+    the known operation count and elapsed time to FLOP/s.
+
+### 4. Which claims are architecture-specific, and which form a durable mental model across Tenstorrent generations?
+
+???+ note "Expert answer — source-grounded reasoning"
+    **Snapshot-specific.** Native matrix shape, clock, fidelity passes, destination
+    capacity, per-core peak, and measured TFLOPS are generation- and
+    configuration-specific.
+
+    **Durable model.** State the arithmetic convention, build a compute-saturating
+    microbenchmark, separate useful-lane utilization from hardware issue rate, validate
+    results, warm the runtime, and compare observed throughput with a clearly derived
+    roofline.
+
 ## Source and delta
 
 - **Original source:** [`tech_reports/GEMM_FLOPS/GEMM_FLOPS.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/GEMM_FLOPS/GEMM_FLOPS.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/GEMM_FLOPS/GEMM_FLOPS.md`
 - **Current delta:** provenance, source metrics, outline, improvement checklist,
-  and verification prompts. No new technical claims have been introduced yet.
+  and source-grounded verification answers. Generation-sensitive claims remain
+  scoped to the pinned source snapshot.

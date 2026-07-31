@@ -93,6 +93,59 @@ stored page → unpack / interpret format → compute representation
 The ISA repository is an **official living source**; this learner page remains
 pinned to the TT-Metal report commit above.
 
+## Verify your understanding
+
+### 1. Why can two values with equal mantissas quantize differently when placed in blocks with different maximum exponents?
+
+???+ note "Expert answer — numerical reasoning"
+    In block floating point, a mantissa is not interpreted independently: all
+    16 values align to the block's selected exponent. If another value raises
+    that maximum exponent, the value under study must shift farther before its
+    retained mantissa bits are chosen. More low-order information is discarded,
+    so its quantization step grows even though its original mantissa bits match
+    the value in the other block.
+
+    The correct unit of analysis is therefore the entire exponent-sharing
+    group. Per-value error can change when only a neighboring value changes.
+
+### 2. For a halfway discarded value, what property of the retained result decides whether to increment?
+
+???+ note "Expert answer — rounding reasoning"
+    Round-to-nearest, ties-to-even examines the least-significant **retained**
+    bit. At an exact half-way case, increment if the unincremented retained
+    mantissa is odd; keep it if it is already even. Both candidates are equally
+    distant, so this rule selects the candidate with an even low bit and avoids
+    a systematic upward bias over many ties.
+
+    Bits below the round bit must all be zero for the case to be an exact tie;
+    any lower one makes the discarded part greater than half.
+
+### 3. What happens when rounding would overflow the retained mantissa?
+
+???+ note "Expert answer — format-boundary reasoning"
+    Under the rule documented by the pinned report, the retained mantissa clamps
+    to all ones. The converter does **not** increase the shared exponent and
+    renormalize all 16 values, because that would change every member of a block
+    after the exponent-selection phase.
+
+    A reference model that propagates the carry into a recomputed block exponent
+    therefore implements a different quantizer and can disagree even when both
+    appear reasonable in ordinary floating-point terms.
+
+### 4. Design a 16-value test block with one large outlier. Compare its error with the same small values placed in a block without that outlier.
+
+???+ note "Expert answer — experiment design"
+    Use fifteen small, non-power-of-two values near a rounding boundary—for
+    example variations around `1.0`—and one value with a much larger exponent,
+    such as `256.0`. Encode this block, then encode the same fifteen small values
+    in a second block whose sixteenth value is also near `1.0`.
+
+    The outlier selects a larger shared exponent in the first block. The small
+    values shift farther, retain fewer useful low bits, and show larger absolute
+    or relative error; some narrow formats may collapse several distinct small
+    inputs to the same code. Record encoded bits as well as error so the causal
+    boundary is visible.
+
 ## Source and delta
 
 - **Original:** [Data Formats at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/data_formats/data_formats.md)

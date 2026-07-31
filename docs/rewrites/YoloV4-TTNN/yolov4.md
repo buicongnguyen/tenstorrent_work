@@ -67,9 +67,50 @@ Code references remain in the [pinned official report](https://github.com/tensto
 the full rewrite, each important symbol will be mapped to its role in the
 host → data-movement → compute → data-movement path.
 
+## Verify your understanding
+
+The answers below are derived from the
+[pinned original report](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/YoloV4-TTNN/yolov4.md). They make the report's
+architecture reasoning explicit; generation-sensitive facts remain scoped to that source.
+
+### 1. What concrete bottleneck, correctness constraint, or programming task is this report addressing?
+
+???+ note "Expert answer — source-grounded reasoning"
+    The report maps YOLOv4's staged convolutional backbone, route/shortcut branches,
+    neck, and three detection heads into TT-NN, then optimizes layouts and convolution
+    configurations while preserving multi-scale feature semantics. Branch-heavy
+    dataflow makes intermediate validation especially important.
+
+### 2. What is one invariant that must remain true?
+
+???+ note "Expert answer — source-grounded reasoning"
+    Every downsample, residual, route, upsample, and concatenation must produce the
+    reference shape and channel order; the three head outputs must remain associated
+    with their intended spatial scales and anchor/post-processing interpretation.
+
+### 3. Trace one unit of data or one control event from producer to consumer.
+
+???+ note "Expert answer — source-grounded reasoning"
+    An image enters TT preprocessing → five downsampling/backbone stages produce
+    multi-scale feature maps → route/shortcut tensors feed the neck → upsample and
+    concatenation combine high- and low-resolution features → three heads emit detection
+    tensors → host post-processing decodes boxes/classes.
+
+### 4. Which claims are architecture-specific, and which form a durable mental model across Tenstorrent generations?
+
+???+ note "Expert answer — source-grounded reasoning"
+    **Snapshot-specific.** Model-specific configs, convolution program choices, shard
+    layouts, supported image/batch sizes, weight-download path, device grid, and
+    reported performance depend on the TT-NN snapshot and chip.
+
+    **Durable model.** Validate branch boundaries and shapes, name multi-scale tensors
+    explicitly, follow each consumer before choosing layout, avoid repeated conversion
+    at concatenations, and test raw heads separately from host decoding.
+
 ## Source and delta
 
 - **Original source:** [`tech_reports/YoloV4-TTNN/yolov4.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/YoloV4-TTNN/yolov4.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/YoloV4-TTNN/yolov4.md`
 - **Current delta:** provenance, source metrics, outline, improvement checklist,
-  and verification prompts. No new technical claims have been introduced yet.
+  and source-grounded verification answers. Generation-sensitive claims remain
+  scoped to the pinned source snapshot.

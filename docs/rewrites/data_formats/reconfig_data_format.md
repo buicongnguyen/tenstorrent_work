@@ -46,9 +46,50 @@ Code references remain in the [pinned official report](https://github.com/tensto
 the full rewrite, each important symbol will be mapped to its role in the
 host → data-movement → compute → data-movement path.
 
+## Verify your understanding
+
+The answers below are derived from the
+[pinned original report](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/data_formats/reconfig_data_format.md). They make the report's
+architecture reasoning explicit; generation-sensitive facts remain scoped to that source.
+
+### 1. What concrete bottleneck, correctness constraint, or programming task is this report addressing?
+
+???+ note "Expert answer — source-grounded reasoning"
+    The task is to let a long-running kernel consume or produce circular buffers with
+    different data formats by reconfiguring unpacker and packer hardware at safe points,
+    avoiding a separate kernel solely for a format boundary.
+
+### 2. What is one invariant that must remain true?
+
+???+ note "Expert answer — source-grounded reasoning"
+    When a tile is unpacked or packed, the hardware configuration must describe the
+    format actually stored in that circular buffer. Reconfiguration must occur after
+    prior work using the old format is complete and before any consumer interprets bytes
+    using the new format.
+
+### 3. Trace one unit of data or one control event from producer to consumer.
+
+???+ note "Expert answer — source-grounded reasoning"
+    A producer publishes a tile in its declared CB format → the compute kernel waits for
+    ownership → `reconfig_data_format` selects the required input interpretation →
+    unpack and math consume it → `pack_reconfig_data_format` selects the output encoding
+    → pack writes the destination tile → the output CB is published.
+
+### 4. Which claims are architecture-specific, and which form a durable mental model across Tenstorrent generations?
+
+???+ note "Expert answer — source-grounded reasoning"
+    **Snapshot-specific.** Supported format pairs, reconfiguration instructions, CB
+    identifiers, APIs, and unpacker/packer state are tied to the Tensix generation and
+    the pinned low-level kernel interface.
+
+    **Durable model.** Treat representation as part of a producer-consumer protocol.
+    Change interpretation only at a quiescent boundary, make format metadata agree with
+    physical bytes, and separate conversion cost from arithmetic cost.
+
 ## Source and delta
 
 - **Original source:** [`tech_reports/data_formats/reconfig_data_format.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/data_formats/reconfig_data_format.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/data_formats/reconfig_data_format.md`
 - **Current delta:** provenance, source metrics, outline, improvement checklist,
-  and verification prompts. No new technical claims have been introduced yet.
+  and source-grounded verification answers. Generation-sensitive claims remain
+  scoped to the pinned source snapshot.

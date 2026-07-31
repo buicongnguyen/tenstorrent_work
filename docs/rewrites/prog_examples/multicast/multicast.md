@@ -67,9 +67,50 @@ Code references remain in the [pinned official report](https://github.com/tensto
 the full rewrite, each important symbol will be mapped to its role in the
 host → data-movement → compute → data-movement path.
 
+## Verify your understanding
+
+The answers below are derived from the
+[pinned original report](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/prog_examples/multicast/multicast.md). They make the report's
+architecture reasoning explicit; generation-sensitive facts remain scoped to that source.
+
+### 1. What concrete bottleneck, correctness constraint, or programming task is this report addressing?
+
+???+ note "Expert answer — source-grounded reasoning"
+    The example demonstrates one coordinator sending identical data to a group of
+    receiver cores through a NoC multicast, replacing repeated point-to-point transfers
+    while making receiver readiness and completion explicit. The optimization is valid
+    only when all receivers need the same payload.
+
+### 2. What is one invariant that must remain true?
+
+???+ note "Expert answer — source-grounded reasoning"
+    Every target must reserve valid destination storage before the coordinator writes,
+    and no receiver may publish the page before arrival. The sender may reuse its source
+    only after the required completion/acknowledgement contract is satisfied.
+
+### 3. Trace one unit of data or one control event from producer to consumer.
+
+???+ note "Expert answer — source-grounded reasoning"
+    The host creates coordinator/receiver kernels, CBs, ranges, and semaphores →
+    receivers reserve pages and signal readiness → the coordinator issues one multicast
+    to the physical destination rectangle → transport completes → receivers
+    signal/publish arrival → local consumers process their copies.
+
+### 4. Which claims are architecture-specific, and which form a durable mental model across Tenstorrent generations?
+
+???+ note "Expert answer — source-grounded reasoning"
+    **Snapshot-specific.** NoC multicast APIs, coordinate conversion, rectangular range
+    restrictions, semaphore placement, alignment, and destination encoding depend on
+    TT-Metal and the chip topology.
+
+    **Durable model.** Use multicast for genuine one-to-many reuse, prove all
+    destinations are ready, distinguish transport completion from local publication, and
+    compare saved source traffic with synchronization and fanout cost.
+
 ## Source and delta
 
 - **Original source:** [`tech_reports/prog_examples/multicast/multicast.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/prog_examples/multicast/multicast.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/prog_examples/multicast/multicast.md`
 - **Current delta:** provenance, source metrics, outline, improvement checklist,
-  and verification prompts. No new technical claims have been introduced yet.
+  and source-grounded verification answers. Generation-sensitive claims remain
+  scoped to the pinned source snapshot.

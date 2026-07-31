@@ -49,9 +49,49 @@ Code references remain in the [pinned official report](https://github.com/tensto
 the full rewrite, each important symbol will be mapped to its role in the
 host → data-movement → compute → data-movement path.
 
+## Verify your understanding
+
+The answers below are derived from the
+[pinned original report](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/tensor_sharding/tensor_sharding.md). They make the report's
+architecture reasoning explicit; generation-sensitive facts remain scoped to that source.
+
+### 1. What concrete bottleneck, correctness constraint, or programming task is this report addressing?
+
+???+ note "Expert answer — source-grounded reasoning"
+    The report explains 2D and experimental N-D sharding: map tensor regions/pages onto
+    a core grid so kernels gain parallel local access, while choosing height, width, or
+    block patterns that match downstream work.
+
+### 2. What is one invariant that must remain true?
+
+???+ note "Expert answer — source-grounded reasoning"
+    The shard mapping must cover the intended logical tensor without gaps or unintended
+    duplication; shard shape, core order/orientation, padded extent, and memory layout
+    must be interpreted identically by allocation, data movement, and compute.
+
+### 3. Trace one unit of data or one control event from producer to consumer.
+
+???+ note "Expert answer — source-grounded reasoning"
+    A logical tensor is converted to pages → a shard specification partitions the page
+    grid → mapper/data movement assigns each shard to one core's L1 → local kernels
+    consume their regions → collectives or resharding handle cross-shard dependencies →
+    composition restores logical order if needed.
+
+### 4. Which claims are architecture-specific, and which form a durable mental model across Tenstorrent generations?
+
+???+ note "Expert answer — source-grounded reasoning"
+    **Snapshot-specific.** `TensorMemoryLayout` values, ND-sharding support, core-grid
+    syntax, shard orientation, valid shapes, and optimal layouts depend on TT-NN and
+    hardware.
+
+    **Durable model.** Partition from consumer access patterns, include padding and
+    ownership in the physical contract, balance shard work/capacity, quantify
+    resharding, and validate both per-shard contents and recomposed tensors.
+
 ## Source and delta
 
 - **Original source:** [`tech_reports/tensor_sharding/tensor_sharding.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/tensor_sharding/tensor_sharding.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/tensor_sharding/tensor_sharding.md`
 - **Current delta:** provenance, source metrics, outline, improvement checklist,
-  and verification prompts. No new technical claims have been introduced yet.
+  and source-grounded verification answers. Generation-sensitive claims remain
+  scoped to the pinned source snapshot.

@@ -67,9 +67,51 @@ Code references remain in the [pinned official report](https://github.com/tensto
 the full rewrite, each important symbol will be mapped to its role in the
 host → data-movement → compute → data-movement path.
 
+## Verify your understanding
+
+The answers below are derived from the
+[pinned original report](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/data_formats/shared_exponent_precision_testing_suite/Readme.md). They make the report's
+architecture reasoning explicit; generation-sensitive facts remain scoped to that source.
+
+### 1. What concrete bottleneck, correctness constraint, or programming task is this report addressing?
+
+???+ note "Expert answer — source-grounded reasoning"
+    The suite tests how shared-exponent formats lose precision across data generation,
+    conversion, arithmetic operations, and comparison. Its real target is corner-case
+    coverage—outliers, ties, cancellation, overflow, and magnitude mixtures—not merely
+    average random-input accuracy.
+
+### 2. What is one invariant that must remain true?
+
+???+ note "Expert answer — source-grounded reasoning"
+    The oracle and device path must use the same block grouping, shared-exponent
+    selection, rounding rule, operation semantics, and output interpretation. Seeds,
+    tolerances, and error metrics must be recorded so a regression is reproducible.
+
+### 3. Trace one unit of data or one control event from producer to consumer.
+
+???+ note "Expert answer — source-grounded reasoning"
+    A controlled 16-value block is generated → a reference encoder chooses the shared
+    exponent and quantizes mantissas → the corresponding device format enters the
+    operation under test → the result is unpacked → elementwise and aggregate error
+    metrics compare it with the high-precision/reference path.
+
+### 4. Which claims are architecture-specific, and which form a durable mental model across Tenstorrent generations?
+
+???+ note "Expert answer — source-grounded reasoning"
+    **Snapshot-specific.** The exact BFP encodings, 16-value grouping, supported
+    operations, pack/unpack behavior, and accepted tolerances reflect the documented
+    formats and hardware/software revision.
+
+    **Durable model.** Build numerical tests from the quantizer's decision boundaries,
+    include adversarial distributions as well as random data, compare against an
+    independent oracle, and diagnose error by stage rather than hiding it in one
+    end-to-end threshold.
+
 ## Source and delta
 
 - **Original source:** [`tech_reports/data_formats/shared_exponent_precision_testing_suite/Readme.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/data_formats/shared_exponent_precision_testing_suite/Readme.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/data_formats/shared_exponent_precision_testing_suite/Readme.md`
 - **Current delta:** provenance, source metrics, outline, improvement checklist,
-  and verification prompts. No new technical claims have been introduced yet.
+  and source-grounded verification answers. Generation-sensitive claims remain
+  scoped to the pinned source snapshot.

@@ -89,6 +89,60 @@ endpoint expected by the device APIs.
 The expected value is `14`: the example fills the input buffer with that value,
 runs the workload, reads the destination buffer, and compares the first result.
 
+## Verify your understanding
+
+### 1. Which call proves that Core 1 has storage reserved before Core 0 writes?
+
+???+ note "Expert answer — ownership reasoning"
+    On Core 1, `cb_reserve_back` reserves the destination circular-buffer page.
+    Core 1 then obtains that reserved page's write pointer and signals Core 0's
+    readiness semaphore. Core 0 may issue its remote write only after observing
+    that signal.
+
+    The semaphore by itself is not the proof: its meaning comes from program
+    order—**reserve first, then signal**—and from both kernels agreeing that the
+    signal refers to the exact remote L1 address Core 0 will use.
+
+### 2. Which event proves the bytes have arrived before Core 1 pushes its CB page?
+
+???+ note "Expert answer — completion reasoning"
+    Core 0 executes `noc_async_write_barrier()` after issuing the L1-to-L1 write,
+    then increments Core 1's transfer-complete semaphore. Core 1 waits for that
+    semaphore before calling `cb_push_back`.
+
+    The causal chain is therefore `write → write barrier → remote signal → wait
+    satisfied → push`. Signaling before the barrier would allow Core 1 to publish
+    a page while some bytes were still in flight.
+
+### 3. Why is a NoC barrier not a replacement for `cb_push_back`?
+
+???+ note "Expert answer — protocol-layer reasoning"
+    A NoC barrier proves completion of outstanding transport issued by that
+    RISC. It does not update the local circular buffer's software indices or
+    transfer a reserved back page from producer ownership to consumer-visible
+    front ownership.
+
+    `cb_push_back` performs that publication. Conversely, pushing without a
+    barrier publishes too early. Correct code needs both boundaries in order:
+    movement completion first, then local ownership transfer.
+
+### 4. Add a second tile. List the semaphore state and CB ownership state for both tiles before changing code.
+
+???+ note "Expert answer — protocol-design reasoning"
+    Model each tile as a separate transaction before editing loops:
+
+    | Tile state | Core 0 source CB | Core 1 destination CB | Ready signal | Arrival signal |
+    |---|---|---|---|---|
+    | tile 0 may be sent | front page owned by sender | back page 0 reserved by receiver | credit for tile 0 observed | not yet issued |
+    | tile 0 may be consumed | source may pop after write completion | page 0 pushed to receiver writer | credit consumed | completion for tile 0 observed |
+    | tile 1 may be sent | second front page owned by sender | a distinct back page 1 reserved | a second credit/sequence observed | not yet issued |
+    | tile 1 may be consumed | second source may pop after completion | page 1 pushed in FIFO order | second credit consumed | completion for tile 1 observed |
+
+    A one-bit semaphore that is repeatedly reset can lose the distinction between
+    two in-flight tiles. Either serialize tile 1 until tile 0's handshake is
+    reclaimed, or use monotonic/counting sequence values and sufficient CB depth
+    so readiness and arrival for each tile cannot be conflated.
+
 ## Source and delta
 
 - **Original:** [NoC Tile Transfer at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/prog_examples/NoC_tile_transfer/NoC_tile_transfer.md)

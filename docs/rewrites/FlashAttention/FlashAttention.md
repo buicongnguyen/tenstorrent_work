@@ -53,9 +53,51 @@ Code references remain in the [pinned official report](https://github.com/tensto
 the full rewrite, each important symbol will be mapped to its role in the
 host → data-movement → compute → data-movement path.
 
+## Verify your understanding
+
+The answers below are derived from the
+[pinned original report](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/FlashAttention/FlashAttention.md). They make the report's
+architecture reasoning explicit; generation-sensitive facts remain scoped to that source.
+
+### 1. What concrete bottleneck, correctness constraint, or programming task is this report addressing?
+
+???+ note "Expert answer — source-grounded reasoning"
+    The bottleneck is the quadratic memory traffic and storage created by materializing
+    the full attention-score matrix. The implementation tiles the sequence and computes
+    an exact, numerically stable softmax online so K/V blocks can be streamed through
+    limited L1 while matrix units remain useful.
+
+### 2. What is one invariant that must remain true?
+
+???+ note "Expert answer — source-grounded reasoning"
+    For every processed key block, the running maximum, normalization sum, and
+    accumulated weighted value must represent all keys seen so far after rescaling into
+    one common softmax frame. Masked entries must contribute neither probability mass
+    nor output.
+
+### 3. Trace one unit of data or one control event from producer to consumer.
+
+???+ note "Expert answer — source-grounded reasoning"
+    A query block is loaded and kept local → key and value blocks stream through
+    circular buffers → QKᵀ produces a score tile → masking and the online maximum update
+    rescale the old accumulator → exponentials update the running denominator and
+    weighted-value numerator → the final normalized block is written.
+
+### 4. Which claims are architecture-specific, and which form a durable mental model across Tenstorrent generations?
+
+???+ note "Expert answer — source-grounded reasoning"
+    **Snapshot-specific.** Tile dimensions, L1 capacity, core partition, circular-buffer
+    depths, math fidelity, Wormhole NoC behavior, and measured performance belong to the
+    target implementation.
+
+    **Durable model.** Use IO-aware tiling, fuse reductions with the consumer
+    computation, maintain a stable online reduction state, double-buffer movement with
+    compute, and choose parallelism from both capacity and reduction cost.
+
 ## Source and delta
 
 - **Original source:** [`tech_reports/FlashAttention/FlashAttention.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/FlashAttention/FlashAttention.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/FlashAttention/FlashAttention.md`
 - **Current delta:** provenance, source metrics, outline, improvement checklist,
-  and verification prompts. No new technical claims have been introduced yet.
+  and source-grounded verification answers. Generation-sensitive claims remain
+  scoped to the pinned source snapshot.

@@ -67,9 +67,52 @@ Code references remain in the [pinned official report](https://github.com/tensto
 the full rewrite, each important symbol will be mapped to its role in the
 host → data-movement → compute → data-movement path.
 
+## Verify your understanding
+
+The answers below are derived from the
+[pinned original report](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/LLMs/llms.md). They make the report's
+architecture reasoning explicit; generation-sensitive facts remain scoped to that source.
+
+### 1. What concrete bottleneck, correctness constraint, or programming task is this report addressing?
+
+???+ note "Expert answer — source-grounded reasoning"
+    The report maps transformer inference into TT-NN for two distinct regimes:
+    throughput-oriented prefill and latency/bandwidth-sensitive autoregressive decode.
+    It must manage weights, activations, KV cache, tensor parallelism, and frequent
+    layout decisions across many modules.
+
+### 2. What is one invariant that must remain true?
+
+???+ note "Expert answer — source-grounded reasoning"
+    For token position `t`, attention may use exactly the permitted key/value positions,
+    the KV cache update must land in the slot owned by that sequence, and every
+    reshape/shard operation must preserve head, batch, sequence, and hidden-dimension
+    meaning.
+
+### 3. Trace one unit of data or one control event from producer to consumer.
+
+???+ note "Expert answer — source-grounded reasoning"
+    A token or prompt is embedded → normalization produces Q/K/V inputs → attention
+    reads and updates the KV cache → causal attention returns a context vector → output
+    projection, residual, normalization, and MLP execute → final normalization/head
+    produces logits → the selected next token feeds the next decode iteration.
+
+### 4. Which claims are architecture-specific, and which form a durable mental model across Tenstorrent generations?
+
+???+ note "Expert answer — source-grounded reasoning"
+    **Snapshot-specific.** Model configs, supported sequence lengths, mesh layouts,
+    sharding schemes, kernels, data types, and measured performance depend on the model,
+    device generation, and TT-NN revision.
+
+    **Durable model.** Separate prefill from decode, follow bytes as closely as FLOPs,
+    keep persistent state well owned, amortize weight movement, validate module
+    checkpoints, and choose tensor/data parallelism from communication as well as
+    compute.
+
 ## Source and delta
 
 - **Original source:** [`tech_reports/LLMs/llms.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/LLMs/llms.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/LLMs/llms.md`
 - **Current delta:** provenance, source metrics, outline, improvement checklist,
-  and verification prompts. No new technical claims have been introduced yet.
+  and source-grounded verification answers. Generation-sensitive claims remain
+  scoped to the pinned source snapshot.

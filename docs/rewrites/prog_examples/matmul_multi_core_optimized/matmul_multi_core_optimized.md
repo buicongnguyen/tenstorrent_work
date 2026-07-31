@@ -43,9 +43,49 @@ Code references remain in the [pinned official report](https://github.com/tensto
 the full rewrite, each important symbol will be mapped to its role in the
 host → data-movement → compute → data-movement path.
 
+## Verify your understanding
+
+The answers below are derived from the
+[pinned original report](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/prog_examples/matmul_multi_core_optimized/matmul_multi_core_optimized.md). They make the report's
+architecture reasoning explicit; generation-sensitive facts remain scoped to that source.
+
+### 1. What concrete bottleneck, correctness constraint, or programming task is this report addressing?
+
+???+ note "Expert answer — source-grounded reasoning"
+    The examples build an optimized multi-core matmul by partitioning output work,
+    controlling blocks, reusing operands, and multicasting shared data so compute scales
+    without multiplying DRAM traffic by the number of cores.
+
+### 2. What is one invariant that must remain true?
+
+???+ note "Expert answer — source-grounded reasoning"
+    The core partition must cover every output tile exactly once, while each output
+    accumulates the complete K dimension. Runtime arguments, CB capacities, and writer
+    ranges must agree with the same partition.
+
+### 3. Trace one unit of data or one control event from producer to consumer.
+
+???+ note "Expert answer — source-grounded reasoning"
+    The host tiles and partitions the output grid → runtime arguments assign A/B/output
+    ranges to cores → readers fetch or multicast operand blocks → compute reuses blocks
+    across output tiles and accumulates K → writers store each core's non-overlapping
+    output region → host validation recomposes the matrix.
+
+### 4. Which claims are architecture-specific, and which form a durable mental model across Tenstorrent generations?
+
+???+ note "Expert answer — source-grounded reasoning"
+    **Snapshot-specific.** Core-grid shape, tile/block sizes, CB identifiers, multicast
+    topology, kernel arguments, fidelity, and measured scaling are
+    implementation-specific.
+
+    **Durable model.** Partition from output ownership, derive input needs, keep hot
+    operands local or shared once, overlap readers/compute/writers, and measure load
+    balance plus memory traffic as core count grows.
+
 ## Source and delta
 
 - **Original source:** [`tech_reports/prog_examples/matmul_multi_core_optimized/matmul_multi_core_optimized.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/prog_examples/matmul_multi_core_optimized/matmul_multi_core_optimized.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/prog_examples/matmul_multi_core_optimized/matmul_multi_core_optimized.md`
 - **Current delta:** provenance, source metrics, outline, improvement checklist,
-  and verification prompts. No new technical claims have been introduced yet.
+  and source-grounded verification answers. Generation-sensitive claims remain
+  scoped to the pinned source snapshot.

@@ -183,6 +183,66 @@ Find these concepts in the current official repository:
 APIs evolve, so search the exact upstream revision when a symbol differs from
 the snapshot.
 
+## Verify your understanding
+
+For a logical `[1, 4, 64, 96]` BF16 tensor:
+
+### 1. What 2D shape represents it?
+
+???+ note "Expert answer — shape reasoning"
+    Preserve the final dimension and flatten every preceding dimension into the
+    height:
+
+    ```text
+    height = 1 × 4 × 64 = 256
+    width  = 96
+    shape  = [256, 96]
+    ```
+
+    This is a reshape of the addressable memory object, not a transpose; logical
+    element order remains unchanged.
+
+### 2. How many `32 × 32` tiles does it contain?
+
+???+ note "Expert answer — tiling reasoning"
+    The tile grid is `ceil(256/32) × ceil(96/32) = 8 × 3`, so it contains **24
+    tiles**. Both dimensions are already tile aligned, so this example adds no
+    edge tiles beyond the logical extent.
+
+### 3. How many payload bytes do those tiles occupy?
+
+???+ note "Expert answer — capacity calculation"
+    BF16 uses two payload bytes per element. One `32 × 32` tile therefore holds
+    `32 × 32 × 2 = 2,048` bytes, and all tiles hold:
+
+    ```text
+    24 × 2,048 B = 49,152 B = 48 KiB
+    ```
+
+    This is payload capacity before allocator alignment, bank lockstep
+    reservation, headers, or other runtime overhead.
+
+### 4. If interleaved over 12 DRAM banks, which bank receives tile page 13?
+
+???+ note "Expert answer — placement reasoning"
+    With zero-based round-robin interleaving, `bank = page_id mod bank_count`.
+    Therefore `13 mod 12 = 1`, so tile page 13 goes to **bank 1**. Its bank-local
+    page index is `floor(13/12) = 1`, which helps determine the offset within that
+    bank's allocation.
+
+### 5. What extra information is needed to design a height-sharded L1 layout?
+
+???+ note "Expert answer — consumer-driven layout reasoning"
+    At minimum, specify the participating core grid and traversal order, shard
+    height/width (including physical padding), shard orientation, per-core L1
+    budget and reserved regions, element/page layout, and the downstream
+    kernel's work partition.
+
+    Then verify that shards cover `[256, 96]` exactly, fit beside CBs and program
+    storage, balance work, and place the rows each consumer needs locally. The
+    tensor shape alone cannot decide sharding: two legal layouts can have very
+    different NoC traffic and resharding cost.
+
 ## Source and delta
 
 - Official source:

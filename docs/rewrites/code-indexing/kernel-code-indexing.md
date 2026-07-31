@@ -109,6 +109,63 @@ different command sets.
 - The runtime compiler shown by the report is
   `runtime/sfpi/compiler/bin/riscv32-tt-elf-g++`.
 
+## Verify your understanding
+
+### 1. Why can CMake export accurate host commands but not every JIT kernel command?
+
+???+ note "Expert answer — build-system reasoning"
+    CMake configures the host build ahead of execution, so it knows each host
+    translation unit, target, include directory, definition, and compiler flag.
+    A standard `compile_commands.json` can therefore describe that build.
+
+    Device kernels are specialized later by TT-Metal's runtime. The selected
+    architecture, RISC processor, generated wrapper, compile-time arguments,
+    macros, and even which variant is needed depend on the executed workload.
+    CMake cannot enumerate all runtime states without approximating them; an
+    observed JIT command is the authoritative context for one actual variant.
+
+### 2. Which workflow should you choose when debugging one specific runtime macro configuration?
+
+???+ note "Expert answer — tool-selection reasoning"
+    Use runtime compile-command logging with the smallest experiment that forces
+    the target kernel variant to compile, then let the helper/Bear path merge the
+    observed command into the compilation database. Inspect that entry before
+    trusting clangd.
+
+    The fake CMake target is better for broad navigation but can select an
+    approximate or duplicate TRISC variant. For one macro-sensitive failure,
+    fidelity to the executed configuration matters more than coverage. Disable
+    or invalidate the relevant kernel cache if a cache hit prevents observation.
+
+### 3. Inspect one generated entry: which `-D` defines, `-mcpu`, wrapper processor, and include paths establish its identity?
+
+???+ note "Expert answer — compile-context reasoning"
+    Verify four groups together:
+
+    1. `-D` values must include the operation's compile-time arguments and the
+       expected architecture/processor feature switches.
+    2. `-mcpu` must name the target supported by the device toolchain for the
+       chip being debugged.
+    3. The wrapper translation unit—such as `brisc.cc`, `ncrisc.cc`, or
+       `trisc0/1/2.cc`—must match the RISC that executes the source.
+    4. Include paths must resolve the matching generated headers, hardware API,
+       low-level kernel headers, and source tree.
+
+    A correct source filename with any one of these groups wrong describes a
+    different program and can produce misleading editor diagnostics.
+
+### 4. Temporarily change the experiment so the target operator is not called. Expected observation: its kernel command should no longer be newly captured.
+
+???+ note "Expert answer — falsification test"
+    Run from a clean capture condition twice: first with the target operator
+    present, then with that call removed while keeping the logging pipeline the
+    same. The second run should add no fresh command for the target kernel.
+
+    If it still appears, the command may come from another operator, a stale
+    merged database, an initialization path, or an unclean capture directory.
+    This negative control proves that the database entry is causally associated
+    with the workload path being indexed rather than merely copied from history.
+
 ## Source and delta
 
 - **Original:** [Kernel code indexing at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/code-indexing/kernel-code-indexing.md)

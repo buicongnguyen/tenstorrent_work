@@ -67,9 +67,49 @@ Code references remain in the [pinned official report](https://github.com/tensto
 the full rewrite, each important symbol will be mapped to its role in the
 host → data-movement → compute → data-movement path.
 
+## Verify your understanding
+
+The answers below are derived from the
+[pinned original report](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/ViT-TTNN/vit.md). They make the report's
+architecture reasoning explicit; generation-sensitive facts remain scoped to that source.
+
+### 1. What concrete bottleneck, correctness constraint, or programming task is this report addressing?
+
+???+ note "Expert answer — source-grounded reasoning"
+    The report brings Vision Transformer inference into TT-NN and tunes patch embedding,
+    attention, MLP, residuals, layout changes, sharding, and operation fusion so the
+    model remains accurate while avoiding data-movement and launch overhead.
+
+### 2. What is one invariant that must remain true?
+
+???+ note "Expert answer — source-grounded reasoning"
+    Patch/token order, class-token position, head reshapes, attention scaling/masking,
+    residual pairing, and classifier output must match the reference model. Padding and
+    sharding may change storage but not logical token semantics.
+
+### 3. Trace one unit of data or one control event from producer to consumer.
+
+???+ note "Expert answer — source-grounded reasoning"
+    An image becomes patch embeddings plus positional/class tokens → each encoder layer
+    normalizes → forms Q/K/V → computes attention and projection → applies residual →
+    runs normalized MLP and second residual → the class token reaches the classifier
+    head → host output is compared.
+
+### 4. Which claims are architecture-specific, and which form a durable mental model across Tenstorrent generations?
+
+???+ note "Expert answer — source-grounded reasoning"
+    **Snapshot-specific.** Core grids, shard specs, fused TT-NN operations, supported
+    batch/shape, data types, program configs, and Wormhole performance are
+    implementation-specific.
+
+    **Durable model.** Validate transformer submodules independently, preserve
+    token/head meaning through reshapes, minimize layout round trips, keep reusable
+    weights/local activations resident, and profile attention and MLP separately.
+
 ## Source and delta
 
 - **Original source:** [`tech_reports/ViT-TTNN/vit.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/ViT-TTNN/vit.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/ViT-TTNN/vit.md`
 - **Current delta:** provenance, source metrics, outline, improvement checklist,
-  and verification prompts. No new technical claims have been introduced yet.
+  and source-grounded verification answers. Generation-sensitive claims remain
+  scoped to the pinned source snapshot.

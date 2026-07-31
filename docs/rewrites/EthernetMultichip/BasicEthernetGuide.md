@@ -67,9 +67,52 @@ Code references remain in the [pinned official report](https://github.com/tensto
 the full rewrite, each important symbol will be mapped to its role in the
 host → data-movement → compute → data-movement path.
 
+## Verify your understanding
+
+The answers below are derived from the
+[pinned original report](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/EthernetMultichip/BasicEthernetGuide.md). They make the report's
+architecture reasoning explicit; generation-sensitive facts remain scoped to that source.
+
+### 1. What concrete bottleneck, correctness constraint, or programming task is this report addressing?
+
+???+ note "Expert answer — source-grounded reasoning"
+    The report explains how to move data between chips through active Ethernet cores and
+    links, including topology discovery, packet/channel behavior, latency and bandwidth,
+    and the extra coordination required when a NoC address is no longer enough.
+
+### 2. What is one invariant that must remain true?
+
+???+ note "Expert answer — source-grounded reasoning"
+    The sender may reuse storage only after the protocol says the receiver has accepted
+    the data; both endpoints must agree on link peer, channel, packet size, destination,
+    and flow-control state. A local NoC barrier alone cannot acknowledge remote
+    consumption.
+
+### 3. Trace one unit of data or one control event from producer to consumer.
+
+???+ note "Expert answer — source-grounded reasoning"
+    A worker or host prepares a source buffer → local NoC traffic reaches the sending
+    Ethernet core → ERISC packetizes and transmits on the selected channel/link → the
+    peer Ethernet core receives and validates flow-control state → remote NoC movement
+    places bytes at the destination → a semaphore/message makes them visible to the
+    consumer.
+
+### 4. Which claims are architecture-specific, and which form a durable mental model across Tenstorrent generations?
+
+???+ note "Expert answer — source-grounded reasoning"
+    **Snapshot-specific.** Ethernet-core types, channel count, packet-size curves, link
+    bandwidth, physical topology, ERISC firmware, and measured latency are device- and
+    snapshot-specific.
+
+    **Durable model.** Separate local transport, link transport, routing, flow control,
+    and application ownership; measure both small-message latency and sustained
+    bandwidth; and design explicit end-to-end completion rather than assuming link
+    delivery equals consumption.
+
 ## Source and delta
 
 - **Original source:** [`tech_reports/EthernetMultichip/BasicEthernetGuide.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/EthernetMultichip/BasicEthernetGuide.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/EthernetMultichip/BasicEthernetGuide.md`
 - **Current delta:** provenance, source metrics, outline, improvement checklist,
-  and verification prompts. No new technical claims have been introduced yet.
+  and source-grounded verification answers. Generation-sensitive claims remain
+  scoped to the pinned source snapshot.

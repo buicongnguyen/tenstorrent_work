@@ -67,9 +67,51 @@ Code references remain in the [pinned official report](https://github.com/tensto
 the full rewrite, each important symbol will be mapped to its role in the
 host → data-movement → compute → data-movement path.
 
+## Verify your understanding
+
+The answers below are derived from the
+[pinned original report](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/ttnn/graph-tracing.md). They make the report's
+architecture reasoning explicit; generation-sensitive facts remain scoped to that source.
+
+### 1. What concrete bottleneck, correctness constraint, or programming task is this report addressing?
+
+???+ note "Expert answer — source-grounded reasoning"
+    Graph tracing captures operation calls, tensor producer-consumer edges, durations,
+    memory information, and optional stack/buffer details so developers can reconstruct
+    what TT-NN executed and identify graph, lifetime, or performance problems.
+
+### 2. What is one invariant that must remain true?
+
+???+ note "Expert answer — source-grounded reasoning"
+    Each operation and tensor must have a stable identity within the trace, and every
+    edge must connect the actual producer to its consumers. Capture must observe rather
+    than change operation semantics; overhead and omitted detail must be recorded when
+    interpreting timing.
+
+### 3. Trace one unit of data or one control event from producer to consumer.
+
+???+ note "Expert answer — source-grounded reasoning"
+    A TT-NN operation enters the tracing wrapper → operation attributes, stack/context,
+    input tensor IDs, and timing are recorded → output tensor IDs create producer edges
+    → optional memory/page data is attached → the report is serialized →
+    visualizer/database reconstructs the graph for queries.
+
+### 4. Which claims are architecture-specific, and which form a durable mental model across Tenstorrent generations?
+
+???+ note "Expert answer — source-grounded reasoning"
+    **Snapshot-specific.** Tracer APIs, `FastOperation` handling, run modes,
+    file/database schema, captured fields, stack/page options, and overhead are
+    version-specific.
+
+    **Durable model.** Represent execution as identities plus causal edges, make capture
+    level explicit, preserve a machine-readable format, distinguish logical graph time
+    from device-kernel time, and use graph evidence to select a smaller profiling
+    experiment.
+
 ## Source and delta
 
 - **Original source:** [`tech_reports/ttnn/graph-tracing.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/ttnn/graph-tracing.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/ttnn/graph-tracing.md`
 - **Current delta:** provenance, source metrics, outline, improvement checklist,
-  and verification prompts. No new technical claims have been introduced yet.
+  and source-grounded verification answers. Generation-sensitive claims remain
+  scoped to the pinned source snapshot.

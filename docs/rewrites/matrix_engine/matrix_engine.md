@@ -107,6 +107,59 @@ and synchronization even if the arithmetic loop is otherwise identical.
 The ISA pages explain units and state below the TT-LLK boundary; the TT-Metal
 report remains the comparison source for the performance claims above.
 
+## Verify your understanding
+
+### 1. Why does `1×16 × 16×16` achieve only one eighth of the `8×16` useful-row throughput?
+
+???+ note "Expert answer — utilization reasoning"
+    The matrix engine still issues its native `(8×16) × (16×16)` work shape.
+    Supplying one useful left-hand row does not create a smaller one-row engine
+    operation; seven of the eight produced row lanes carry no useful model work.
+    Useful-lane utilization is therefore `1/8`, so the effective useful FLOP rate
+    is at most one eighth of the same-fidelity peak before movement, pack, or
+    synchronization overhead.
+
+    Batching or blocking several independent rows into the native eight-row
+    shape recovers utilization if the operation's semantics permit it.
+
+### 2. Starting from 4 TFLOPS LoFi, compute the report's HiFi3 peak.
+
+???+ note "Expert answer — throughput calculation"
+    HiFi3 uses three fidelity passes for work that LoFi issues in one pass, so:
+
+    ```text
+    4 TFLOPS ÷ 3 = 1.333... TFLOPS ≈ 1.33 TFLOPS
+    ```
+
+    This is a documented arithmetic ceiling, not a measured application rate.
+    Useful-row fraction and all reader, unpack, pack, NoC, instruction, and
+    synchronization costs can reduce observed throughput further.
+
+### 3. Which elementwise operations ignore math fidelity, and which one uses it?
+
+???+ note "Expert answer — operation semantics"
+    In the pinned report's elementwise table, **add and subtract ignore math
+    fidelity**, while **multiply uses it**. Fidelity controls how many mantissa
+    portions contribute to multiplication; it is not a universal speed/accuracy
+    knob applied identically to every arithmetic instruction.
+
+    The same distinction appears in reductions: reduce-max does not use
+    fidelity, whereas reduce-sum and reduce-average include addition/multiply
+    behavior for which fidelity matters.
+
+### 4. If FP32 destination accumulation halves destination tile capacity, what program-level blocking or synchronization assumptions must be revisited?
+
+???+ note "Expert answer — capacity reasoning"
+    A block designed to keep eight Float16_b destination tiles live may fit only
+    four FP32 tiles. Recompute output sub-block size, destination acquire/release
+    count, `DstSync` mode, pack cadence, intermediate-CB capacity, and the point
+    at which partial K accumulations are spilled or repacked.
+
+    If code still reserves or computes the old block, it can overrun destination
+    state or wait for capacity that cannot exist. Smaller blocks can also change
+    operand reuse and add synchronization/pack traffic, so accuracy gains must be
+    evaluated with a newly measured schedule—not only a flipped config flag.
+
 ## Source and delta
 
 - **Original:** [Matrix Engine at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/matrix_engine/matrix_engine.md)

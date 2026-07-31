@@ -67,9 +67,51 @@ Code references remain in the [pinned official report](https://github.com/tensto
 the full rewrite, each important symbol will be mapped to its role in the
 host → data-movement → compute → data-movement path.
 
+## Verify your understanding
+
+The answers below are derived from the
+[pinned original report](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/TT-Fabric/TT-Fabric-Architecture.md). They make the report's
+architecture reasoning explicit; generation-sensitive facts remain scoped to that source.
+
+### 1. What concrete bottleneck, correctness constraint, or programming task is this report addressing?
+
+???+ note "Expert answer — source-grounded reasoning"
+    TT-Fabric supplies routed, flow-controlled communication across chips and meshes.
+    The report separates data/control planes and routing, transport, and session
+    responsibilities so packet forwarding, congestion control, reliability, and
+    application semantics are not collapsed into one firmware path.
+
+### 2. What is one invariant that must remain true?
+
+???+ note "Expert answer — source-grounded reasoning"
+    A router may forward only when the next virtual channel has sufficient credit/bubble
+    space, and routing choices must remain deadlock-safe. Packet metadata, payload, and
+    required ordering/reliability must survive every hop until the destination session
+    accepts them.
+
+### 3. Trace one unit of data or one control event from producer to consumer.
+
+???+ note "Expert answer — source-grounded reasoning"
+    A source worker issues a fabric/NoC command → the local router places a packet in
+    the selected virtual channel → dimension-ordered routing selects each hop → Ethernet
+    or NoC links move it under credit/bubble flow control → the destination router
+    ejects it to local NoC/storage → session completion reaches the consumer.
+
+### 4. Which claims are architecture-specific, and which form a durable mental model across Tenstorrent generations?
+
+???+ note "Expert answer — source-grounded reasoning"
+    **Snapshot-specific.** Router-core placement, ring-buffer sizes, virtual-channel
+    mapping, packet formats, routing tables, topology, Ethernet behavior, and command
+    encodings are device/firmware specific.
+
+    **Durable model.** Separate routing from transport and session semantics, use
+    virtual channels and an acyclic routing policy to prevent deadlock, apply
+    backpressure before overflow, and define completion at the final consumer boundary.
+
 ## Source and delta
 
 - **Original source:** [`tech_reports/TT-Fabric/TT-Fabric-Architecture.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/TT-Fabric/TT-Fabric-Architecture.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/TT-Fabric/TT-Fabric-Architecture.md`
 - **Current delta:** provenance, source metrics, outline, improvement checklist,
-  and verification prompts. No new technical claims have been introduced yet.
+  and source-grounded verification answers. Generation-sensitive claims remain
+  scoped to the pinned source snapshot.

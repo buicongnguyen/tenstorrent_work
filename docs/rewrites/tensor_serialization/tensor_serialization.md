@@ -61,9 +61,51 @@ Code references remain in the [pinned official report](https://github.com/tensto
 the full rewrite, each important symbol will be mapped to its role in the
 host → data-movement → compute → data-movement path.
 
+## Verify your understanding
+
+The answers below are derived from the
+[pinned original report](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/tensor_serialization/tensor_serialization.md). They make the report's
+architecture reasoning explicit; generation-sensitive facts remain scoped to that source.
+
+### 1. What concrete bottleneck, correctness constraint, or programming task is this report addressing?
+
+???+ note "Expert answer — source-grounded reasoning"
+    The report defines how to persist TT-NN tensors—including enough metadata to
+    reconstruct them—and how multi-host use and cache hits/misses affect reliable reuse
+    across processes and runs. The file must be portable without pretending device
+    allocation is serialized.
+
+### 2. What is one invariant that must remain true?
+
+???+ note "Expert answer — source-grounded reasoning"
+    Serialized payload and metadata must agree on logical shape, dtype, layout, padding,
+    version, and byte count. A reader must never interpret a partial, stale, or
+    incompatible file as a valid cache hit, and participating hosts must agree on
+    ownership/path semantics.
+
+### 3. Trace one unit of data or one control event from producer to consumer.
+
+???+ note "Expert answer — source-grounded reasoning"
+    A tensor is materialized in a serializable representation → metadata/header and
+    payload are written to a stable file → cache lookup validates identity and
+    compatibility → deserialization reconstructs the tensor → requested device/memory
+    placement is applied → consumers use the restored value.
+
+### 4. Which claims are architecture-specific, and which form a durable mental model across Tenstorrent generations?
+
+???+ note "Expert answer — source-grounded reasoning"
+    **Snapshot-specific.** API names, on-disk format, cache-key fields, multi-host file
+    rules, supported layouts, and compatibility guarantees belong to the TT-NN revision.
+
+    **Durable model.** Version persistent formats, validate metadata before payload use,
+    publish files atomically, make cache identity explicit, separate logical
+    serialization from device placement, and test cross-process plus
+    backward-compatibility cases.
+
 ## Source and delta
 
 - **Original source:** [`tech_reports/tensor_serialization/tensor_serialization.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/tensor_serialization/tensor_serialization.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/tensor_serialization/tensor_serialization.md`
 - **Current delta:** provenance, source metrics, outline, improvement checklist,
-  and verification prompts. No new technical claims have been introduced yet.
+  and source-grounded verification answers. Generation-sensitive claims remain
+  scoped to the pinned source snapshot.

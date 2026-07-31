@@ -67,9 +67,51 @@ Code references remain in the [pinned official report](https://github.com/tensto
 the full rewrite, each important symbol will be mapped to its role in the
 host → data-movement → compute → data-movement path.
 
+## Verify your understanding
+
+The answers below are derived from the
+[pinned original report](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/TT-Distributed/HDSocketsModel.md). They make the report's
+architecture reasoning explicit; generation-sensitive facts remain scoped to that source.
+
+### 1. What concrete bottleneck, correctness constraint, or programming task is this report addressing?
+
+???+ note "Expert answer — source-grounded reasoning"
+    The report designs high-throughput host-to-device and device-to-host PCIe sockets as
+    long-lived streams rather than isolated tensor copies. Transfer modes, ring buffers,
+    and flow control must support multiple hosts/devices without overwrite or
+    starvation.
+
+### 2. What is one invariant that must remain true?
+
+???+ note "Expert answer — source-grounded reasoning"
+    Producer and consumer indices/credits must describe the same ring state: a producer
+    cannot overwrite an unread slot, a consumer cannot read an unpublished slot, and
+    backing buffers plus socket endpoints must outlive all in-flight transfers.
+
+### 3. Trace one unit of data or one control event from producer to consumer.
+
+???+ note "Expert answer — source-grounded reasoning"
+    A producer reserves a socket/ring slot → fills or points it at payload → publishes
+    availability → PCIe/DMA moves data across the host-device boundary → the consumer
+    waits on the matching state, reads the payload, and returns credit → the producer
+    may reuse the slot.
+
+### 4. Which claims are architecture-specific, and which form a durable mental model across Tenstorrent generations?
+
+???+ note "Expert answer — source-grounded reasoning"
+    **Snapshot-specific.** Socket APIs, transfer modes, queue depths, buffer placement,
+    PCIe topology, synchronization implementation, and reported bandwidth/latency are
+    snapshot-specific.
+
+    **Durable model.** Use bounded queues with explicit backpressure, separate
+    reservation from publication and reclamation, preserve endpoint lifetime, batch
+    transfers enough to amortize setup, and measure steady-state streaming independently
+    from startup.
+
 ## Source and delta
 
 - **Original source:** [`tech_reports/TT-Distributed/HDSocketsModel.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/TT-Distributed/HDSocketsModel.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/TT-Distributed/HDSocketsModel.md`
 - **Current delta:** provenance, source metrics, outline, improvement checklist,
-  and verification prompts. No new technical claims have been introduced yet.
+  and source-grounded verification answers. Generation-sensitive claims remain
+  scoped to the pinned source snapshot.

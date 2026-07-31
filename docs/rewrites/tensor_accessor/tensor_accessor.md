@@ -147,6 +147,57 @@ where a cached program is reused with a different aligned page size.
   `TensorAccessor(args, bank_base_address[, page_size])` in a data-movement
   kernel.
 
+## Verify your understanding
+
+### 1. If `RuntimeRank` is selected, why can tensor shape not remain a compile-time array indexed by that rank?
+
+???+ note "Expert answer — representation reasoning"
+    A compile-time array has a size and element offsets fixed when the kernel is
+    compiled. If rank arrives only at runtime, the compiler cannot define a
+    compile-time shape container whose length is indexed by that unknown rank or
+    calculate where following compile-time arguments begin.
+
+    The dependent tensor/shard shapes and strides must therefore move to runtime
+    storage with the rank. This preserves one coherent serialized argument
+    layout; mixing a runtime container length with compile-time contents would
+    make host and device disagree about offsets.
+
+### 2. What units does `dspec.tensor_shape()` use?
+
+???+ note "Expert answer — units reasoning"
+    It uses **pages**, not logical elements and not bytes. The same page-based
+    convention applies to distribution-spec shapes, shard shapes, volumes, and
+    strides.
+
+    To reach bytes, address calculation combines the page mapping with aligned
+    page size and bank base address. Confusing element extents with page extents
+    multiplies dimensions twice or routes a page to the wrong bank/offset.
+
+### 3. Which component calculates the address, which moves the data, and which establishes ownership?
+
+???+ note "Expert answer — responsibility-boundary reasoning"
+    `TensorAccessor`/its iterator calculates the logical-page-to-physical NoC
+    address. `noc_async_read_page`, `noc_async_write_page`, or related NoC APIs
+    move the bytes, and their barriers establish movement completion.
+
+    Circular-buffer calls establish local ownership: reserve/wait choose storage,
+    push publishes produced data, and pop releases consumed data. None of these
+    roles implies the others; a correct address does not prove arrival, and a NoC
+    barrier does not publish a CB page.
+
+### 4. Compare a loop using repeated `get_noc_addr(page_id)` with an accessor iterator. Expected observation: the iterator can reuse state instead of reconstructing the full mapping for each page.
+
+???+ note "Expert answer — cost-model reasoning"
+    Repeated `get_noc_addr(page_id)` treats each page as an independent mapping:
+    it may decompose the logical ID across rank/strides, determine shard and bank,
+    and rebuild the offset each iteration. Cost grows with mapping complexity.
+
+    An iterator computes the starting state once, then advances cached bank,
+    shard, coordinate, and offset state. The advantage is largest for regular
+    contiguous traversal and shard-page boundaries with predictable increments.
+    Verify identical address sequences first, then benchmark enough pages to
+    amortize construction; random access may still favor direct lookup.
+
 ## Source and delta
 
 - **Original:** [Tensor Accessor Guide at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/tensor_accessor/tensor_accessor.md)

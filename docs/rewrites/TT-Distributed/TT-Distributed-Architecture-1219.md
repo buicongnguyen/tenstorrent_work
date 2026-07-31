@@ -67,9 +67,52 @@ Code references remain in the [pinned official report](https://github.com/tensto
 the full rewrite, each important symbol will be mapped to its role in the
 host → data-movement → compute → data-movement path.
 
+## Verify your understanding
+
+The answers below are derived from the
+[pinned original report](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/TT-Distributed/TT-Distributed-Architecture-1219.md). They make the report's
+architecture reasoning explicit; generation-sensitive facts remain scoped to that source.
+
+### 1. What concrete bottleneck, correctness constraint, or programming task is this report addressing?
+
+???+ note "Expert answer — source-grounded reasoning"
+    The architecture virtualizes many devices behind TT-NN mesh
+    abstractions—`MeshDevice`, virtual command queues, `MeshBuffer`/allocator, and
+    `MeshWorkload`—so programs can scale without manually issuing every per-device
+    operation. It coordinates logical intent with distributed physical ownership.
+
+### 2. What is one invariant that must remain true?
+
+???+ note "Expert answer — source-grounded reasoning"
+    A logical mesh coordinate must resolve to the same owning physical device throughout
+    buffer and workload lifetimes. Queue dependencies, allocation views, and per-device
+    programs must collectively implement the logical operation exactly once on every
+    intended shard.
+
+### 3. Trace one unit of data or one control event from producer to consumer.
+
+???+ note "Expert answer — source-grounded reasoning"
+    A TT-NN distributed operation targets a logical mesh tensor → a virtual command
+    queue accepts the work → `MeshWorkload` expands or references per-device programs →
+    mesh buffers resolve local allocations → owning controllers submit commands →
+    fabric/CCL moves cross-device data → logical completion is reported.
+
+### 4. Which claims are architecture-specific, and which form a durable mental model across Tenstorrent generations?
+
+???+ note "Expert answer — source-grounded reasoning"
+    **Snapshot-specific.** Class names, virtual-CQ implementation, allocator metadata,
+    workload APIs, host scaling model, mesh sizes, and fabric integration are tied to
+    the dated architecture specification.
+
+    **Durable model.** Virtualize placement behind stable logical identities, preserve
+    explicit ownership and lifetimes, lower global work into local programs plus
+    communication, and ensure logical completion aggregates every required physical
+    dependency.
+
 ## Source and delta
 
 - **Original source:** [`tech_reports/TT-Distributed/TT-Distributed-Architecture-1219.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/TT-Distributed/TT-Distributed-Architecture-1219.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/TT-Distributed/TT-Distributed-Architecture-1219.md`
 - **Current delta:** provenance, source metrics, outline, improvement checklist,
-  and verification prompts. No new technical claims have been introduced yet.
+  and source-grounded verification answers. Generation-sensitive claims remain
+  scoped to the pinned source snapshot.

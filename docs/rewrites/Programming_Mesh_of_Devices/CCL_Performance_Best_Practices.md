@@ -47,9 +47,52 @@ Code references remain in the [pinned official report](https://github.com/tensto
 the full rewrite, each important symbol will be mapped to its role in the
 host → data-movement → compute → data-movement path.
 
+## Verify your understanding
+
+The answers below are derived from the
+[pinned original report](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/Programming_Mesh_of_Devices/CCL_Performance_Best_Practices.md). They make the report's
+architecture reasoning explicit; generation-sensitive facts remain scoped to that source.
+
+### 1. What concrete bottleneck, correctness constraint, or programming task is this report addressing?
+
+???+ note "Expert answer — source-grounded reasoning"
+    The report tunes collective communication by removing avoidable setup/dispatch
+    overhead and matching packetization, buffers, topology, and operation-specific
+    parameters to the message, so links and fabric routers remain supplied.
+    Optimization begins only after collective correctness is established across ranks.
+
+### 2. What is one invariant that must remain true?
+
+???+ note "Expert answer — source-grounded reasoning"
+    Every rank must invoke compatible collectives in the same logical order with
+    matching tensor counts/shapes, and source/output buffers must remain valid until
+    completion. Trace replay or pre-allocation may optimize execution only while
+    captured addresses and lifetimes stay valid.
+
+### 3. Trace one unit of data or one control event from producer to consumer.
+
+???+ note "Expert answer — source-grounded reasoning"
+    A tensor shard is read from each participant → the CCL operation packetizes it →
+    fabric/links forward packets along the collective topology → intermediate nodes
+    reduce, gather, or relay → final shards land in destination buffers → completion
+    makes the collective result visible to subsequent compute.
+
+### 4. Which claims are architecture-specific, and which form a durable mental model across Tenstorrent generations?
+
+???+ note "Expert answer — source-grounded reasoning"
+    **Snapshot-specific.** Trace APIs, CCL algorithms, packet-size knobs, buffer counts,
+    link topology, queue behavior, and best parameter values depend on the collective,
+    message size, chip generation, and TT-Metal revision.
+
+    **Durable model.** Initialize once, reuse storage, separate launch overhead from
+    wire time, choose an algorithm/topology from traffic volume, keep enough packets in
+    flight, overlap only with explicit dependencies, and validate all ranks under the
+    same schedule.
+
 ## Source and delta
 
 - **Original source:** [`tech_reports/Programming_Mesh_of_Devices/CCL_Performance_Best_Practices.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/Programming_Mesh_of_Devices/CCL_Performance_Best_Practices.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/Programming_Mesh_of_Devices/CCL_Performance_Best_Practices.md`
 - **Current delta:** provenance, source metrics, outline, improvement checklist,
-  and verification prompts. No new technical claims have been introduced yet.
+  and source-grounded verification answers. Generation-sensitive claims remain
+  scoped to the pinned source snapshot.

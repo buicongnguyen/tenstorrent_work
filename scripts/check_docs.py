@@ -164,7 +164,13 @@ def check_links(errors: list[str]) -> None:
 
 
 def check_required_sections(errors: list[str]) -> None:
-    required = ("## Code connection", "## Source and delta")
+    required = (
+        "## Code connection",
+        "## Verify your understanding",
+        "## Source and delta",
+    )
+    total_questions = 0
+    total_answers = 0
     for rewrite in markdown_files(DOCS / "rewrites"):
         content = rewrite.read_text(encoding="utf-8")
         for heading in required:
@@ -176,31 +182,44 @@ def check_required_sections(errors: list[str]) -> None:
                 f"{rewrite.relative_to(ROOT)}: contains unanswered seed questions"
             )
 
-        if "## Verify your understanding" in content:
-            section = content.split("## Verify your understanding", maxsplit=1)[1]
-            section = section.split("\n## ", maxsplit=1)[0]
-            questions = len(
-                re.findall(r"^(?:### )?\d+\. ", section, flags=re.MULTILINE)
+        if "## Verify your understanding" not in content:
+            continue
+
+        section = content.split("## Verify your understanding", maxsplit=1)[1]
+        section = section.split("\n## ", maxsplit=1)[0]
+        question_blocks = re.split(r"^### \d+\. ", section, flags=re.MULTILINE)[1:]
+        answers = section.count("???+ note \"Expert answer")
+        total_questions += len(question_blocks)
+        total_answers += answers
+
+        if not question_blocks or len(question_blocks) != answers:
+            errors.append(
+                f"{rewrite.relative_to(ROOT)}: verification questions must "
+                f"have one-to-one answers; found {len(question_blocks)} questions "
+                f"and {answers} answers"
             )
-            answers = section.count("???+ note \"Expert answer")
-            legacy_answers = section.count("??? note \"Guided answer")
-            if questions == 0 or questions != answers + legacy_answers:
+
+        for index, block in enumerate(question_blocks, start=1):
+            block_answers = block.count("???+ note \"Expert answer")
+            if block_answers != 1:
                 errors.append(
-                    f"{rewrite.relative_to(ROOT)}: verification questions must "
-                    f"have answers; found {questions} questions and "
-                    f"{answers + legacy_answers} answers"
+                    f"{rewrite.relative_to(ROOT)}: verification question {index} "
+                    f"must be followed by exactly one expert answer; found {block_answers}"
+                )
+                continue
+            answer_body = block.split("???+ note \"Expert answer", maxsplit=1)[1]
+            answer_body = answer_body.split("\n", maxsplit=1)[-1]
+            word_count = len(re.findall(r"\b[\w'-]+\b", answer_body))
+            if word_count < 30:
+                errors.append(
+                    f"{rewrite.relative_to(ROOT)}: verification question {index} "
+                    f"needs an expanded answer; found only {word_count} words"
                 )
 
-    cnn = (DOCS / "rewrites" / "CNNs" / "ttcnn.md").read_text(encoding="utf-8")
-    cnn_section = cnn.split("## Verify your understanding", maxsplit=1)[1]
-    cnn_section = cnn_section.split("\n## ", maxsplit=1)[0]
-    cnn_questions = len(re.findall(r"^### \d+\.", cnn_section, flags=re.MULTILINE))
-    cnn_answers = cnn_section.count('???+ note "Expert answer — architecture reasoning"')
-    if cnn_questions != 4 or cnn_answers != 4:
+    if total_questions != 233 or total_answers != 233:
         errors.append(
-            "CNN learner page must contain four questions and four expanded "
-            f"architecture answers; found {cnn_questions} questions and "
-            f"{cnn_answers} answers"
+            "rewrite curriculum must retain all 233 verification questions and "
+            f"answers; found {total_questions} questions and {total_answers} answers"
         )
 
 

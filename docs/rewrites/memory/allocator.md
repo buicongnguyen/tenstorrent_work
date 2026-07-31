@@ -120,6 +120,58 @@ Use the [tensor-layout learner chapter](../tensor_layouts/tensor_layouts.md) to
 separate page definition from interleaved/sharded placement, then return here
 to reason about the address span reserved in each bank.
 
+## Verify your understanding
+
+### 1. Why can lockstep allocation reserve space in a bank that stores no page from a small buffer?
+
+???+ note "Expert answer — address-mapping reasoning"
+    The allocator first derives a per-bank span, then advances the same address
+    interval in every participating bank. With fewer pages than banks, only some
+    banks receive payload, but all reserve the span so one common base and
+    bank-local offset rule remains valid.
+
+    The unused reservation is intentional internal fragmentation. It trades
+    capacity for regular address arithmetic and synchronized free-list state;
+    compacting only the empty banks would give later allocations different bases
+    and break that lockstep mapping.
+
+### 2. Why are user DRAM buffers and program binaries grown from opposite ends?
+
+???+ note "Expert answer — fragmentation reasoning"
+    They are structurally different allocation classes with different sizes and
+    lifetimes. Growing user buffers upward and binaries downward reduces the
+    chance that interleaved allocations split the remaining region into unusable
+    holes, while still allowing the two frontiers to consume unused capacity.
+
+    The direction describes where an allocation block is selected. Bytes inside
+    a selected top-down block still use normal increasing addresses; the binary
+    is not stored backwards.
+
+### 3. A device reports plenty of total free L1 but allocation still fails. Which CSV field should you inspect first?
+
+???+ note "Expert answer — failure diagnosis"
+    Inspect the **largest free block** for the affected L1 banks, not only total
+    free bytes. An allocation needs one contiguous, aligned span per
+    participating bank; many smaller holes can sum to a large total while none
+    satisfies the request.
+
+    `memory_usage_summary.csv` exposes free and largest-block summaries, and
+    `detailed_memory_usage.csv` shows the exact ranges needed to confirm external
+    fragmentation. Also check the minimum across lockstep banks, because the
+    most constrained participant can reject the whole buffer.
+
+### 4. Explain why the allocator can assign an address without moving any bytes.
+
+???+ note "Expert answer — responsibility boundary"
+    The allocator is a host-side model of free and occupied address ranges. It
+    chooses an aligned base, updates free lists/metadata, and returns an address;
+    allocation creates storage ownership but no payload.
+
+    Bytes move only when a later host transfer, NoC data-movement kernel, or
+    compute/packer path writes the buffer. This separation matters for reasoning:
+    a valid allocation proves capacity and non-overlap, not initialization,
+    transfer completion, or visibility to a consumer.
+
 ## Source and delta
 
 - **Original:** [Allocator at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/memory/allocator.md)

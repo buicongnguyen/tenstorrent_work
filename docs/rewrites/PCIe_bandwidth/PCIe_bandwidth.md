@@ -54,9 +54,51 @@ Code references remain in the [pinned official report](https://github.com/tensto
 the full rewrite, each important symbol will be mapped to its role in the
 host → data-movement → compute → data-movement path.
 
+## Verify your understanding
+
+The answers below are derived from the
+[pinned original report](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/PCIe_bandwidth/PCIe_bandwidth.md). They make the report's
+architecture reasoning explicit; generation-sensitive facts remain scoped to that source.
+
+### 1. What concrete bottleneck, correctness constraint, or programming task is this report addressing?
+
+???+ note "Expert answer — source-grounded reasoning"
+    The report measures host-to-device and device-to-host PCIe throughput through both
+    host-side shard APIs and device-side NoC kernels, separating PCIe limits from
+    on-device placement and transfer overhead. It therefore requires controlled direction,
+    size, synchronization, and placement.
+
+### 2. What is one invariant that must remain true?
+
+???+ note "Expert answer — source-grounded reasoning"
+    The timed interval must move a known byte count in one declared direction, all
+    asynchronous work must complete before the timer stops, source and destination
+    buffers must remain valid, and readback must verify that the expected bytes arrived.
+
+### 3. Trace one unit of data or one control event from producer to consumer.
+
+???+ note "Expert answer — source-grounded reasoning"
+    For a write, a pinned host buffer feeds the runtime transfer → PCIe carries data to
+    device DRAM/L1 shards → optional device NoC movement distributes it → a completion
+    boundary makes it consumable. The read path reverses those stages before host
+    validation.
+
+### 4. Which claims are architecture-specific, and which form a durable mental model across Tenstorrent generations?
+
+???+ note "Expert answer — source-grounded reasoning"
+    **Snapshot-specific.** PCIe generation/width, host platform, DMA granularity, device
+    bank topology, sharding API, transfer size, and measured GB/s are machine- and
+    snapshot-specific.
+
+    **Durable model.** Report payload bytes and direction, warm and synchronize
+    consistently, sweep transfer sizes, separate link throughput from device
+    redistribution, validate data, and compare against the negotiated-link ceiling
+    rather than a marketing maximum.
+
 ## Source and delta
 
 - **Original source:** [`tech_reports/PCIe_bandwidth/PCIe_bandwidth.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/PCIe_bandwidth/PCIe_bandwidth.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/PCIe_bandwidth/PCIe_bandwidth.md`
 - **Current delta:** provenance, source metrics, outline, improvement checklist,
-  and verification prompts. No new technical claims have been introduced yet.
+  and source-grounded verification answers. Generation-sensitive claims remain
+  scoped to the pinned source snapshot.

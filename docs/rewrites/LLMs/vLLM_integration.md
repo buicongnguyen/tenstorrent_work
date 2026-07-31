@@ -46,9 +46,51 @@ Code references remain in the [pinned official report](https://github.com/tensto
 the full rewrite, each important symbol will be mapped to its role in the
 host → data-movement → compute → data-movement path.
 
+## Verify your understanding
+
+The answers below are derived from the
+[pinned original report](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/LLMs/vLLM_integration.md). They make the report's
+architecture reasoning explicit; generation-sensitive facts remain scoped to that source.
+
+### 1. What concrete bottleneck, correctness constraint, or programming task is this report addressing?
+
+???+ note "Expert answer — source-grounded reasoning"
+    The task is to make a TT-backed model obey vLLM's scheduling and model-runner
+    contracts: dynamic request batches, token positions, sampling inputs, KV-cache
+    management, testing, and fallback modifications must agree across two runtimes.
+
+### 2. What is one invariant that must remain true?
+
+???+ note "Expert answer — source-grounded reasoning"
+    Request identity, sequence position, KV-block ownership, batch slot, and
+    returned-logit row must remain aligned through scheduling and execution. Reordering for
+    performance is legal only if the inverse mapping restores vLLM's logical request
+    order.
+
+### 3. Trace one unit of data or one control event from producer to consumer.
+
+???+ note "Expert answer — source-grounded reasoning"
+    vLLM admits and batches requests → the integration converts scheduler metadata and
+    tokens to TT tensors → the TT model reads/updates the assigned KV-cache blocks and
+    computes logits → results return to vLLM in request order → sampling selects tokens
+    → updated sequence state enters the next scheduling step.
+
+### 4. Which claims are architecture-specific, and which form a durable mental model across Tenstorrent generations?
+
+???+ note "Expert answer — source-grounded reasoning"
+    **Snapshot-specific.** Concrete vLLM interfaces, TT model classes, cache managers,
+    supported batching modes, patches, and test commands are version-specific on both
+    sides.
+
+    **Durable model.** Define a narrow backend contract, keep scheduler metadata and
+    accelerator storage mapping explicit, test mixed-length and preemption cases,
+    isolate vendor changes, and validate both numerical outputs and stateful multi-step
+    behavior.
+
 ## Source and delta
 
 - **Original source:** [`tech_reports/LLMs/vLLM_integration.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/LLMs/vLLM_integration.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/LLMs/vLLM_integration.md`
 - **Current delta:** provenance, source metrics, outline, improvement checklist,
-  and verification prompts. No new technical claims have been introduced yet.
+  and source-grounded verification answers. Generation-sensitive claims remain
+  scoped to the pinned source snapshot.
