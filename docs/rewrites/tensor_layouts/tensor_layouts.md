@@ -183,24 +183,6 @@ Find these concepts in the current official repository:
 APIs evolve, so search the exact upstream revision when a symbol differs from
 the snapshot.
 
-## Verify your understanding
-
-For a logical `[1, 4, 64, 96]` BF16 tensor:
-
-1. What 2D shape represents it?
-2. How many `32 × 32` tiles does it contain?
-3. How many payload bytes do those tiles occupy?
-4. If interleaved over 12 DRAM banks, which bank receives tile page 13?
-5. What extra information is needed to design a height-sharded L1 layout?
-
-??? success "Answers"
-    1. `[256, 96]`.
-    2. `8 × 3 = 24` tiles.
-    3. `24 × 2 KiB = 48 KiB`, before any allocator alignment overhead.
-    4. Bank 1 with zero-based round-robin numbering (`13 mod 12`).
-    5. At minimum: the core grid/order, shard shape, orientation, available L1,
-       and how the consuming kernels partition work.
-
 ## Source and delta
 
 - Official source:

@@ -93,19 +93,6 @@ stored page → unpack / interpret format → compute representation
 The ISA repository is an **official living source**; this learner page remains
 pinned to the TT-Metal report commit above.
 
-## Verify your understanding
-
-1. Why can two values with equal mantissas quantize differently when placed in
-   blocks with different maximum exponents?
-2. For a halfway discarded value, what property of the retained result decides
-   whether to increment?
-3. What happens when rounding would overflow the retained mantissa?
-4. Design a 16-value test block with one large outlier. Compare its error with
-   the same small values placed in a block without that outlier.
-
-Expected observation for question 4: the outlier can force a larger shared
-exponent, leaving fewer effective low-order bits for the smaller values.
-
 ## Source and delta
 
 - **Original:** [Data Formats at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/data_formats/data_formats.md)

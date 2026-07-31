@@ -10,7 +10,7 @@
 !!! info "What ‘seed’ means"
     The official report and its assets are preserved verbatim under
     <code>upstream/tt-metal/tech_reports/PCIe_bandwidth/PCIe_bandwidth.md</code>. This learner page
-    establishes provenance, a reading map, and review prompts; its technical
+    establishes provenance, a reading map, and an improvement plan; its technical
     explanation is still queued for a full visual rewrite.
 
 ## Original report map
@@ -53,17 +53,6 @@ The learner edition should make these parts explicit before it can move beyond
 Code references remain in the [pinned official report](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/PCIe_bandwidth/PCIe_bandwidth.md). During
 the full rewrite, each important symbol will be mapped to its role in the
 host → data-movement → compute → data-movement path.
-
-## Verify your understanding
-
-Before rewriting this page, answer from the original:
-
-1. What concrete bottleneck, correctness constraint, or programming task is
-   this report addressing?
-2. What is one invariant that must remain true?
-3. Trace one unit of data or one control event from producer to consumer.
-4. Which claims are architecture-specific, and which form a durable mental
-   model across Tenstorrent generations?
 
 ## Source and delta
 

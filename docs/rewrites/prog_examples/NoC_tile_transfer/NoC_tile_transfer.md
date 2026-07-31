@@ -89,18 +89,6 @@ endpoint expected by the device APIs.
 The expected value is `14`: the example fills the input buffer with that value,
 runs the workload, reads the destination buffer, and compares the first result.
 
-## Verify your understanding
-
-1. Which call proves that Core 1 has storage reserved before Core 0 writes?
-2. Which event proves the bytes have arrived before Core 1 pushes its CB page?
-3. Why is a NoC barrier not a replacement for `cb_push_back`?
-4. Add a second tile. List the semaphore state and CB ownership state for both
-   tiles before changing code.
-
-Expected answer for question 3: the barrier completes transport; it does not
-publish a page to a local CB consumer or transfer that page's software
-ownership.
-
 ## Source and delta
 
 - **Original:** [NoC Tile Transfer at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/prog_examples/NoC_tile_transfer/NoC_tile_transfer.md)

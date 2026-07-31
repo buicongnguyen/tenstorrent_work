@@ -109,16 +109,6 @@ different command sets.
 - The runtime compiler shown by the report is
   `runtime/sfpi/compiler/bin/riscv32-tt-elf-g++`.
 
-## Verify your understanding
-
-1. Why can CMake export accurate host commands but not every JIT kernel command?
-2. Which workflow should you choose when debugging one specific runtime macro
-   configuration?
-3. Inspect one generated entry: which `-D` defines, `-mcpu`, wrapper processor,
-   and include paths establish its identity?
-4. Temporarily change the experiment so the target operator is not called.
-   Expected observation: its kernel command should no longer be newly captured.
-
 ## Source and delta
 
 - **Original:** [Kernel code indexing at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/code-indexing/kernel-code-indexing.md)

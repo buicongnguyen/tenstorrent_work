@@ -107,15 +107,6 @@ and synchronization even if the arithmetic loop is otherwise identical.
 The ISA pages explain units and state below the TT-LLK boundary; the TT-Metal
 report remains the comparison source for the performance claims above.
 
-## Verify your understanding
-
-1. Why does `1×16 × 16×16` achieve only one eighth of the `8×16` useful-row
-   throughput?
-2. Starting from 4 TFLOPS LoFi, compute the report's HiFi3 peak.
-3. Which elementwise operations ignore math fidelity, and which one uses it?
-4. If FP32 destination accumulation halves destination tile capacity, what
-   program-level blocking or synchronization assumptions must be revisited?
-
 ## Source and delta
 
 - **Original:** [Matrix Engine at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/matrix_engine/matrix_engine.md)

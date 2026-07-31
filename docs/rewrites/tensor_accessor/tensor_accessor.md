@@ -147,17 +147,6 @@ where a cached program is reused with a different aligned page size.
   `TensorAccessor(args, bank_base_address[, page_size])` in a data-movement
   kernel.
 
-## Verify your understanding
-
-1. If `RuntimeRank` is selected, why can tensor shape not remain a compile-time
-   array indexed by that rank?
-2. What units does `dspec.tensor_shape()` use?
-3. Which component calculates the address, which moves the data, and which
-   establishes ownership?
-4. Compare a loop using repeated `get_noc_addr(page_id)` with an accessor
-   iterator. Expected observation: the iterator can reuse state instead of
-   reconstructing the full mapping for each page.
-
 ## Source and delta
 
 - **Original:** [Tensor Accessor Guide at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/tensor_accessor/tensor_accessor.md)

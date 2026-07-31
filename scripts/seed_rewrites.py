@@ -66,7 +66,7 @@ def seed_page(source: Path) -> str:
 !!! info "What ‘seed’ means"
     The official report and its assets are preserved verbatim under
     <code>upstream/tt-metal/tech_reports/{path}</code>. This learner page
-    establishes provenance, a reading map, and review prompts; its technical
+    establishes provenance, a reading map, and an improvement plan; its technical
     explanation is still queued for a full visual rewrite.
 
 ## Original report map
@@ -99,23 +99,12 @@ Code references remain in the [pinned official report]({source_url}). During
 the full rewrite, each important symbol will be mapped to its role in the
 host → data-movement → compute → data-movement path.
 
-## Verify your understanding
-
-Before rewriting this page, answer from the original:
-
-1. What concrete bottleneck, correctness constraint, or programming task is
-   this report addressing?
-2. What is one invariant that must remain true?
-3. Trace one unit of data or one control event from producer to consumer.
-4. Which claims are architecture-specific, and which form a durable mental
-   model across Tenstorrent generations?
-
 ## Source and delta
 
 - **Original source:** [`tech_reports/{path}` at `{COMMIT[:7]}`]({source_url})
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/{path}`
-- **Current delta:** provenance, source metrics, outline, improvement checklist,
-  and verification prompts. No new technical claims have been introduced yet.
+- **Current delta:** provenance, source metrics, outline, and improvement
+  checklist. Questions are added only when source-grounded answers are ready.
 """
 
 

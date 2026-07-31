@@ -262,23 +262,6 @@ Use DeepWiki to discover files, then inspect these official locations:
 `main` links are intentionally living references. For a durable research note,
 replace them with the exact commit being studied and record the access date.
 
-## Verify your understanding
-
-1. Why must cold-run and warm-run latency be reported separately?
-2. What does Fast Dispatch's command prefetcher move, and how is that different
-   from a reader kernel prefetching tensor tiles?
-3. Why does a program-cache hit not imply that Metal Trace is active?
-4. Which addresses and lifetimes must remain stable for the trace pattern you
-   selected?
-5. Draw the minimum two events needed for CQ1 to write an input that CQ0
-   consumes without early read or overwrite.
-6. Which timeline signature suggests trace, and which suggests multiple command
-   queues?
-7. Give one case where non-blocking execution changes overlap but not total
-   device work.
-8. Translate Fast Dispatch, trace, and multiple CQs into vendor-neutral NPU
-   runtime principles.
-
 ## Source and delta
 
 - **Original source:** [`tech_reports/AdvancedPerformanceOptimizationsForModels/AdvancedPerformanceOptimizationsForModels.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/AdvancedPerformanceOptimizationsForModels/AdvancedPerformanceOptimizationsForModels.md)
@@ -288,5 +271,5 @@ replace them with the exact commit being studied and record the access date.
 - **Learner delta:** added a unified runtime flow, the program-cache/Fast
   Dispatch/trace dependency order, two meanings of prefetch, queue-ownership
   invariants, controlled experiments, code entry points, transferable-NPU
-  principles, and interview questions. API and architecture-sensitive details
+  principles, and interview framing. API and architecture-sensitive details
   still require review against the target runtime version and hardware.

@@ -164,12 +164,44 @@ def check_links(errors: list[str]) -> None:
 
 
 def check_required_sections(errors: list[str]) -> None:
-    required = ("## Code connection", "## Verify your understanding", "## Source and delta")
+    required = ("## Code connection", "## Source and delta")
     for rewrite in markdown_files(DOCS / "rewrites"):
         content = rewrite.read_text(encoding="utf-8")
         for heading in required:
             if heading not in content:
                 errors.append(f"{rewrite.relative_to(ROOT)}: missing {heading!r}")
+
+        if "Before rewriting this page, answer from the original:" in content:
+            errors.append(
+                f"{rewrite.relative_to(ROOT)}: contains unanswered seed questions"
+            )
+
+        if "## Verify your understanding" in content:
+            section = content.split("## Verify your understanding", maxsplit=1)[1]
+            section = section.split("\n## ", maxsplit=1)[0]
+            questions = len(
+                re.findall(r"^(?:### )?\d+\. ", section, flags=re.MULTILINE)
+            )
+            answers = section.count("???+ note \"Expert answer")
+            legacy_answers = section.count("??? note \"Guided answer")
+            if questions == 0 or questions != answers + legacy_answers:
+                errors.append(
+                    f"{rewrite.relative_to(ROOT)}: verification questions must "
+                    f"have answers; found {questions} questions and "
+                    f"{answers + legacy_answers} answers"
+                )
+
+    cnn = (DOCS / "rewrites" / "CNNs" / "ttcnn.md").read_text(encoding="utf-8")
+    cnn_section = cnn.split("## Verify your understanding", maxsplit=1)[1]
+    cnn_section = cnn_section.split("\n## ", maxsplit=1)[0]
+    cnn_questions = len(re.findall(r"^### \d+\.", cnn_section, flags=re.MULTILINE))
+    cnn_answers = cnn_section.count('???+ note "Expert answer — architecture reasoning"')
+    if cnn_questions != 4 or cnn_answers != 4:
+        errors.append(
+            "CNN learner page must contain four questions and four expanded "
+            f"architecture answers; found {cnn_questions} questions and "
+            f"{cnn_answers} answers"
+        )
 
 
 def check_diagrams(errors: list[str]) -> None:

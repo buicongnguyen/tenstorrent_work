@@ -120,19 +120,10 @@ Use the [tensor-layout learner chapter](../tensor_layouts/tensor_layouts.md) to
 separate page definition from interleaved/sharded placement, then return here
 to reason about the address span reserved in each bank.
 
-## Verify your understanding
-
-1. Why can lockstep allocation reserve space in a bank that stores no page from
-   a small buffer?
-2. Why are user DRAM buffers and program binaries grown from opposite ends?
-3. A device reports plenty of total free L1 but allocation still fails. Which
-   CSV field should you inspect first?
-4. Explain why the allocator can assign an address without moving any bytes.
-
 ## Source and delta
 
 - **Original:** [Allocator at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/memory/allocator.md)
 - **Added here:** an address-space map, lockstep benefit/cost model,
-  fragmentation diagnosis, ownership/lifetime boundary, and review questions.
+  fragmentation diagnosis, ownership/lifetime boundary, and review checkpoints.
 - **Still to review:** exact reserved regions and bank counts for later device
   descriptors.
