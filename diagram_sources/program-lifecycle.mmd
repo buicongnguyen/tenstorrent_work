@@ -1,0 +1,15 @@
+sequenceDiagram
+    participant H as Host application
+    participant Q as Command queue
+    participant R as Reader kernel
+    participant C as Compute kernel
+    participant W as Writer kernel
+
+    H->>H: Open device and allocate buffers
+    H->>H: Create program, CBs, kernels, runtime args
+    H->>Q: Enqueue transfers and program
+    Q->>R: Dispatch
+    R->>C: Tiles available in input CB
+    C->>W: Result tiles available in output CB
+    W-->>Q: Output written
+    Q-->>H: Completion / readback

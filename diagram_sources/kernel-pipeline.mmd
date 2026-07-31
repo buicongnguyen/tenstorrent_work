@@ -1,0 +1,8 @@
+flowchart LR
+    H["Host"] -->|"enqueue input"| D["Device DRAM"]
+    D -->|"NoC read"| R["Reader kernel"]
+    R -->|"push pages"| C0["Circular buffer"]
+    C0 -->|"wait / unpack"| M["Compute kernel"]
+    M -->|"pack / push"| C1["Circular buffer"]
+    C1 -->|"wait / NoC write"| W["Writer kernel"]
+    W --> D2["DRAM or another core"]

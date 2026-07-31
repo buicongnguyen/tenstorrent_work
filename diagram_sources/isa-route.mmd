@@ -1,0 +1,9 @@
+flowchart TD
+    W["Wormhole B0 overview"] --> T["Tensix Tile overview"]
+    T --> R["Baby RISC-V"]
+    T --> L["L1 + NoC"]
+    T --> C["Tensix Coprocessor"]
+    C --> U["Unpackers"]
+    C --> M["Matrix Unit / SFPU / Dst"]
+    C --> P["Packers"]
+    M --> I["Individual instruction pages"]

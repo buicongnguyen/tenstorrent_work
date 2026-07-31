@@ -1,0 +1,6 @@
+flowchart TD
+    A["Low performance"] --> B{"Is the device<br/>kept busy?"}
+    B -->|"No"| C["Inspect host, dispatch,<br/>op-to-op gaps"]
+    B -->|"Yes"| D{"Are engines<br/>waiting on data?"}
+    D -->|"Yes"| E["Inspect NoC, DRAM, L1,<br/>sharding, synchronization"]
+    D -->|"No"| F["Inspect math fidelity,<br/>tile utilization, engine limits"]

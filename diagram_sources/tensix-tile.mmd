@@ -1,0 +1,8 @@
+flowchart TB
+    N0["NoC 0 / NoC 1"] <--> DM0["Data-movement<br/>RISC-V processors"]
+    DM0 <--> L1["Local L1 SRAM<br/>buffers + circular buffers"]
+    L1 <--> U["Unpack"]
+    U --> F["Matrix engine / SFPU"]
+    F --> P["Pack"]
+    P --> L1
+    L1 <--> DM1["Data-movement<br/>RISC-V processors"]

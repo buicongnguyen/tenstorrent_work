@@ -1,0 +1,10 @@
+flowchart LR
+    S0["0 · Stack<br/>and vocabulary"] --> S1["1 · Tiles, formats,<br/>layouts"]
+    S1 --> S2["2 · L1, DRAM,<br/>NoC, circular buffers"]
+    S2 --> S3["3 · Reader, compute,<br/>writer kernels"]
+    S3 --> S4["4 · Operators and<br/>performance"]
+    S3 --> S35["3½ · TT-LLK<br/>and ISA"]
+    S35 --> S4
+    S4 --> S5["5 · Multi-core,<br/>mesh, fabric"]
+    S3 --> S6["Debugging and<br/>profiling"]
+    S6 --> S4

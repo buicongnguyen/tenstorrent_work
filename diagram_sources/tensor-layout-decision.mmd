@@ -1,0 +1,10 @@
+flowchart TD
+    A["Write logical shape"] --> B["Flatten to 2D"]
+    B --> C["Choose row-major or tile pages"]
+    C --> D["Calculate page/tile count and bytes"]
+    D --> E["Choose interleaved or shard geometry"]
+    E --> F["Choose DRAM or L1"]
+    F --> G["Trace the consuming kernel's access"]
+    G --> H{"Local, aligned,<br/>and balanced?"}
+    H -->|"No"| C
+    H -->|"Yes"| I["Measure on hardware"]

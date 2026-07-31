@@ -1,0 +1,5 @@
+flowchart TB
+    A["Model or application"] --> B["TT-NN<br/>tensor operations"]
+    B --> C["TT-Metalium host API<br/>programs, buffers, kernels"]
+    C --> D["Tensix cores<br/>RISC-V + NoC + matrix/vector engines"]
+    D --> E["L1 SRAM, DRAM,<br/>Ethernet-connected devices"]

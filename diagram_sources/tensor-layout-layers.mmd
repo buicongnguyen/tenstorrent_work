@@ -1,0 +1,4 @@
+flowchart LR
+    T["Logical tensor<br/>shape + values"] --> TL["Tensor layout<br/>elements → pages"]
+    TL --> ML["Memory layout<br/>pages → banks/cores"]
+    ML --> S["Storage<br/>DRAM or L1"]
