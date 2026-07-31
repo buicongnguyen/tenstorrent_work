@@ -74,6 +74,7 @@ nav:
   - Home: index.md
   - Start here:
       - Learning path: start/learning-path.md
+      - Performance optimization track: start/optimization-path.md
       - Architecture mental model: start/architecture-mental-model.md
   - Reports by layer:
       - Layer overview (all 57): reference/report-catalog.md
@@ -125,7 +126,7 @@ nav:
           - PCIe bandwidth: rewrites/PCIe_bandwidth/PCIe_bandwidth.md
           - Saturating DRAM bandwidth: rewrites/Saturating_DRAM_bandwidth/Saturating_DRAM_bandwidth.md
           - Matrix multiply FLOPS: rewrites/GEMM_FLOPS/GEMM_FLOPS.md
-          - Advanced model optimizations: rewrites/AdvancedPerformanceOptimizationsForModels/AdvancedPerformanceOptimizationsForModels.md
+          - Runtime and model optimizations: rewrites/AdvancedPerformanceOptimizationsForModels/AdvancedPerformanceOptimizationsForModels.md
       - "Level 6 · Multi-device systems":
           - Programming a mesh with TT-NN: rewrites/Programming_Mesh_of_Devices/Programming_Mesh_of_Devices_with_TT-NN.md
           - CCL performance practices: rewrites/Programming_Mesh_of_Devices/CCL_Performance_Best_Practices.md
@@ -147,8 +148,9 @@ nav:
   - Project reference:
       - Rewrite roadmap: reference/rewrite-roadmap.md
       - Provenance and updates: reference/provenance.md
-  - External & ISA:
+  - Research sources & ISA:
       - Resource guide: resources/index.md
+      - How to use TT-Metal DeepWiki: resources/deepwiki-research-guide.md
       - Corsix series map and links: resources/corsix-wormhole-series.md
       - Official ISA deep dive: resources/isa-reference.md
   - Contribute:

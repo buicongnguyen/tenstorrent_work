@@ -2,6 +2,9 @@ flowchart TB
     A["TT-NN operators"] --> B["TT-Metalium<br/>programs and kernels"]
     B --> C["TT-LLK<br/>low-level kernel APIs"]
     C --> D["Tenstorrent ISA docs<br/>units, state, instructions"]
+    F["TT-Metal DeepWiki<br/>generated code map"] -. "discover files, then verify" .-> A
+    F -. "discover files, then verify" .-> B
+    F -. "discover files, then verify" .-> C
     E["Corsix Wormhole series<br/>independent experiments + mental models"] -. "cross-check" .-> B
     E -. "cross-check" .-> C
     E -. "cross-check" .-> D

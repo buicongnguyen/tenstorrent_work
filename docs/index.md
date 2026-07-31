@@ -8,6 +8,7 @@
   </p>
   <div class="hero-actions">
     <a class="md-button md-button--primary" href="start/learning-path/">Start the learning path</a>
+    <a class="md-button" href="start/optimization-path/">Study optimization</a>
     <a class="md-button" href="reference/report-catalog/">Browse reports by layer</a>
     <a class="md-button" href="resources/">Explore external &amp; ISA sources</a>
   </div>
@@ -81,6 +82,12 @@ questions for any operator:
 ## Recommended next page
 
 [Build the architecture mental model →](start/architecture-mental-model.md)
+
+If you already know the stack and want an evidence-driven performance route,
+open the [performance optimization learning track](start/optimization-path.md).
+It connects program cache, Fast Dispatch, Metal Trace, multiple command queues,
+memory placement, kernel dataflow, and ISA-level study without flattening their
+different abstraction levels.
 
 For lower-level study, open the
 [external and ISA resource guide](resources/index.md). It distinguishes

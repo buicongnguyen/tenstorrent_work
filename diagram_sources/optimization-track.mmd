@@ -1,0 +1,21 @@
+flowchart LR
+    subgraph Runtime["Host and runtime"]
+        direction TB
+        B["0 · Measure a repeatable baseline"] --> P["1 · Separate cold start<br/>Program cache and warm-up"]
+        P --> T["2–3 · Remove host/inter-op gaps<br/>Fast Dispatch and Metal Trace"]
+    end
+
+    subgraph DataPath["Device data path"]
+        direction TB
+        M["4 · Overlap iterations and I/O<br/>CQs, events, async execution"] --> D["5 · Shorten the memory path<br/>Layout, sharding, L1 placement"]
+        D --> K["6 · Pipeline and reuse tiles<br/>Work split, CBs, multicast"]
+    end
+
+    subgraph Depth["Scale and depth"]
+        direction TB
+        F["7 · Scale communication<br/>Collectives and fabric"] --> I["8 · Descend only when measured<br/>Formats, TT-LLK, ISA"]
+        I --> V["Re-profile the same metric<br/>then choose the next bottleneck"]
+    end
+
+    T --> M
+    K --> F

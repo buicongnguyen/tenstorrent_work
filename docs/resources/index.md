@@ -1,8 +1,9 @@
 # External and ISA resource guide
 
-The official `tt-metal` reports explain the programming stack. Two additional
-sources make the lower layers easier to study—but they have different trust
-properties.
+The official `tt-metal` reports explain the programming stack. DeepWiki helps
+map the changing codebase, while the Corsix series and official ISA material
+make lower layers easier to study. These sources have different trust
+properties and should not be blended silently.
 
 ![How the official and community sources relate](../assets/diagrams/source-map.svg){ .atlas-diagram }
 
@@ -13,6 +14,8 @@ properties.
 | If you are asking… | Start with | Trust label |
 |---|---|---|
 | How do I build or optimize a TT-Metal/TT-NN operator? | [Pinned `tt-metal` reports](../reference/report-catalog.md) | Official · pinned |
+| Which subsystem or source files should I inspect for a question? | [How to use TT-Metal DeepWiki](deepwiki-research-guide.md) | Discovery index · verify |
+| How do I diagnose and optimize a workload across layers? | [Performance optimization track](../start/optimization-path.md) | Atlas synthesis · source-linked |
 | How does Wormhole appear experimentally from PCIe down to a T tile? | [Corsix Wormhole series](corsix-wormhole-series.md) | Community · verify |
 | How should I actively study and question Corsix Parts 1–7? | [Corsix reading workbook](corsix-reading-workbook.md) | Community · verify against official |
 | What exactly does an Unpacker, Packer, register, or instruction do? | [Tenstorrent ISA deep dive](isa-reference.md) | Official · living |
@@ -24,6 +27,13 @@ properties.
     vector ISA, and matrix math. It is independent analysis, so treat measured
     values and inferred internals as hypotheses until official documentation,
     current source, or your own hardware confirms them.
+
+!!! info "Why DeepWiki is included"
+    DeepWiki is unusually useful for finding classes, tests, firmware, and
+    subsystem relationships in a large repository. Its pages are generated and
+    can be indexed at different commits, so the Atlas uses it for discovery—not
+    authority. Record each page's own indexed commit, follow its source links,
+    and compare the claim with official pinned and current material.
 
 !!! warning "Architecture boundary"
     Wormhole B0 and Blackhole A0 share ideas but are not interchangeable. Mark
@@ -39,3 +49,8 @@ file—not merely the home page—so you can compare the explanation directly.
 For a complete lower-layer route, use the
 [Parts 1–7 reading workbook](corsix-reading-workbook.md). It places each article
 inside Level 7 and pairs it with questions and official comparison sources.
+
+For a complete performance route, use the
+[optimization learning track](../start/optimization-path.md). For the research
+method and a reusable source-ledger template, use the
+[DeepWiki research guide](deepwiki-research-guide.md).

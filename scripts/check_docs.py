@@ -175,6 +175,80 @@ def check_corsix_workbook(errors: list[str]) -> None:
         errors.append("sidebar navigation is missing the Corsix reading workbook")
 
 
+def check_deepwiki_optimization(errors: list[str]) -> None:
+    guide = (DOCS / "resources" / "deepwiki-research-guide.md").read_text(
+        encoding="utf-8"
+    )
+    track = (DOCS / "start" / "optimization-path.md").read_text(encoding="utf-8")
+    advanced = (
+        DOCS
+        / "rewrites"
+        / "AdvancedPerformanceOptimizationsForModels"
+        / "AdvancedPerformanceOptimizationsForModels.md"
+    ).read_text(encoding="utf-8")
+    navigation = (ROOT / "mkdocs.yml").read_text(encoding="utf-8")
+
+    deepwiki_urls = (
+        "https://deepwiki.com/tenstorrent/tt-metal",
+        "https://deepwiki.com/tenstorrent/tt-metal/2.5-fast-dispatch-and-command-queue-system",
+        "https://deepwiki.com/tenstorrent/tt-metal/4.10-program-configuration-and-optimization",
+        "https://deepwiki.com/tenstorrent/tt-metal/7.4-performance-optimization-techniques",
+        "https://deepwiki.com/tenstorrent/tt-metal/8.4-profiling-and-performance-analysis",
+        "https://deepwiki.com/tenstorrent/tt-metal/3-low-level-kernel-apis-%28llk%29",
+    )
+    for url in deepwiki_urls:
+        if url not in guide:
+            errors.append(f"DeepWiki research guide is missing original link {url}")
+
+    for marker in ("96d1d1", "page's own", "## Evidence labels for notes"):
+        if marker not in guide:
+            errors.append(f"DeepWiki research guide is missing {marker!r}")
+
+    track_topics = (
+        "Program cache",
+        "Fast Dispatch",
+        "Metal Trace",
+        "Multiple command queues",
+        "Transfer the lessons to another NPU",
+        "Interview drill",
+    )
+    for topic in track_topics:
+        if topic.lower() not in track.lower():
+            errors.append(f"optimization track is missing {topic!r}")
+
+    if "<!-- rewrite-status: improved-draft -->" not in advanced:
+        errors.append("advanced optimization learner page was not promoted")
+    for topic in ("### Command prefetch is not tensor prefetch", "## Optimization diagnosis lab"):
+        if topic not in advanced:
+            errors.append(f"advanced optimization learner page is missing {topic!r}")
+
+    for nav_path in (
+        "start/optimization-path.md",
+        "resources/deepwiki-research-guide.md",
+    ):
+        if nav_path not in navigation:
+            errors.append(f"sidebar navigation is missing {nav_path}")
+
+
+def check_status_summary(errors: list[str]) -> None:
+    counts: dict[str, int] = {}
+    for rewrite in markdown_files(DOCS / "rewrites"):
+        match = STATUS_RE.search(rewrite.read_text(encoding="utf-8"))
+        if match:
+            counts[match.group(1)] = counts.get(match.group(1), 0) + 1
+
+    roadmap = (DOCS / "reference" / "rewrite-roadmap.md").read_text(
+        encoding="utf-8"
+    )
+    for status in ("improved-draft", "seed"):
+        expected_row = f"| `{status}` | {counts.get(status, 0)} |"
+        if expected_row not in roadmap:
+            errors.append(
+                f"rewrite roadmap status summary is stale for {status!r}: "
+                f"expected row starting {expected_row!r}"
+            )
+
+
 def main() -> int:
     errors: list[str] = []
     check_upstream(errors)
@@ -184,6 +258,8 @@ def main() -> int:
     check_required_sections(errors)
     check_diagrams(errors)
     check_corsix_workbook(errors)
+    check_deepwiki_optimization(errors)
+    check_status_summary(errors)
 
     if errors:
         print("Documentation validation failed:")

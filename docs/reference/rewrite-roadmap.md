@@ -8,8 +8,8 @@ Every report has a one-to-one learner URL and exact original-source link, but a
 
 | Status | Count | Meaning |
 |---|---:|---|
-| `improved-draft` | 7 | Substantive explanation, diagram, code connection, and verification prompts; practitioner review remains |
-| `seed` | 50 | Provenance, source outline, and improvement checklist exist; technical rewrite is queued |
+| `improved-draft` | 8 | Substantive explanation, diagram, code connection, and verification prompts; practitioner review remains |
+| `seed` | 49 | Provenance, source outline, and improvement checklist exist; technical rewrite is queued |
 | **Total** | **57** | One learner page for every pinned official report |
 
 The [report catalog](report-catalog.md) is the authoritative per-document status
@@ -46,6 +46,10 @@ After the primitives, promote the reports on DRAM/PCIe bandwidth, GEMM FLOPS,
 profilers, performance counters, numerical accuracy, and advanced optimization.
 Each rewrite should distinguish a theoretical ceiling from measured utilization
 and identify the counter or trace that tests the suspected bottleneck.
+
+- [x] [Advanced runtime and model optimizations](../rewrites/AdvancedPerformanceOptimizationsForModels/AdvancedPerformanceOptimizationsForModels.md)
+- [x] [Cross-layer optimization learning track](../start/optimization-path.md)
+- [x] [DeepWiki research guide](../resources/deepwiki-research-guide.md)
 
 ## Phase 4 — operators, models, and scale-out
 

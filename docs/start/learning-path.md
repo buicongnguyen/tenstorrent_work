@@ -117,13 +117,19 @@ writer kernels, including circular-buffer ownership and NoC barriers.
 **Goal:** decide whether a problem is correctness, host dispatch, PCIe, DRAM,
 NoC, local memory, synchronization, or compute.
 
+For a cross-layer route organized by measured symptoms, start with the
+[performance optimization learning track](optimization-path.md). It links back
+to the canonical report at each level and explains how to use DeepWiki for code
+discovery without treating it as the source of truth.
+
 Read:
 
 1. [Kernel debugging tips](../rewrites/Debugging/Kernel_Debugging_Tips.md)
 2. [Metal profiler](../rewrites/MetalProfiler/metal-profiler.md)
 3. [Hardware performance counters](../rewrites/PerfCounters/perf-counters.md)
-4. [Saturating DRAM bandwidth](../rewrites/Saturating_DRAM_bandwidth/Saturating_DRAM_bandwidth.md)
-5. [Matrix multiply FLOPS](../rewrites/GEMM_FLOPS/GEMM_FLOPS.md)
+4. [Runtime and model optimizations](../rewrites/AdvancedPerformanceOptimizationsForModels/AdvancedPerformanceOptimizationsForModels.md)
+5. [Saturating DRAM bandwidth](../rewrites/Saturating_DRAM_bandwidth/Saturating_DRAM_bandwidth.md)
+6. [Matrix multiply FLOPS](../rewrites/GEMM_FLOPS/GEMM_FLOPS.md)
 
 **Checkpoint:** name the measurement that would confirm or reject each
 candidate bottleneck before changing code.

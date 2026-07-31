@@ -1,0 +1,20 @@
+flowchart LR
+    subgraph Discover["Discover"]
+        direction TB
+        Q["Start with one concrete question"] --> D["Use DeepWiki to map<br/>concepts and candidate files"]
+        D --> S["Record page URL,<br/>indexed commit, access date"]
+    end
+
+    subgraph Verify["Verify"]
+        direction TB
+        C["Inspect source files<br/>at the indexed commit"] --> O["Compare pinned reports<br/>and current official docs"]
+        O --> E["Label evidence<br/>official · observed · inferred · open"]
+    end
+
+    subgraph Publish["Test and publish"]
+        direction TB
+        X["Run one-variable A/B test<br/>with a predicted observation"] --> L["Publish the learner explanation<br/>with original links"]
+    end
+
+    S --> C
+    E --> X

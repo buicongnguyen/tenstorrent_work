@@ -1,0 +1,19 @@
+flowchart LR
+    subgraph Host["Host side"]
+        A["TT-NN / Metalium API"] --> IQ["Issue queue in system memory"]
+        PC["Program cache<br/>reuse compiled program"] -.-> A
+    end
+
+    subgraph Service["Fast Dispatch service cores"]
+        PF["Command prefetcher"] --> DP["Dispatcher"]
+    end
+
+    subgraph Device["Worker execution"]
+        W["Worker Tensix programs"] --> CQ["Completion queue"]
+    end
+
+    IQ --> PF
+    DP --> W
+    CQ --> A
+    TR["Metal Trace buffer<br/>replay captured commands"] -.-> PF
+    IO["Second command queue<br/>overlap next I/O"] -. "events protect ownership" .-> W

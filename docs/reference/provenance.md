@@ -34,6 +34,7 @@ official and which are interpretation. Instead:
 |---|---|---|
 | **Official · pinned** | Tenstorrent material at an exact commit | basis for one-to-one rewrites and comparison links |
 | **Official · living** | Tenstorrent documentation linked at `main` | low-level/ISA reference; re-check before relying on details |
+| **DeepWiki map** | generated repository explanation indexed at a displayed commit | subsystem discovery and source-file leads; never the only evidence for a claim |
 | **Community · verify** | independent analysis such as Corsix | intuition and experiments; compare with official docs and code |
 | **Atlas synthesis** | explanation written in this repository | teaching aid whose sources and added interpretation are explicit |
 
@@ -41,6 +42,10 @@ Every one-to-one learner rewrite must show its exact **Original source** link
 at the top and repeat the comparison links in its **Source and delta** section.
 The generated report catalog links every original report even when a rewrite
 does not exist yet.
+
+DeepWiki research notes must additionally record the exact page URL, that
+page's displayed indexed commit/date, and the access date. Different pages can
+lag the repository—or each other—by different amounts.
 
 ## Update checklist
 
