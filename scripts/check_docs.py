@@ -158,19 +158,57 @@ def check_corsix_workbook(errors: list[str]) -> None:
     )
     navigation = (ROOT / "mkdocs.yml").read_text(encoding="utf-8")
 
-    for part in range(1, 8):
+    part_files = (
+        "part1-physicalities.md",
+        "part2-disabled-rows.md",
+        "part3-noc-latency.md",
+        "part4-ethernet.md",
+        "part5-tile-architecture.md",
+        "part6-vector-isa.md",
+        "part7-matmul.md",
+    )
+    expected_answers = (6, 6, 6, 6, 7, 7, 7)
+    parts_root = DOCS / "resources" / "corsix-parts"
+
+    for part, (filename, answer_count) in enumerate(
+        zip(part_files, expected_answers, strict=True), start=1
+    ):
         source_url = f"https://www.corsix.org/content/tt-wh-part{part}"
         if source_url not in series:
             errors.append(f"Corsix series map is missing Part {part} original link")
-        if source_url not in workbook:
-            errors.append(f"Corsix workbook is missing Part {part} original link")
-        if f"## Part {part} —" not in workbook:
-            errors.append(f"Corsix workbook is missing Part {part} section")
+        if f"corsix-parts/{filename}" not in workbook:
+            errors.append(f"Corsix course hub is missing Part {part} lesson link")
+        if f"resources/corsix-parts/{filename}" not in navigation:
+            errors.append(f"sidebar navigation is missing Corsix Part {part}")
 
-    if workbook.count("### Questions while reading") != 7:
-        errors.append("Corsix workbook must contain one question section per part")
-    if workbook.count("### Verify after reading") != 7:
-        errors.append("Corsix workbook must contain one verification section per part")
+        page_path = parts_root / filename
+        if not page_path.exists():
+            errors.append(f"Corsix Part {part} guided page is missing")
+            continue
+        page = page_path.read_text(encoding="utf-8")
+        if source_url not in page:
+            errors.append(f"Corsix Part {part} page is missing its original link")
+        for marker in (
+            "## Follow the reasoning",
+            "## Questions and guided answers",
+            "## Verify and extend",
+            "Architecture review",
+        ):
+            if marker not in page:
+                errors.append(f"Corsix Part {part} page is missing {marker!r}")
+
+        answers = page.count('??? note "Guided answer"')
+        questions = len(re.findall(r"^### \d+\.", page, flags=re.MULTILINE))
+        if answers != answer_count or questions != answer_count:
+            errors.append(
+                f"Corsix Part {part} must contain {answer_count} questions and "
+                f"guided answers; found {questions} questions and {answers} answers"
+            )
+
+        expected_diagram = f"corsix-part{part}-"
+        if expected_diagram not in page:
+            errors.append(f"Corsix Part {part} page is missing its flow diagram")
+
     if "resources/corsix-reading-workbook.md" not in navigation:
         errors.append("sidebar navigation is missing the Corsix reading workbook")
 

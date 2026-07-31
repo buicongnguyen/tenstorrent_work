@@ -143,7 +143,15 @@ nav:
           - Shared-exponent precision suite: rewrites/data_formats/shared_exponent_precision_testing_suite/Readme.md
           - Special values in Tensix compute: rewrites/Handling_Special_Value/special_values.md
           - Blackhole bring-up guide: rewrites/Blackhole/BlackholeBringUpProgrammingGuide.md
-          - Corsix Parts 1–7 workbook: resources/corsix-reading-workbook.md
+          - "Corsix Wormhole guided course":
+              - Course overview: resources/corsix-reading-workbook.md
+              - "Part 1 · Physicalities": resources/corsix-parts/part1-physicalities.md
+              - "Part 2 · Disabled rows": resources/corsix-parts/part2-disabled-rows.md
+              - "Part 3 · NoC latency": resources/corsix-parts/part3-noc-latency.md
+              - "Part 4 · Ethernet routing": resources/corsix-parts/part4-ethernet.md
+              - "Part 5 · Tensix tile": resources/corsix-parts/part5-tile-architecture.md
+              - "Part 6 · Vector ISA": resources/corsix-parts/part6-vector-isa.md
+              - "Part 7 · Matrix pipeline": resources/corsix-parts/part7-matmul.md
           - Official ISA route: resources/isa-reference.md
   - Project reference:
       - Rewrite roadmap: reference/rewrite-roadmap.md

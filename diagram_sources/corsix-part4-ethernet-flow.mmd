@@ -1,0 +1,13 @@
+sequenceDiagram
+    participant H as Host
+    participant E0 as ASIC 0 Ethernet tile
+    participant E1 as ASIC 1 Ethernet tile
+    participant T as Remote target tile
+    H->>E0: write command payload
+    H->>E0: fence, then publish SQ index
+    E0->>E1: route across Ethernet
+    E1->>T: forward over local NoC
+    T-->>E1: response
+    E1-->>E0: return across Ethernet
+    E0-->>H: publish CQ entry
+    H->>E0: consume, then advance CQ index

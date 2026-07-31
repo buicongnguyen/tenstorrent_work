@@ -1,0 +1,18 @@
+flowchart TB
+    subgraph Observe["Observe"]
+        direction LR
+        A["Multicast reset release"] --> B["Each tile records local counter"]
+        B --> C["Unicast result collection"]
+    end
+    subgraph Correct["Correct"]
+        direction LR
+        D["Compare both NoC directions"]
+        D --> E["Estimate counter offsets"]
+    end
+    subgraph Infer["Infer carefully"]
+        direction LR
+        F["Fit injection + hops + ejection"]
+        F --> G["Repeat under load and report variance"]
+    end
+    C --> D
+    E --> F

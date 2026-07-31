@@ -1,0 +1,22 @@
+flowchart LR
+    subgraph Control["Independent control"]
+        B["BRISC / NCRISC\nmovement"]
+        T0["T0\nUnpack control"]
+        T1["T1\nMath control"]
+        T2["T2\nPack control"]
+    end
+    subgraph Issue["Tensix issue"]
+        T0 --> M0["MOP / Replay"]
+        T1 --> M1["MOP / Replay"]
+        T2 --> M2["MOP / Replay"]
+        M0 --> S["Shared sync"]
+        M1 --> S
+        M2 --> S
+    end
+    subgraph Engines["Specialized engines"]
+        S --> U["Unpack → SrcA / SrcB"]
+        S --> M["Matrix / SFPU → Dst"]
+        S --> P["Pack → L1"]
+    end
+    B -. "NoC and L1 data flow" .-> U
+    P -.-> B

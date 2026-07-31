@@ -17,7 +17,7 @@ properties and should not be blended silently.
 | Which subsystem or source files should I inspect for a question? | [How to use TT-Metal DeepWiki](deepwiki-research-guide.md) | Discovery index · verify |
 | How do I diagnose and optimize a workload across layers? | [Performance optimization track](../start/optimization-path.md) | Atlas synthesis · source-linked |
 | How does Wormhole appear experimentally from PCIe down to a T tile? | [Corsix Wormhole series](corsix-wormhole-series.md) | Community · verify |
-| How should I actively study and question Corsix Parts 1–7? | [Corsix reading workbook](corsix-reading-workbook.md) | Community · verify against official |
+| How should I actively study and question Corsix Parts 1–7? | [Seven-part Corsix guided course](corsix-reading-workbook.md) | Community · guided answers · verify against official |
 | What exactly does an Unpacker, Packer, register, or instruction do? | [Tenstorrent ISA deep dive](isa-reference.md) | Official · living |
 | How do I write at the low-level-kernel API? | [`tt-llk`](https://github.com/tenstorrent/tt-llk) | Official · living |
 
@@ -47,7 +47,7 @@ one of these supporting sources, it also links the exact Corsix article or ISA
 file—not merely the home page—so you can compare the explanation directly.
 
 For a complete lower-layer route, use the
-[Parts 1–7 reading workbook](corsix-reading-workbook.md). It places each article
+[Parts 1–7 guided course](corsix-reading-workbook.md). It places each article
 inside Level 7 and pairs it with questions and official comparison sources.
 
 For a complete performance route, use the

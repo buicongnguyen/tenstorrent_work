@@ -161,7 +161,7 @@ and instructions without mixing Wormhole and Blackhole details.
 Use:
 
 1. [Matrix engine](../rewrites/matrix_engine/matrix_engine.md)
-2. [Corsix Parts 1–7 reading workbook](../resources/corsix-reading-workbook.md)
+2. [Corsix Parts 1–7 guided course](../resources/corsix-reading-workbook.md)
 3. [Official ISA deep dive](../resources/isa-reference.md)
 4. [Resource guide and trust labels](../resources/index.md)
 

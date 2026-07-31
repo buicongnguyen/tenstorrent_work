@@ -1,0 +1,13 @@
+flowchart LR
+    subgraph Product["Board"]
+        H["Host"] --> P["PCIe-attached ASIC"]
+        P <-->|"internal Ethernet"| R["Remote ASIC on n300"]
+    end
+    subgraph Chip["Inside one ASIC"]
+        P --> N["Logical NoC coordinates"]
+        N --> T["Tensix tiles"]
+        N --> D["DRAM tiles"]
+        N --> E["Ethernet / I/O tiles"]
+    end
+    F["Physical interleaving + harvesting"] -. "hidden below logical view" .-> N
+    T --> L["Placement and locality still matter"]

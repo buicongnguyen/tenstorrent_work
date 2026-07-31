@@ -1,0 +1,24 @@
+flowchart TB
+    subgraph Entry["Keep data on the tile"]
+        direction LR
+        A["Matrix result in Dst"] --> B["SFPLOAD + format conversion"]
+        B --> C["8 registers × 32 lanes"]
+    end
+    subgraph Work["Programmable SIMD work"]
+        direction LR
+        D["Predicated arithmetic"]
+        E["LUT / FMA approximation"]
+        F["Cross-lane movement"]
+    end
+    subgraph Exit["Write once"]
+        direction LR
+        G["SFPSTORE"] --> H["Updated Dst"]
+        H --> I["Pack once to L1"]
+    end
+    C --> D
+    C --> E
+    C --> F
+    D --> G
+    E --> G
+    F --> G
+    J["Toolchain schedules hazards"] -.-> D

@@ -1,0 +1,21 @@
+flowchart TB
+    subgraph Input["Prepare operands"]
+        direction LR
+        L["L1 input tiles"] --> U["Unpack\nformat + reshape"]
+        U --> A["SrcA / SrcB"]
+    end
+    subgraph Compute["Choose precision and accumulate"]
+        direction LR
+        F["Fidelity phases"] --> M["Matrix primitive\nnarrow multipliers"]
+        M --> D["Accumulate in Dst"]
+    end
+    subgraph Output["Fuse and store"]
+        direction LR
+        V["Optional SFPU fusion"] --> P["Pack\nconvert + round"]
+        P --> O["L1 output tile"]
+    end
+    A --> M
+    D --> V
+    R["Bottleneck = slowest stage"] -.-> U
+    R -.-> M
+    R -.-> P

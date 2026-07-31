@@ -1,0 +1,10 @@
+flowchart LR
+    A["CPU virtual address"] --> B["OS mapping to PCIe BAR"]
+    B --> C["Programmable device window"]
+    C --> D["NoC 0 / NoC 1"]
+    D --> E["Tile coordinate"]
+    E --> F["Tile-local address"]
+    G["Window configuration"] --> C
+    G1["unicast / multicast"] --> G
+    G2["target + address range"] --> G
+    G3["cache policy affects host ordering"] -.-> B

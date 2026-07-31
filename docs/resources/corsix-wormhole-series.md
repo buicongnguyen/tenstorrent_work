@@ -15,20 +15,20 @@ the low-level system foundation; Parts 5–7 descend into the Tensix compute
 pipeline. Part 4 also bridges to Level 6 because it studies multi-ASIC Ethernet
 routing.
 
-[Open the Parts 1–7 reading and questioning workbook →](corsix-reading-workbook.md){ .md-button .md-button--primary }
+[Open the seven-part guided course →](corsix-reading-workbook.md){ .md-button .md-button--primary }
 
 ## Read in order
 
-| Part | Original article | What to extract | Compare with |
+| Part | Original article | Guided lesson with answers | Compare with |
 |---:|---|---|---|
-| 1 | [Physicalities](https://www.corsix.org/content/tt-wh-part1) | board, ASIC tile types, logical versus physical NoC placement | [Wormhole B0 overview](https://github.com/tenstorrent/tt-isa-documentation/tree/main/WormholeB0) |
-| 2 | [Which disabled rows?](https://www.corsix.org/content/tt-wh-part2) | PCIe mappings, host TLB windows, harvesting discovery | [`tt-kmd`](https://github.com/tenstorrent/tt-kmd) and current device APIs |
-| 3 | [NoC propagation delay](https://www.corsix.org/content/tt-wh-part3) | multicast experiment, tile counters, latency inference | [Wormhole NoC docs](https://github.com/tenstorrent/tt-isa-documentation/tree/main/WormholeB0/NoC) |
-| 4 | [A touch of Ethernet](https://www.corsix.org/content/tt-wh-part4) | n300 multi-ASIC connectivity and routing | [`BasicEthernetGuide.md`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/EthernetMultichip/BasicEthernetGuide.md) |
-| 5 | [Taking apart T tiles](https://www.corsix.org/content/tt-wh-part5) | five Baby RISC-V cores, L1, Tensix front/back ends | [Tensix Tile overview](https://github.com/tenstorrent/tt-isa-documentation/tree/main/WormholeB0/TensixTile) |
-| 6 | [Vector instruction set](https://www.corsix.org/content/tt-wh-part6) | SFPU state, lanes, flags, instruction families | [Tensix Coprocessor directory](https://github.com/tenstorrent/tt-isa-documentation/tree/main/WormholeB0/TensixTile/TensixCoprocessor) |
-| 7 | [Bits of the MatMul](https://www.corsix.org/content/tt-wh-part7) | Unpack/Matrix/Pack data path, fidelity stages, throughput reasoning | [`MatrixUnit.md`](https://github.com/tenstorrent/tt-isa-documentation/blob/main/WormholeB0/TensixTile/TensixCoprocessor/MatrixUnit.md) |
-| 8 | [Reference](https://www.corsix.org/content/tt-wh-part8) | bridge from the blog series to the comprehensive ISA repository | [`tt-isa-documentation`](https://github.com/tenstorrent/tt-isa-documentation) |
+| 1 | [Physicalities](https://www.corsix.org/content/tt-wh-part1) | [Topology, yield, and locality](corsix-parts/part1-physicalities.md) | [Wormhole B0 overview](https://github.com/tenstorrent/tt-isa-documentation/tree/main/WormholeB0) |
+| 2 | [Which disabled rows?](https://www.corsix.org/content/tt-wh-part2) | [Host-to-tile address flow](corsix-parts/part2-disabled-rows.md) | [`tt-kmd`](https://github.com/tenstorrent/tt-kmd) and current device APIs |
+| 3 | [NoC propagation delay](https://www.corsix.org/content/tt-wh-part3) | [Measurement and inference](corsix-parts/part3-noc-latency.md) | [Wormhole NoC docs](https://github.com/tenstorrent/tt-isa-documentation/tree/main/WormholeB0/NoC) |
+| 4 | [A touch of Ethernet](https://www.corsix.org/content/tt-wh-part4) | [Queues, ownership, and routing](corsix-parts/part4-ethernet.md) | [`BasicEthernetGuide.md`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/EthernetMultichip/BasicEthernetGuide.md) |
+| 5 | [Taking apart T tiles](https://www.corsix.org/content/tt-wh-part5) | [Control and specialized engines](corsix-parts/part5-tile-architecture.md) | [Tensix Tile overview](https://github.com/tenstorrent/tt-isa-documentation/tree/main/WormholeB0/TensixTile) |
+| 6 | [Vector instruction set](https://www.corsix.org/content/tt-wh-part6) | [SFPU fusion and ISA tradeoffs](corsix-parts/part6-vector-isa.md) | [Tensix Coprocessor directory](https://github.com/tenstorrent/tt-isa-documentation/tree/main/WormholeB0/TensixTile/TensixCoprocessor) |
+| 7 | [Bits of the MatMul](https://www.corsix.org/content/tt-wh-part7) | [Pipeline balance and fidelity](corsix-parts/part7-matmul.md) | [`MatrixUnit.md`](https://github.com/tenstorrent/tt-isa-documentation/blob/main/WormholeB0/TensixTile/TensixCoprocessor/MatrixUnit.md) |
+| 8 | [Reference](https://www.corsix.org/content/tt-wh-part8) | Reference bridge after the guided course | [`tt-isa-documentation`](https://github.com/tenstorrent/tt-isa-documentation) |
 
 The pagination URL originally supplied—[`/content/page3`](https://www.corsix.org/content/page3)—contains
 Parts 3–7 together. The table above uses stable per-article URLs so sidebar
@@ -37,8 +37,8 @@ links open exactly the chapter you intend.
 ## Recommended study rhythm
 
 1. Read one original article and draw its actors, addresses, and data movement.
-2. Answer that part's questions in the
-   [workbook](corsix-reading-workbook.md) before reading a summary.
+2. Answer that part's questions on its guided subpage before expanding the
+   answer blocks.
 3. Classify important claims as official, observed, inferred, or open.
 4. Compare with the exact official ISA/report links beside that part.
 5. Record disagreements as architecture- and date-qualified research questions.

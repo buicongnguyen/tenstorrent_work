@@ -198,7 +198,7 @@ format conversion, or low-level synchronization is the remaining limit?
 Use:
 
 1. [Matrix engine](../rewrites/matrix_engine/matrix_engine.md)
-2. [Corsix Parts 1–7 workbook](../resources/corsix-reading-workbook.md)
+2. [Corsix Parts 1–7 guided course](../resources/corsix-reading-workbook.md)
 3. [Official ISA route](../resources/isa-reference.md)
 4. DeepWiki [LLK map](https://deepwiki.com/tenstorrent/tt-metal/3-low-level-kernel-apis-%28llk%29)
 
