@@ -52,14 +52,27 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** Split the model plan into prefill and decode regimes, then
+   identify which transformer modules are compute-bound, KV/weight-bandwidth-bound,
+   launch-bound, or constrained by tensor-parallel communication for production shapes.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Trace one token from embedding through normalization, Q/K/V
+   and rotary application, KV-cache update/read, causal attention, projection/residual, MLP,
+   final normalization/head, logits, and the next decode iteration.
+
+3. **Invariant to prove.** Preserve batch, sequence, head, hidden-dimension, causal
+   position, and KV ownership semantics through every reshape/shard; token `t` must read
+   only the permitted cache positions and update exactly its assigned slot.
+
+4. **TT-Metal evidence to connect.** Connect modules to concrete operations such as
+   `ttnn.experimental.rotary_embedding_llama`, `RotarySetup`, normalization `stats` tensors,
+   attention/cache operations, mesh configs, and model-specific program factories named by
+   the source.
+
+5. **Experiment and expected observation.** Measure prefill time-to-first-token and steady
+   decode token latency separately while keeping weights/KV resident; expected result:
+   regime-specific configurations improve their targeted metric without cache growth,
+   reorder, or module-PCC errors.
 
 ## Code connection
 

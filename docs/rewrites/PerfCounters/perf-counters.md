@@ -52,14 +52,25 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** Choose counters only after stating a mechanism
+   hypothesis—request/grant pressure, issue utilization, wait dependency, or another
+   documented event—and define the exact core and interval the derived metric represents.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Draw a hardware event increment through selected counter
+   register, start/stop/reset lifecycle, RISC synchronization, readout, exported record, and
+   formula such as request/reference or request/grant stall ratio.
+
+3. **Invariant to prove.** Prove counter selection, width, reset, sampling window, core
+   coverage, and formula use compatible events; account for overflow, unsupported selectors,
+   and any multiplexing or instrumentation effect.
+
+4. **TT-Metal evidence to connect.** Connect the workflow to `start_perf_counter()`,
+   `stop_perf_counter()`, `wait_ncrisc_trisc()`, `read_perf_counters()`, `counter_sel`,
+   `tt_perf_cnt`, and the report's derived expressions.
+
+5. **Experiment and expected observation.** Create a baseline plus one controlled source of
+   reader or arbitration pressure; expected result: the predicted counter/ratio changes in
+   the measured interval and aligns with a matching timeline stall.
 
 ## Code connection
 

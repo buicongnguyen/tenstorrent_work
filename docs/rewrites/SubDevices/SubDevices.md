@@ -39,14 +39,26 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** Define which cores, dispatch resources, buffers, queues, and
+   synchronization scope each independent workload owns and which rare dependencies
+   genuinely require global semaphores or circular buffers.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Draw sub-device manager creation/loading, targeted
+   buffer/program enqueue, local completion, optional global object publication,
+   cross-sub-device wait/consume, stall-group synchronization, and manager teardown.
+
+3. **Invariant to prove.** Prove core/resource sets are disjoint by default, commands cannot
+   consume another sub-device's local resources, and shared storage becomes visible and
+   reusable only through explicit cross-owner dependencies.
+
+4. **TT-Metal evidence to connect.** Connect the lifecycle to
+   `device.load_sub_device_manager`, `clear_loaded_sub_device_manager`,
+   `remove_sub_device_manager`, `CreateBuffer(..., sub_device_id)`,
+   `set_sub_device_stall_group`, `Synchronize`, and `EnqueueRecordEvent`.
+
+5. **Experiment and expected observation.** Run two independent sub-device programs with and
+   without a global barrier, then add one shared buffer/event; expected result: independent
+   work overlaps, while only the declared producer-consumer edge serializes shared use.
 
 ## Code connection
 

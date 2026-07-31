@@ -31,14 +31,25 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** Derive A/B reuse from the M/N/K block nest and select
+   fine-grained block sizes that fit input CBs, destination/intermediate state, and double
+   buffering while keeping edge cores useful.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Draw A/B block reads, CB reserve/publish, repeated
+   output-subblock compute with one resident operand, intermediate K accumulation, final
+   pack, output CB publication, and writer reclamation.
+
+3. **Invariant to prove.** Prove each output tile receives all K-block products exactly once
+   and that partial state is never packed, overwritten, or exposed as final before the
+   reduction completes.
+
+4. **TT-Metal evidence to connect.** Connect the plan to `get_large_matmul_params`,
+   `interm0_cb_index`, `bmm_tile_layout.cpp`, `bmm_large_block_zm.cpp`, `cb_reserve_back`,
+   `cb_wait_front`, and `pack_tile`.
+
+5. **Experiment and expected observation.** Sweep one block/reuse dimension at fixed math
+   and output partition; expected result: operand read bytes and compute input waits
+   decrease until L1 pressure, reduced buffering, or imbalance offsets additional reuse.
 
 ## Code connection
 

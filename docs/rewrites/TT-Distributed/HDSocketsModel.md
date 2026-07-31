@@ -52,14 +52,26 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** Define socket direction, endpoint ownership, transfer mode,
+   ring depth, backing memory, producer/consumer rates, and host/device failure/teardown
+   semantics for the intended streaming workload.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Draw slot reservation, payload fill/reference, publication,
+   PCIe/DMA transfer, remote availability, consumer read, completion, credit return,
+   wraparound, and endpoint close for both H2D and D2H.
+
+3. **Invariant to prove.** Prove a producer never overwrites an unread slot, a consumer
+   never reads an unpublished slot, credits/indices describe the same ring state, and
+   endpoints/buffers outlive every in-flight transfer.
+
+4. **TT-Metal evidence to connect.** Connect the design to `H2DSocket`, `D2HSocket`,
+   `MeshSocket`, and `tt_metal/api/tt-metalium/experimental/sockets/`, including the
+   report's transfer-mode and flow-control APIs.
+
+5. **Experiment and expected observation.** Run producer faster than consumer and then
+   reverse the rates across multiple wraparounds; expected result: bounded backpressure
+   prevents corruption/underrun and steady-state throughput separates from
+   connection/fill/drain latency.
 
 ## Code connection
 

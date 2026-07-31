@@ -32,14 +32,26 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** Classify collective cost into initialization/program
+   construction, dispatch, packet startup, per-link bytes/congestion, synchronization, and
+   buffer allocation before selecting trace, preallocation, packet size, or topology knobs.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Draw one tensor shard through local read/packetization,
+   selected CCL algorithm/fabric route, intermediate reduce/relay steps, destination buffer,
+   collective completion, and dependent compute.
+
+3. **Invariant to prove.** Prove all ranks invoke the same compatible collective order and
+   shapes, buffers remain valid through completion/replay, and trace-captured
+   addresses/configuration remain stable across warm iterations.
+
+4. **TT-Metal evidence to connect.** Connect tuning to `mesh_device`, `FABRIC_1D`,
+   `FABRIC_1D_RING`, `FABRIC_2D`, `FABRIC_2D_TORUS_X/Y/XY`, trace mode, preallocated
+   buffers, op parameters, and packet size.
+
+5. **Experiment and expected observation.** Sweep message and packet size in warm cached and
+   trace modes for one topology; expected result: trace removes launch gaps, while
+   packet/algorithm changes alter link utilization only in the matching latency or bandwidth
+   regime.
 
 ## Code connection
 

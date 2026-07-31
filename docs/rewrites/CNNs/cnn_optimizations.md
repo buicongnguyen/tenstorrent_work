@@ -38,14 +38,27 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** Identify the concrete CNN subgraphs where convolution,
+   pooling, concat, residuals, or layout conversion dominate warm latency. Choose
+   optimization scope at the producer-consumer chain, not at an isolated operator benchmark.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Trace an activation through preprocessing,
+   `ttnn.conv2d`/`ttnn.maxpool2d`, sharded L1 residency, residual or `ttnn.concat`,
+   subsequent convolution, and post-processing, marking every tilize, reshard, deallocation,
+   and host boundary.
+
+3. **Invariant to prove.** Preserve reference shapes, padding, stride, groups, channel
+   order, residual pairing, and numerical tolerance across every layout or
+   convolution-config change; a faster tensor with different branch meaning is not valid.
+
+4. **TT-Metal evidence to connect.** Connect each proposed optimization to `ttnn.conv2d`,
+   `ttnn.maxpool2d`, `ttnn.concat`, the `B×H×W×C → 1×H×W×BC` transformations, sharded memory
+   configs, and the model's concrete module tests.
+
+5. **Experiment and expected observation.** A/B one subgraph with and without a conversion
+   or resharing while holding input and output contracts fixed; expected result: the removed
+   boundary reduces total subgraph bytes/latency without increasing downstream conversion
+   cost or lowering PCC.
 
 ## Code connection
 

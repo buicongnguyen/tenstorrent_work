@@ -41,14 +41,26 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** Define the minimum structured invocation schema needed to
+   reproduce cache/config behavior—operation ID/name, shapes, dtypes, layouts,
+   memory/program configs, scalar parameters, version, and unsupported-field markers.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Draw TT-NN wrapper entry through parameter serialization,
+   unique filename/record append, generated operation-parameter directory, offline
+   filtering/aggregation, and minimal reproducer construction.
+
+3. **Invariant to prove.** Prove one record corresponds to one invocation, preserves
+   thread-safe order/identity, distinguishes program-selecting variants, and exposes missing
+   values instead of silently producing an incomplete replay description.
+
+4. **TT-Metal evidence to connect.** Connect the workflow to
+   `enable_fast_runtime_mode=false`, `generated/ttnn/operation_parameters/`, record fields
+   `operation_id`/`operation_name`, JSON examples such as `3_ttnn_add_...json`, and
+   `operation_tracing_examples/`.
+
+5. **Experiment and expected observation.** Trace two calls differing in one
+   program-selecting attribute and replay from their records; expected result: distinct
+   captured configurations/cache identities with equivalent outputs to the original calls.
 
 ## Code connection
 

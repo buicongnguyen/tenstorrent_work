@@ -32,14 +32,26 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** Calculate per-bank and aggregate bandwidth targets,
+   outstanding-read depth, burst/page size, reader-core placement, L1 destination capacity,
+   and NoC route pressure instead of assuming more readers imply more bandwidth.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Draw pages interleaved/sharded across DRAM banks through one
+   reader per bank, asynchronous NoC reads, reserved L1/CB pages, read barriers, consumer
+   publication, and page reclamation.
+
+3. **Invariant to prove.** Prove every transfer is aligned and in range, destinations are
+   reserved before issue, pages publish only after completion, and bank/core work is
+   balanced enough that one channel does not determine the device rate.
+
+4. **TT-Metal evidence to connect.** Connect the report's single-bank and full-device reader
+   examples to architecture bank placement, `noc_async_read`/barrier loops, CB depth,
+   Wormhole reader/core mapping, and sharded-DRAM examples.
+
+5. **Experiment and expected observation.** Scale from one bank/reader to all banks while
+   recording per-bank bytes and aggregate rate; expected result: near-linear growth until
+   NoC, issue, or consumer capacity becomes the new ceiling, with no gain from extra readers
+   on one hot bank.
 
 ## Code connection
 

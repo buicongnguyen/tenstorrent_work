@@ -52,14 +52,27 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** Explain separately the data/control planes and routing,
+   transport, and session problems: route selection, deadlock/flow control, packet
+   delivery/order, API semantics, and topology-specific resource allocation.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Draw a command/payload from source NoC through local fabric
+   router ring/virtual channel, routing-table and dimension-order decision, Ethernet/NoC hop
+   with bubble/credit state, destination ejection, session completion, and buffer
+   reclamation.
+
+3. **Invariant to prove.** Prove channel dependencies remain deadlock-safe, a router
+   forwards only with required downstream space, packet metadata/payload survive every hop,
+   and required delivery/order is acknowledged at the destination session.
+
+4. **TT-Metal evidence to connect.** Connect the report to `FabricNodeId`, `{MeshId,
+   ChipId}`, routing tables/planes, per-VC buffers, bubble flow control, and topology APIs
+   under `tt_metal/fabric/hw/inc/linear|mesh/api.h`.
+
+5. **Experiment and expected observation.** Construct two competing flows that share a
+   link/VC and vary available bubble space; expected result: backpressure prevents
+   overwrite, dimension-ordered routing avoids cyclic wait under stated assumptions, and
+   congestion appears on the predicted hop.
 
 ## Code connection
 

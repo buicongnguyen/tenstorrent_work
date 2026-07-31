@@ -28,14 +28,26 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** Define row-major page order, tensor/padded extents, shard
+   shape/orientation, core grid, per-core page range, and the downstream reuse that
+   justifies staging global pages into L1.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Draw interleaved/global source pages through
+   `MeshCommandQueue`, `MeshWorkload`/`Program` runtime arguments, per-core NoC reads and
+   `padded_offset_bytes`, local shard ownership, downstream consumer or writer, and
+   recomposition.
+
+3. **Invariant to prove.** Prove shards cover each logical page once in promised order,
+   padded rows never alias real data, source bank/offset calculations match page size, and
+   recomposition restores the original tensor.
+
+4. **TT-Metal evidence to connect.** Connect the example to `MeshCommandQueue`,
+   `mesh_device`, `Program`, `MeshWorkload`, the `(16, 1)` grid/shape data,
+   `padded_offset_bytes`, and its row-major `uint32_t` page handling.
+
+5. **Experiment and expected observation.** Compare repeated interleaved reads with one
+   staging pass plus multiple local consumers; expected result: staging pays off only when
+   avoided remote bytes exceed initial shard creation and later recomposition/reshard cost.
 
 ## Code connection
 

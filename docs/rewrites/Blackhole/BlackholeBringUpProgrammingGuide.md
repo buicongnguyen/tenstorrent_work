@@ -37,14 +37,29 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** Separate Blackhole enablement into reset/boot, L1 cache
+   behavior, DRAM, NoC, Ethernet, debug, and CI gates. Record exactly which Wormhole
+   assumption is invalid at each gate instead of treating a failed application as one
+   bring-up problem.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Draw `host architecture detection → Blackhole
+   descriptor/config → reset → firmware/service cores → DRAM/NoC/Ethernet initialization →
+   minimal worker kernel → CI promotion`, including the owner and observable completion of
+   every transition.
+
+3. **Invariant to prove.** Prove that binaries, descriptors, coordinates, cache policy, and
+   reset sequence match the detected Blackhole device and that a higher-layer test runs only
+   after every dependency below it has passed its minimal check.
+
+4. **TT-Metal evidence to connect.** Connect the analysis to
+   `set_l1_data_cache<true/false>()`, `invalidate_l1_cache()`,
+   `TT_METAL_ENABLE_HW_CACHE_INVALIDATION`, `tt-smi -r 0`, and the architecture-qualified
+   multicast/CI cases named by the source.
+
+5. **Experiment and expected observation.** Toggle L1 caching on one minimal memory test and
+   compare stale/correct observations before and after explicit invalidation; expected
+   result: cache-dependent behavior changes only at the documented boundary, while reset
+   returns the device to a reproducible baseline.
 
 ## Code connection
 

@@ -52,14 +52,25 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** Define which latency terms require observation—host
+   construction, dispatch, device reader/compute/writer zones, NoC stalls, or
+   synchronization—and which clock domains must be correlated to establish causality.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Draw instrumented events from host/device zone emission
+   through per-RISC buffers, runtime transfer/correlation, Tracy capture or CSV generation,
+   and the final critical-path interpretation.
+
+3. **Invariant to prove.** Prove every zone has paired start/end, stable core/RISC/program
+   identity, a known clock relationship, and identical instrumentation in compared runs;
+   profiling overhead must not be confused with workload cost.
+
+4. **TT-Metal evidence to connect.** Connect setup to `tt_metal/third_party/tracy/`,
+   `./build_metal.sh`, `build/tools/profiler/bin/tracy-capture`, the generated trace/output
+   directories, and the report's device-profiler integration flow.
+
+5. **Experiment and expected observation.** Profile a warm workload with one deliberate host
+   sleep and one reader delay; expected result: the correlated timeline separates the host
+   gap from device input starvation and attributes each to the inserted boundary.
 
 ## Code connection
 

@@ -52,14 +52,25 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** Identify which ViT encoder boundaries—patch embedding,
+   QKV/head transforms, attention, projection/residual, and MLP—justify preserving,
+   changing, or sharding layouts based on their next consumer and production shape.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Draw image patches and class/position tokens through
+   `vit_layer`, normalization, `vit_attention`, Q/K/V transforms, attention/projection,
+   residual, MLP, second residual, class-token extraction, and classifier output.
+
+3. **Invariant to prove.** Prove token/class order, head reshape/transpose, scaling/masking,
+   residual pairing, padded lanes, and classifier interpretation remain reference-equivalent
+   through every layout or sharding optimization.
+
+4. **TT-Metal evidence to connect.** Connect the plan to `vit_layer()`, `b × seqL × dim`,
+   `vit_attention`, `ROW_MAJOR`, column/row-major choices, `transpose_mcast=False`, and the
+   source's encoder configuration/code structure.
+
+5. **Experiment and expected observation.** A/B one encoder layer with a canonical-layout
+   boundary removed; expected result: fewer conversion bytes and lower layer latency with
+   unchanged module PCC and no new conversion before the next consumer.
 
 ## Code connection
 

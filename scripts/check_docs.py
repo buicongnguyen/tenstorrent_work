@@ -218,6 +218,23 @@ def check_required_sections(errors: list[str]) -> None:
     )
     total_questions = 0
     total_answers = 0
+    improvement_sections: list[tuple[Path, str]] = []
+    improvement_labels = (
+        "**Architecture pressure.**",
+        "**Flow to make explicit.**",
+        "**Invariant to prove.**",
+        "**TT-Metal evidence to connect.**",
+        "**Experiment and expected observation.**",
+    )
+    forbidden_improvement_text = (
+        "The learner edition should make these parts explicit before it can move beyond",
+        "State the problem and the hardware/software boundary involved.",
+        "Draw the data or control flow, including ownership and synchronization.",
+        "Extract correctness invariants and architecture-specific assumptions.",
+        "Connect the concepts to concrete TT-Metal symbols or examples.",
+        "Add a small verification exercise with an expected observation.",
+        "SOURCE-SPECIFIC PLAN REQUIRED",
+    )
     for rewrite in markdown_files(DOCS / "rewrites"):
         content = rewrite.read_text(encoding="utf-8")
         for heading in required:
@@ -228,6 +245,39 @@ def check_required_sections(errors: list[str]) -> None:
             errors.append(
                 f"{rewrite.relative_to(ROOT)}: contains unanswered seed questions"
             )
+
+        for forbidden in forbidden_improvement_text:
+            if forbidden in content:
+                errors.append(
+                    f"{rewrite.relative_to(ROOT)}: contains generic improvement-plan "
+                    f"text {forbidden!r}"
+                )
+
+        status_match = STATUS_RE.search(content)
+        if status_match and status_match.group(1) == "seed":
+            if "## Improvement plan" not in content:
+                errors.append(
+                    f"{rewrite.relative_to(ROOT)}: seed page is missing its "
+                    "source-specific Improvement plan"
+                )
+            else:
+                improvement_section = content.split(
+                    "## Improvement plan", maxsplit=1
+                )[1].split("\n## ", maxsplit=1)[0]
+                improvement_sections.append((rewrite, improvement_section))
+                for label in improvement_labels:
+                    count = improvement_section.count(label)
+                    if count != 1:
+                        errors.append(
+                            f"{rewrite.relative_to(ROOT)}: Improvement plan must contain "
+                            f"exactly one {label!r}; found {count}"
+                        )
+                word_count = len(re.findall(r"\b[\w'-]+\b", improvement_section))
+                if word_count < 120:
+                    errors.append(
+                        f"{rewrite.relative_to(ROOT)}: source-specific Improvement plan "
+                        f"is too shallow; found {word_count} words"
+                    )
 
         if "## Verify your understanding" not in content:
             continue
@@ -268,6 +318,21 @@ def check_required_sections(errors: list[str]) -> None:
             "rewrite curriculum must retain all 233 verification questions and "
             f"answers; found {total_questions} questions and {total_answers} answers"
         )
+
+    if len(improvement_sections) != 49:
+        errors.append(
+            "rewrite curriculum must retain 49 source-specific Improvement plans; "
+            f"found {len(improvement_sections)}"
+        )
+
+    normalized_plans: dict[str, list[Path]] = {}
+    for rewrite, section in improvement_sections:
+        normalized = re.sub(r"\s+", " ", section).strip()
+        normalized_plans.setdefault(normalized, []).append(rewrite)
+    for duplicates in normalized_plans.values():
+        if len(duplicates) > 1:
+            paths = ", ".join(str(path.relative_to(ROOT)) for path in duplicates)
+            errors.append(f"duplicate Improvement plans found: {paths}")
 
 
 def check_diagrams(errors: list[str]) -> None:

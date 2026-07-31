@@ -39,14 +39,27 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** Document the concrete migration and behavioral differences
+   between deprecated `DPRINT` and supported `DEVICE_PRINT`, including enablement,
+   formatting, core/RISC selection, buffering, drain, and teardown—not merely a macro
+   rename.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Draw `selected device thread → DEVICE_PRINT record encoding →
+   device debug buffer/transport → runtime drain → host console/log`, including when records
+   become observable and which component owns flushing.
+
+3. **Invariant to prove.** Prove that diagnostic output comes from the intended core/RISC,
+   remains within supported buffer/format limits, is drained before teardown, and is never
+   used as a substitute for a NoC barrier or CB/event dependency.
+
+4. **TT-Metal evidence to connect.** Connect old/new examples to `DPRINT`, `DEVICE_PRINT`,
+   `TT_METAL_DEVICE_PRINT=1`, the former stream syntax `DPRINT << ... << ENDL()`, and the
+   current debug include/runtime path.
+
+5. **Experiment and expected observation.** Run the same minimal kernel with printing
+   disabled, enabled on one core, and enabled broadly; expected result: functional output is
+   unchanged, scoped output identifies the producer, and measured perturbation grows with
+   print volume.
 
 ## Code connection
 

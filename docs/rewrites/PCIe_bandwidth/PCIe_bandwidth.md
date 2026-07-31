@@ -39,14 +39,25 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** Separate host memory/API overhead, PCIe DMA, device DRAM/L1
+   placement, and on-device NoC redistribution for both H2D and D2H; declare which path each
+   reported GB/s number actually measures.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Draw payload movement from pinned/host buffer through
+   `WriteShard` or `ReadShard`, PCIe, device buffer, optional `noc_async_read/write`,
+   completion/barrier, and final data validation.
+
+3. **Invariant to prove.** Prove timed bytes, direction, buffer lifetime, placement, and
+   synchronization are identical across comparisons and that the timer stops only after
+   transfer completion, not asynchronous enqueue.
+
+4. **TT-Metal evidence to connect.** Connect tests to `distributed::WriteShard`,
+   `distributed::ReadShard`, `std::chrono`, `noc_async_read`, `noc_async_write`, and device
+   zones such as `DeviceZoneScopedN("RISCV0")`.
+
+5. **Experiment and expected observation.** Sweep transfer size in both directions and
+   compare direct host path with device NoC redistribution; expected result: small sizes
+   expose startup/API cost, large sizes approach the negotiated-link or device-path ceiling.
 
 ## Code connection
 

@@ -52,14 +52,26 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** Separate local NoC movement, ERISC/channel service, physical
+   Ethernet link behavior, remote ejection, and application acknowledgement. Quantify
+   small-packet latency and sustained bandwidth as different regimes.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Draw one packet from a worker/source buffer through local NoC,
+   sending Ethernet core, channel packetization, physical link, peer Ethernet core, remote
+   NoC, destination storage, and consumer completion/credit.
+
+3. **Invariant to prove.** Prove that both endpoints agree on peer link, channel, packet
+   size, route, destination, and flow-control state and that source storage is not reused
+   merely because the local NoC write completed.
+
+4. **TT-Metal evidence to connect.** Connect the path to `run_routing()`,
+   `eth/dataflow_api.hpp`, `dataflow_api.hpp`, `eth_send_packet()`, and the source report's
+   packet-size/channel-count and ring/round-trip measurements.
+
+5. **Experiment and expected observation.** Sweep packet size and channel count on one fixed
+   link in both directions; expected result: small messages expose startup latency while
+   larger concurrent packets approach the link bandwidth until channel or routing contention
+   saturates.
 
 ## Code connection
 

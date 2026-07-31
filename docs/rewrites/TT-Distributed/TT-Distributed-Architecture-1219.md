@@ -52,14 +52,26 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** Define the lowering boundary between global TT-NN intent and
+   physical per-device programs: logical mesh identity, virtual queues, mesh
+   buffers/allocator, workload expansion, controller ownership, and completion aggregation.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Draw a TT-NN distributed operation through `MeshDevice`,
+   virtual command queue, `MeshWorkload`, per-device program selection, `MeshBuffer`
+   resolution, controller enqueue, fabric/CCL movement, and logical completion.
+
+3. **Invariant to prove.** Prove each logical coordinate resolves to one owning device for
+   buffer/workload lifetime, every intended shard executes exactly once, and logical
+   completion includes all physical program and communication dependencies.
+
+4. **TT-Metal evidence to connect.** Connect the plan to the report's `MeshDevice`, virtual
+   command queues, `MeshBuffer`, `MeshAllocator`, `MeshWorkload`, controller, and
+   virtualization sections rather than using a generic distributed diagram.
+
+5. **Experiment and expected observation.** Trace a small two-device operation with unique
+   shard markers through virtual and physical identities; expected result: exactly-once
+   local execution, correct composition, and no logical completion before both device/fabric
+   paths finish.
 
 ## Code connection
 

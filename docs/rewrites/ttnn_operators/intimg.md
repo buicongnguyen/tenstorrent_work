@@ -52,14 +52,26 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** Define the integral-image recurrence and `[B, W, H, C]` axis
+   mapping, then assign tile/core wavefront work and the exact horizontal/vertical prefix
+   state that must cross every boundary.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Draw `X[B=1,W,H,C]` tiles through reader initialization,
+   `cumsum_cube_axis_2`/`cumsum_cube_axis_3`, local scan, incoming edge-state addition,
+   output writer, feedback of row/column context, and dependent tile release.
+
+3. **Invariant to prove.** Prove each output equals the origin-to-position rectangle sum and
+   that boundary state belongs to the same batch/channel and immediately preceding
+   row/column tile; no dependent tile may read incomplete context.
+
+4. **TT-Metal evidence to connect.** Connect the plan to `ttnn.cumsum(ttnn.cumsum(x,
+   dim=-2), dim=-3)`, `cumsum_cube_axis_2`, `cumsum_cube_axis_3`, `column_block_i`,
+   `row_chunk_i`, signals, CBs, and feedback buffers.
+
+5. **Experiment and expected observation.** Use a small increasing-value tensor spanning
+   multiple tiles/cores and compare every boundary with a host summed-area table; expected
+   result: exact recurrence and a timeline exposing whether wavefront waits or local scan
+   compute dominates.
 
 ## Code connection
 

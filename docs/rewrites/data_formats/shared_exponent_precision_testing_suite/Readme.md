@@ -52,14 +52,27 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** Organize the precision investigation around shared-exponent
+   decision boundaries—maximum exponent selection, alignment, rounding ties,
+   carry/saturation, cancellation, and outliers—rather than around a large undifferentiated
+   random corpus.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Draw `generator → 16-value exponent-sharing block →
+   independent encoder/oracle → TT format conversion → operation under test → decode →
+   elementwise and aggregate error report`, recording seeds and encoded bits.
+
+3. **Invariant to prove.** Require oracle and device paths to agree on block grouping,
+   shared exponent, rounding, operation semantics, and output interpretation while keeping
+   the oracle implementation independent enough to expose device bugs.
+
+4. **TT-Metal evidence to connect.** Connect cases to `generators.py` and the named
+   distributions `constant`, `normal_0_1`, `normal_skewed_mean`, `normal_high_var_10/100`,
+   `normal_with_outliers`, and `fa_rand_default`.
+
+5. **Experiment and expected observation.** Compare fifteen small values with and without
+   one large outlier in the same block; expected result: the outlier raises the shared
+   exponent and increases error or code collisions for the small values, matching the
+   reference encoder.
 
 ## Code connection
 

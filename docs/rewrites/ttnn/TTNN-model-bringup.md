@@ -44,14 +44,27 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** Decompose model porting into its actual architecture
+   boundaries: preprocessing, each unsupported or converted operator, module composition,
+   end-to-end post-processing, numerical acceptance, and only then measured optimization for
+   the target model.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Draw `reference input → TT preprocessing → per-op TT-NN tests
+   → module tests → composed TT-NN model → output post-processing → golden comparison →
+   profiler-driven optimization`, naming checkpoint tensors and layouts.
+
+3. **Invariant to prove.** Prove each checkpoint receives semantically identical inputs and
+   preserves shape/order/broadcast/padding with an agreed PCC or error threshold; an
+   optimization may change representation but not the model contract.
+
+4. **TT-Metal evidence to connect.** Connect every model module to its concrete TT-NN
+   operations, golden implementation, device program/config, preprocessing utility, test
+   file, and profiler zone instead of leaving symbols deferred to a future rewrite.
+
+5. **Experiment and expected observation.** Introduce one module at a time and record the
+   first failing checkpoint, then optimize one measured boundary; expected result: failures
+   localize to one module and the accepted change improves end-to-end latency without
+   reducing model accuracy.
 
 ## Code connection
 

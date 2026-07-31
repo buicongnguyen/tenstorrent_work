@@ -33,14 +33,27 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** Turn the stack overview into one concrete operation lifecycle:
+   public semantic contract, validation/registration, implementation selection,
+   device-operation attributes, program creation/cache hit, runtime argument patching,
+   dispatch, and output ownership.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Draw a framework/user call through TT-NN operation
+   library/infrastructure, tensor metadata validation, program hash/factory, TT-Metal
+   command queue, reader/compute/writer kernels, and returned tensor.
+
+3. **Invariant to prove.** Prove logical shape/dtype/layout/placement/ownership remain
+   coherent across layers and that cached programs include every compile-time choice while
+   only documented runtime state is patched.
+
+4. **TT-Metal evidence to connect.** Connect the report's ML Framework, OP Library, OP
+   Infra, TT-NN Runtime, and TT-Metal boundaries to one actual registered operation, its
+   program factory/hash/cache-hit callback, tensor objects, and command queue.
+
+5. **Experiment and expected observation.** Trace the same operation cold, warm, and with
+   one shape/layout change; expected result: identical semantics, a cache hit only for
+   compatible identity, and a timeline that separates construction from steady
+   dispatch/device execution.
 
 ## Code connection
 

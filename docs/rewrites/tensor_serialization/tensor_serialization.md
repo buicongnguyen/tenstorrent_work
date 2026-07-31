@@ -46,14 +46,26 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** Define the persistent semantic contract—logical/padded shape,
+   dtype, layout, payload, version, cache identity, multi-host path/ownership—and explicitly
+   exclude transient device addresses/allocator state.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Draw tensor materialization through metadata and payload
+   encoding, atomic `.tensorbin` publication, cache lookup/validation, `ttnn.load_tensor`,
+   current-run device placement, consumer use, and invalidation/cleanup.
+
+3. **Invariant to prove.** Prove header metadata and byte count match payload, readers
+   reject partial/stale/incompatible artifacts, and all hosts agree on cache-file identity
+   and publication ownership before treating a file as a hit.
+
+4. **TT-Metal evidence to connect.** Connect the plan to `ttnn.as_tensor`,
+   `ttnn.dump_tensor`, `ttnn.load_tensor`, `.tensorbin`, `cache_file_name`, and
+   `ttnn/ttnn/operations/core.py` behavior named by the source.
+
+5. **Experiment and expected observation.** Round-trip across processes, alter
+   dtype/layout/version and truncate a file; expected result: valid artifacts reproduce
+   values while incompatible/partial files fail loudly or become cache misses rather than
+   being misinterpreted.
 
 ## Code connection
 

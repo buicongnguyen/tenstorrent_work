@@ -29,14 +29,26 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** Define the live use case, event schema, timestamp/source
+   identity, acceptable observation latency, producer-overhead budget,
+   buffering/backpressure behavior, and required durability on abnormal termination.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Draw `ProgramRealtimeRecord` emission through runtime
+   queueing, callback registration/invocation, JSON-line or Tracy sink, incremental
+   consumer, flush, and `UnregisterProgramRealtimeProfilerCallback(handle)`.
+
+3. **Invariant to prove.** Prove callback processing preserves complete event identity/order
+   without blocking producers beyond budget, handles concurrency/failure, and flushes every
+   accepted record before unregister/shutdown.
+
+4. **TT-Metal evidence to connect.** Connect fields such as `runtime_id`, `start_timestamp`,
+   `end_timestamp`, `frequency`, `chip_id`, and `kernel_sources` to the JSON/Tracy
+   representation and consuming analysis.
+
+5. **Experiment and expected observation.** Deliberately slow and then fail the callback
+   consumer under a steady workload; expected result: documented buffering/backpressure or
+   loss behavior occurs without silent record corruption, and measured producer perturbation
+   remains within budget.
 
 ## Code connection
 

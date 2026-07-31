@@ -28,14 +28,26 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** Partition numerical error into input encoding, Unpack, math
+   fidelity/approximation, accumulation order/width, and Pack/output format for the specific
+   kernel rather than adjusting one global tolerance.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Draw reference input encoding through device format,
+   reader/Unpack, matrix or SFPU operations, destination accumulation, Pack, output storage,
+   host conversion, and each comparison metric.
+
+3. **Invariant to prove.** Prove device and golden paths share shapes, broadcasting,
+   padding, operation order, and exceptional-value policy; choose tolerance from the
+   format/error budget rather than relaxing it after a failure.
+
+4. **TT-Metal evidence to connect.** Connect tests to `comp_equal`/`assert_equal`,
+   `comp_ulp`/`assert_with_ulp`, `comp_allclose`/`assert_allclose`, and relative-Frobenius
+   helpers, selecting each for a stated failure model.
+
+5. **Experiment and expected observation.** Sweep one precision boundary while holding the
+   rest fixed on random and adversarial data; expected result: the selected metric changes
+   at the responsible stage and model-level accuracy identifies the cheapest acceptable
+   configuration.
 
 ## Code connection
 

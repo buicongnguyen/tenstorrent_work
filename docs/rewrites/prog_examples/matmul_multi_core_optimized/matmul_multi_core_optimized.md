@@ -28,14 +28,25 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** Start from disjoint C-output ownership across the core grid,
+   then derive each core's A/B ranges, K reduction, data reuse, multicast group, buffer
+   capacity, and edge/tail work.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Draw host partition/runtime arguments through per-core
+   readers, optional shared-operand multicast, compute K loop and partial sums, Pack/writer,
+   non-overlapping output placement, and host recomposition/check.
+
+3. **Invariant to prove.** Prove complete non-overlapping C coverage and full K accumulation
+   for normal and edge cores; runtime arguments, CB sizes, multicast participants, and
+   writer ranges must encode the same partition.
+
+4. **TT-Metal evidence to connect.** Connect the overview to the concrete example build/run
+   path and its reuse/multicast kernels, program configs, core-grid/runtime arguments, CB
+   creation, and validation code rather than leaving only a conceptual matmul diagram.
+
+5. **Experiment and expected observation.** Sweep core-grid shape for one matrix including a
+   tail; expected result: throughput improves while per-core finish times remain balanced,
+   then degrades when smaller shards or communication/tail imbalance dominate.
 
 ## Code connection
 

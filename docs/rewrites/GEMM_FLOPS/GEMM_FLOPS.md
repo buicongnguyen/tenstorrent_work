@@ -48,14 +48,26 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** Define the precise GEMM roofline under test: M/N/K, useful
+   native lanes, fidelity, clock, cores, FLOP convention, residency, warm state, and timed
+   boundary. Do not compare application FLOPs with a microbenchmark denominator.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Draw input tiles through reader/Unpack, matrix issue and K
+   accumulation, destination state, Pack/writer, device timing zone, CSV aggregation, and
+   host correctness check.
+
+3. **Invariant to prove.** Prove the benchmark executes the declared arithmetic exactly
+   once, excludes compile/setup from steady timing, synchronizes before stopping
+   measurement, and verifies output independently of the FLOP calculation.
+
+4. **TT-Metal evidence to connect.** Connect evidence to `TTNN_RUN_GEMM_FLOPS_BENCHMARK=1`,
+   `test_matmul_2d_host_perf`, `generated/matmul_benchmark_report.csv`, and configurations
+   such as `tuned_2d_l1`, `tuned_2d_dram`, and the architecture YAML.
+
+5. **Experiment and expected observation.** Run resident-input and DRAM-input variants at
+   the same shape/fidelity; expected result: resident data approaches the
+   phase/lane-adjusted compute ceiling, while a large gap only in DRAM mode identifies
+   movement or reader supply.
 
 ## Code connection
 

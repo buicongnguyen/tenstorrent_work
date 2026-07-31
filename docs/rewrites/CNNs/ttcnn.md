@@ -41,14 +41,28 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** Explain why convolution is lowered to blocked matrix
+   multiplication on Tensix and why overlapping spatial windows make naive remote reads the
+   dominant movement problem once activations no longer fit in one core's L1.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Draw one activation stick from its source shard through
+   sliding-window dependency analysis, local/remote halo configuration, halo transfer,
+   activation-reader flattening, matrix accumulation, pack, and the destination output
+   shard.
+
+3. **Invariant to prove.** For every output coordinate, prove that stride, padding,
+   dilation, groups, channel order, and shard-boundary haloing select exactly the same
+   logical input window and filter values as reference convolution.
+
+4. **TT-Metal evidence to connect.** Map the original `conv2d` input/weight/bias/output
+   contracts and halo implementation sections to TT-NN convolution configuration,
+   sliding-window analysis, reader CBs, compute blocks, and output post-processing rather
+   than listing generic kernel roles.
+
+5. **Experiment and expected observation.** Use distinctive boundary values and compare
+   direct/reference convolution with haloed sharding for image edges and inter-core
+   boundaries; expected result: identical outputs with fewer remote reads during the hot
+   convolution phase after halo construction.
 
 ## Code connection
 

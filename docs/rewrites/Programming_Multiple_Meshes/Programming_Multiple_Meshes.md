@@ -52,14 +52,26 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** Specify physical meshes, graph connectivity, host/rank
+   ownership, process launch, fabric configuration, and failure/teardown domains so no
+   process independently invents a conflicting global topology.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Draw `.textproto` mesh graph loading through `tt-run`, rank
+   binding, local mesh creation, fabric route setup, local SPMD work, cross-mesh
+   communication, barrier/completion, and teardown.
+
+3. **Invariant to prove.** Prove every physical device has one owner, all ranks interpret
+   the identical mesh graph and collective/work order, and cross-mesh fabric is ready before
+   dependent commands execute.
+
+4. **TT-Metal evidence to connect.** Connect the plan to `.textproto`,
+   `tt_metal/fabric/MGD_README.md`, `tt-run`, `mesh_id`, `TT_VISIBLE_DEVICES`, and
+   `mesh_host_rank`.
+
+5. **Experiment and expected observation.** Launch two ranks with a deliberately swapped
+   binding and then the validated graph; expected result: validation rejects inconsistent
+   ownership before execution, while the correct mapping produces identical graph hashes and
+   expected cross-mesh traffic.
 
 ## Code connection
 

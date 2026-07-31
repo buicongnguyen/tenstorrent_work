@@ -32,14 +32,26 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** Classify the target failure as host/JIT, firmware/watchdog,
+   address/bounds, CB ownership/count, NoC completion, or numerical compute before adding
+   instrumentation; each class requires different evidence.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Draw the failing program from host launch/runtime arguments
+   through reader, transport, compute, writer, and host validation, placing TT-TRIAGE,
+   Watcher, and device-print observations at the first boundary they can verify.
+
+3. **Invariant to prove.** For the suspected channel, prove matching producer/consumer loop
+   counts, valid addresses, reserved storage before movement, movement completion before
+   publication, and reclamation only after the final consumer.
+
+4. **TT-Metal evidence to connect.** Connect the workflow to `./tools/tt-triage.py
+   --verbosity=4 --dev=0`, `api/debug/dprint.h`, `TT_METAL_DPRINT_CORES`,
+   `TT_METAL_WATCHER=1`, and `generated/watcher/watcher.log`.
+
+5. **Experiment and expected observation.** Create a minimal reproduction and intentionally
+   break one count or address check; expected result: the selected tool reports the first
+   violated boundary consistently, while random delays change timing but do not repair the
+   protocol.
 
 ## Code connection
 

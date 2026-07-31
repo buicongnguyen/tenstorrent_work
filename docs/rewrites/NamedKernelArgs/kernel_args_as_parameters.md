@@ -32,14 +32,25 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** Identify the positional ABI failures the proposal must
+   eliminate: compile-time versus runtime kind, common versus per-core scope, type/order
+   drift, and index shifts when a new argument is inserted.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Draw one named value from host declaration through generated
+   argument schema/wrapper, program compile/runtime storage, device kernel signature, and
+   typed access at the consuming instruction path.
+
+3. **Invariant to prove.** Prove host binding and kernel signature share one authoritative
+   name, type, kind, order, and scope; generation or compilation must reject drift rather
+   than silently read a neighboring slot.
+
+4. **TT-Metal evidence to connect.** Connect the proposal to `kernel_args_generated.h`,
+   `args::<name>`, `args::start_tile_id`, `get_arg(args::<name>)`, `constexpr` template
+   parameters, and the generated `kernel_main()` wrapper.
+
+5. **Experiment and expected observation.** Insert and reorder one argument in a test
+   schema; expected result: regenerated host/device interfaces remain aligned or fail
+   loudly, whereas an intentionally stale positional consumer is detected before runtime.
 
 ## Code connection
 

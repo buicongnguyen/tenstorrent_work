@@ -45,14 +45,25 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** Identify loops that traverse consecutive pages or shard pages
+   and quantify address-generation cycles from repeated full mapping versus stateful
+   iteration, including rank and shard-boundary frequency.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Draw iterator construction from TensorAccessor/distribution
+   state, first address, NoC read/write and CB ownership, incremented bank/shard/offset
+   state, boundary transition, and `end_page_id` termination.
+
+3. **Invariant to prove.** Prove the iterator emits exactly the same address sequence and
+   logical page order as `TA.get_noc_addr(...)` for first, last, bank-wrap, shard-wrap,
+   padded, and empty ranges.
+
+4. **TT-Metal evidence to connect.** Connect the plan to `start_page_id`, `end_page_id`,
+   `tensor_volume()`, page and shard-page iterator APIs, and the baseline
+   `TA.get_noc_addr(...)` path.
+
+5. **Experiment and expected observation.** Benchmark sequential and randomized page access
+   with direct lookup and iterators; expected result: iteration reduces cycles for regular
+   traversal while random access shows little benefit and both produce identical addresses.
 
 ## Code connection
 

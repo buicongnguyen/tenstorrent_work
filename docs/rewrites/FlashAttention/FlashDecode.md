@@ -44,14 +44,26 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** Explain why decode's small query dimension under-fills cores
+   while the growing KV cache dominates bytes, and calculate when splitting the KV sequence
+   can amortize its final cross-worker reduction.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Draw `query distribution → per-worker K/V shard read → local
+   scores/mask → partial max/sum/weighted value → global max propagation/rescaling →
+   sum/numerator reduction → normalized output`.
+
+3. **Invariant to prove.** Prove each partition covers a disjoint permitted KV range and
+   that partial online-softmax state is combined with the global maximum exactly, preserving
+   token position, causal range, and grouped-query head mapping.
+
+4. **TT-Metal evidence to connect.** Connect the plan to `n_qh_per_kvh`, `n_q_heads`,
+   `n_kv_heads`, the report's `bsz*n_kv_heads` partitioning, tile-volume expressions,
+   KV-cache readers, and reduction kernels.
+
+5. **Experiment and expected observation.** Sweep context length and worker count with
+   identical queries/cache; expected result: parallel KV bandwidth improves long-context
+   decode until reduction/synchronization dominates, while short contexts may favor fewer
+   workers.
 
 ## Code connection
 

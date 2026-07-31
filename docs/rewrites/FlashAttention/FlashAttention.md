@@ -38,14 +38,26 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** Quantify the score-matrix bytes avoided by tiled online
+   attention for the report's batch, head, sequence, and head-dimension regime, and identify
+   whether DRAM movement or matrix/SFPU compute is the expected ceiling.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Draw one Q block held locally while K/V blocks stream through
+   QKᵀ, causal masking, running maximum, exponential sum, weighted-value rescaling, final
+   normalization, and output pack/write.
+
+3. **Invariant to prove.** Prove after every K block that running `(max, sum, weighted
+   value)` represents all unmasked keys seen so far in one numerical frame and that the
+   final result matches reference softmax attention within tolerance.
+
+4. **TT-Metal evidence to connect.** Connect each phase to the report's parallelization and
+   asynchronous-pipeline sections, concrete tensor dimensions, reader/compute/writer CBs,
+   matrix operations, SFPU exponential/reduction, and output storage.
+
+5. **Experiment and expected observation.** Compare materialized attention with the tiled
+   online path at increasing sequence length; expected result: score-intermediate external
+   bytes stop growing quadratically while correctness remains stable and kernel gaps reveal
+   the next limiting stage.
 
 ## Code connection
 

@@ -34,14 +34,25 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** Choose sharding from the next consumer's output ownership and
+   input reuse, then specify logical/padded tensor, page layout, shard shape/orientation,
+   core order, L1 footprint, and reshard/halo requirements.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Draw logical pages through `TensorMemoryLayout`/`ShardSpec` or
+   `NdShardSpec`, mapper/data movement, per-core L1 shard, local compute, cross-shard
+   dependency, and composition or next reshard.
+
+3. **Invariant to prove.** Prove shard regions cover the intended tensor without unintended
+   gaps/duplication and that allocation, TensorAccessor, reader, compute, and writer
+   interpret identical shape, orientation, padding, and core order.
+
+4. **TT-Metal evidence to connect.** Connect 2D/ND cases to
+   `TensorMemoryLayout::INTERLEAVED`, `HEIGHT_SHARDED`, `WIDTH_SHARDED`, block layouts,
+   `ShardSpec`, `NdShardSpec`, and `memory_config`.
+
+5. **Experiment and expected observation.** Compare two legal shard orientations for one
+   consumer chain; expected result: the consumer-aligned choice reduces remote/reshard bytes
+   and wait time enough to justify L1 occupancy and shard-creation cost.
 
 ## Code connection
 

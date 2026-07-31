@@ -52,14 +52,26 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** Treat each downsample, residual/route, neck upsample/concat,
+   and three detection heads as a named tensor contract; identify where sharding, format, or
+   deallocation should follow the next branch consumer.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Draw one image through five downsample stages, retained
+   multi-scale feature maps, neck routes/upsamples/concats, scale-specific heads, raw output
+   tensors, and host decoding.
+
+3. **Invariant to prove.** Prove feature shape/channel order, route source, concat order,
+   upsample alignment, and head-to-scale/anchor meaning; physical padding or sharding must
+   not change logical multi-scale semantics.
+
+4. **TT-Metal evidence to connect.** Connect the plan to `ttnn.deallocate(tensor)`,
+   `bfloat8_b`, `BLOCK_SHARDED`, `HEIGHT_SHARDED`, `WIDTH_SHARDED`, `common.py`, and
+   `MathFidelity::LoFi` choices in the source.
+
+5. **Experiment and expected observation.** Capture raw values and layouts at every neck
+   merge and head before decoding, then remove one conversion/deallocation boundary;
+   expected result: exact/PCC parity at raw heads and a measurable end-to-end benefit
+   without higher peak memory.
 
 ## Code connection
 

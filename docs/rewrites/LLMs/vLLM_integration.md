@@ -31,14 +31,27 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** Define the exact boundary between vLLM scheduling and the TT
+   backend: request/batch identity, token position, prefill/decode dispatch, KV block
+   ownership, logits ordering, sampling interface, and supported preemption behavior.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Draw a request from vLLM admission/batching through TT input
+   construction, `forward_prefill` or `forward_decode`, paged KV update/attention, logits
+   return in scheduler order, token sampling, and next-step state.
+
+3. **Invariant to prove.** Prove request identity, batch slot, token position, KV block, and
+   returned-logit row remain aligned under mixed lengths, reorder, cancellation, and resume;
+   performance reordering must have a correct inverse mapping.
+
+4. **TT-Metal evidence to connect.** Connect the adapter to `paged_fill_cache`,
+   `paged_update_cache`, `paged_scaled_dot_product_attention_decode`, `forward_prefill`,
+   `forward_decode`, `LlamaForCausalLM`, `initialize_vllm_model`, and
+   `TTModelLoader::load_model`.
+
+5. **Experiment and expected observation.** Run interleaved requests with different
+   prompt/decode lengths and force scheduler reordering; expected result: each request
+   reproduces standalone tokens while persistent KV blocks avoid per-token host/device
+   reconstruction.
 
 ## Code connection
 

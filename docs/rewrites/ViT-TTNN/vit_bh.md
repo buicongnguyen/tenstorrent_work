@@ -52,14 +52,26 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** List which ViT semantics remain generation-independent and
+   re-derive Blackhole-specific L1 footprint, core grid, NoC/layout, transpose/multicast,
+   compute config, and operation availability instead of copying Wormhole tuning.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Draw the same validated encoder flow as the Wormhole path
+   while marking every Blackhole-specific policy selection, buffer/layout transition,
+   program configuration, and fallback.
+
+3. **Invariant to prove.** Prove identical logical token/head/residual contracts and
+   checkpoint tolerances across generations; only physical layout, program, and scheduling
+   choices may differ.
+
+4. **TT-Metal evidence to connect.** Connect the Blackhole plan to the source's
+   `WormholeComputeKernelConfig` comparison, `transpose_mcast=False/True`, `vit_layer()`, `b
+   × seqL × dim`, and generation-specific optimization/code sections.
+
+5. **Experiment and expected observation.** Run identical inputs/weights through the
+   correctness bootstrap and tuned Blackhole variants; expected result: checkpoint parity in
+   both, with gains attributable to measured Blackhole capacity/utilization or communication
+   changes.
 
 ## Code connection
 

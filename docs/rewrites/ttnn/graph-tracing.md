@@ -52,14 +52,26 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** Specify the structural questions requiring capture—unexpected
+   operation, tensor fan-out, allocation lifetime, graph break, stack origin—and choose
+   slow/full or fast capture fields accordingly; do not call it a device stall profiler.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Draw operation entry through tracer wrapper, parameter/input
+   tensor IDs, producer-consumer edge creation, output IDs, optional stack/buffer
+   pages/timing, report serialization, database import, and visualizer query.
+
+3. **Invariant to prove.** Prove every operation/tensor has stable identity, edges reflect
+   actual producers/consumers, capture does not change semantics, and omitted or
+   overhead-heavy fields are declared when interpreting the result.
+
+4. **TT-Metal evidence to connect.** Connect modes to `full_graph_capture`,
+   `slow_dispatch=True`, `enable_fast_runtime_mode=False`, `Operation`, `FastOperation`, and
+   examples such as `ttnn::add` and `ttnn::matmul`.
+
+5. **Experiment and expected observation.** Capture one branching graph in fast and full
+   modes, then join a chosen operation to profiler identity; expected result: identical
+   graph semantics, declared detail/overhead differences, and no inference of device stalls
+   from structure alone.
 
 ## Code connection
 

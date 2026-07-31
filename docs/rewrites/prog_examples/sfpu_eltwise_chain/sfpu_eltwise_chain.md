@@ -44,14 +44,26 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** List the exact ordered elementwise chain and intermediate
+   consumers, then calculate pack/write/read/unpack bytes and launches eliminated when the
+   intermediate tile remains live in SFPU state.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Draw input reader/CB publication, Unpack, ordered SFPU
+   operations such as exp/log/softplus composition, final Pack, output CB publication,
+   writer, and host comparison.
+
+3. **Invariant to prove.** Prove fused operation order, constants, approximation mode,
+   input/output formats, and final rounding implement the same function; the tile remains
+   compute-owned until all operations finish.
+
+4. **TT-Metal evidence to connect.** Connect the plan to `sfpu_eltwise_chain.cpp`,
+   `softplus(x) = log(1 + exp(x))`, `ttnn::exp`, `ttnn::log`, `float_to_bfloat16`,
+   `bfloat16`, and its reader/compute/writer kernels.
+
+5. **Experiment and expected observation.** Compare fused and separate-kernel chains across
+   representative magnitudes; expected result: identical tolerated output with fewer
+   intermediate bytes/launch gaps unless register pressure or lost pipeline overlap becomes
+   limiting.
 
 ## Code connection
 

@@ -32,14 +32,25 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** Define logical padding, physical tile/page padding, output
+   layout, pad value, and a disjoint output ownership partition so every produced coordinate
+   has exactly one responsible core.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Draw host `Device`/`CommandQueue`/`Program` setup,
+   input/output buffer creation, output-range runtime arguments, per-core coordinate
+   classification, input read or pad synthesis, writer commit, and host validation.
+
+3. **Invariant to prove.** Prove each output coordinate is written once; in-range
+   coordinates map to the correct input element and out-of-range coordinates receive the
+   declared pad value, including partial rows/pages and every corner.
+
+4. **TT-Metal evidence to connect.** Connect the plan to the example's `Device`,
+   `CommandQueue`, `Program`, `bfloat16` buffers, designated core ranges, DRAM/L1 configs,
+   reader/writer kernels, and runtime arguments.
+
+5. **Experiment and expected observation.** Use distinctive interior/edge values and uneven
+   padding that crosses page boundaries; expected result: exact output ownership/values with
+   no overlap, and per-core timings reveal any padding-heavy imbalance.
 
 ## Code connection
 

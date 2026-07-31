@@ -36,14 +36,25 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** Separate mechanical ownership/API migration from actual
+   distribution. First reproduce single-device behavior on a one-device `MeshDevice`; only
+   then choose sharding, replication, and multi-device collectives.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Draw original `CreateDevice`/buffer/queue/operation/close
+   alongside `open_mesh_device`, mesh tensor aggregation/distribution, mesh-aware operation,
+   compose/readback, synchronization, and teardown.
+
+3. **Invariant to prove.** Prove the one-device mesh preserves tensor contents, operation
+   order, completion, and lifetime before adding another device; each distribution change
+   must have an explicit inverse composition and parity test.
+
+4. **TT-Metal evidence to connect.** Connect migration steps to `CreateDevice`,
+   `ttnn::open_device`, `ttnn::open_mesh_device`, `CreateDevices`, `get_device_tensors`,
+   `aggregate_as_tensor`, and `aggregate_as_tensor(host_tensors).to(mesh_device)`.
+
+5. **Experiment and expected observation.** Convert one representative program to a
+   one-device mesh, then add a second device with one mapping change; expected result:
+   parity at stage one and an attributable, reversible distribution delta at stage two.
 
 ## Code connection
 

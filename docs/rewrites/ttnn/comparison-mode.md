@@ -28,14 +28,25 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** Define which TT-NN operations have valid golden functions,
+   what tensor conversions comparison requires, which metric/tolerance each format warrants,
+   and how failures should preserve invocation context.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Draw an intercepted operation through input/config capture,
+   golden execution, device operation, comparable output conversion, PCC/error calculation,
+   report/exception, and continuation or stop policy.
+
+3. **Invariant to prove.** Prove golden and device paths see the same logical inputs,
+   parameters, broadcast/padding, and order; tolerances must come from the numerical
+   contract and comparison must not be used for performance timing.
+
+4. **TT-Metal evidence to connect.** Connect configuration to `TTNN_CONFIG_OVERRIDES`,
+   `enable_fast_runtime_mode`, `enable_comparison_mode`,
+   `comparison_mode_should_raise_exception`, and the operation's registered golden function.
+
+5. **Experiment and expected observation.** Inject one known numerical error in a supported
+   op and run raise/report modes; expected result: comparison identifies the first exact
+   invocation and metric while normal execution returns after the configured policy.
 
 ## Code connection
 

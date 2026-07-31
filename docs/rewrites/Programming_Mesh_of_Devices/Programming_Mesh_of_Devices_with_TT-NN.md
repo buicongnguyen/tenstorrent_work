@@ -52,14 +52,25 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** Define the logical mesh tensor semantics first—partition or
+   replication, mesh shape, device mapping, operation scope, collective boundary, and
+   composition—before choosing physical devices or launch mode.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Draw host tensor mapping into mesh shards/replicas, per-device
+   TT-NN/SPMD execution, collective communication, mesh completion, composition/readback,
+   and resource teardown.
+
+3. **Invariant to prove.** Prove logical mesh coordinates map stably to owned physical
+   devices and that distribute/compose preserves every logical element; all collective
+   participants must agree on order, count, shape, and communicator.
+
+4. **TT-Metal evidence to connect.** Connect setup and isolation to `TT_VISIBLE_DEVICES`,
+   `/dev/tenstorrent/<id>`, `TT_METAL_CACHE`, `MeshDevice`, mapper/composer APIs, and the
+   visible-device multiprocess test path named by the report.
+
+5. **Experiment and expected observation.** Run the same operation on one-device and
+   multi-device meshes, compose results, and compare with host reference; expected result:
+   semantic parity plus per-device work/communication matching the declared distribution.
 
 ## Code connection
 

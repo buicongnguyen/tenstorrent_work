@@ -31,14 +31,28 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** Specify which fused kernel consumes or produces multiple CB
+   data formats and why a separate conversion kernel would add material traffic or dispatch.
+   Name the exact safe points where Unpack or Pack state must change.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Draw `producer CB format A → wait/ownership →
+   reconfig_data_format(_srca/_srcb) → Unpack/compute → pack_reconfig_data_format →
+   destination CB format B → publish`, including completion of work using the old
+   configuration.
+
+3. **Invariant to prove.** Prove that each tile's physical bytes agree with active
+   Unpack/Pack interpretation and that reconfiguration occurs after prior-format work
+   completes but before the next tile is consumed or published.
+
+4. **TT-Metal evidence to connect.** Connect examples to `reconfig_data_format`,
+   `reconfig_data_format_srca`, `reconfig_data_format_srcb`, and
+   `pack_reconfig_data_format`, then trace the corresponding LLK/configuration path for the
+   target Tensix generation.
+
+5. **Experiment and expected observation.** Alternate two supported input/output formats in
+   one controlled kernel and compare with fixed-format reference kernels; expected result:
+   identical decoded values and fewer materialized conversion boundaries, with no corruption
+   at the reconfiguration transition.
 
 ## Code connection
 

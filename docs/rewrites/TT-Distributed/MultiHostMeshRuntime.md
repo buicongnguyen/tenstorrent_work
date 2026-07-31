@@ -42,14 +42,26 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** Specify global mesh/rank identity, one-controller-per-device
+   ownership, local versus cross-host responsibilities, SPMD workload epochs, host
+   coordination, error propagation, and aggregate completion.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Draw launcher/topology distribution through per-host rank
+   initialization, local `MeshDevice`/`MeshBuffer`/`MeshWorkload`, device command
+   submission, fabric communication, host rendezvous, global completion, and failure
+   cleanup.
+
+3. **Invariant to prove.** Prove all ranks agree on topology and epoch/workload order, each
+   physical device has one controlling process, and no rank advances beyond an unpublished
+   dependency or reports success when a peer failed.
+
+4. **TT-Metal evidence to connect.** Connect the design to `MeshDevice`, `MeshWorkload`,
+   `MeshBuffer`, the proposed multiple-lockstep-controller model, and the explicit
+   host-coordination dependency in the source.
+
+5. **Experiment and expected observation.** Inject one delayed and one failed rank during a
+   two-epoch workload; expected result: delay appears as the global critical participant and
+   failure is propagated consistently without other ranks committing a later epoch.
 
 ## Code connection
 

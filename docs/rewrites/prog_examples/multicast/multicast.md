@@ -52,14 +52,26 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** State the exact one-to-many reuse: which coordinator payload
+   is identical for which receiver core rectangle, how often it is reused, and why multicast
+   saves more traffic than its group synchronization costs.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Draw host setup in `multicast.cpp`, receiver
+   reservation/readiness, coordinator action in `coordinator_kernel.cpp`, NoC multicast,
+   inbound handling in `inbound_kernel.cpp`, arrival publication, local consumption, and
+   acknowledgement/reuse.
+
+3. **Invariant to prove.** Prove all destinations are addressable and reserved before send,
+   no receiver publishes before transport completion, and source/destination pages are not
+   reclaimed while any required consumer still owns them.
+
+4. **TT-Metal evidence to connect.** Connect core coordinates/ranges, semaphores, CBs, and
+   host runtime arguments to `multicast.cpp`, `coordinator_kernel.cpp`,
+   `inbound_kernel.cpp`, and the source's `{0, 0}` coordinator example.
+
+5. **Experiment and expected observation.** Compare one multicast with repeated unicast/DRAM
+   reads for synchronized and deliberately skewed receivers; expected result: multicast wins
+   for aligned dense fanout but group wait can erase the benefit under skew.
 
 ## Code connection
 

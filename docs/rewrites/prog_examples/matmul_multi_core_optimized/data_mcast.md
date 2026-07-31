@@ -34,14 +34,26 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** For the chosen output grid, identify which A or B blocks are
+   shared across a row/column of cores and calculate repeated DRAM/NoC bytes saved by one
+   designated distributor.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Draw shared-operand DRAM read into the source CB, receiver
+   page reservation/readiness semaphores, NoC multicast to the target core range,
+   arrival/publication, private-operand consumption, K accumulation, fused bias/activation,
+   and output write.
+
+3. **Invariant to prove.** Prove every receiver reserves the correct page before fanout,
+   observes the same tile before compute, consumes each K block once, and the sender
+   retains/reuses source storage only according to the acknowledgement protocol.
+
+4. **TT-Metal evidence to connect.** Connect the host/kernel configuration to
+   `CoreRangeSet`, `all_cores`, `left_column`, `all_except_left_column`, semaphore setup,
+   and `bmm_large_block_zm_fused_bias_activation`.
+
+5. **Experiment and expected observation.** Compare per-core DRAM reads with multicast
+   across increasing fanout; expected result: shared-operand external bytes fall near the
+   fanout factor until sender injection, receiver skew, or route contention limits scaling.
 
 ## Code connection
 

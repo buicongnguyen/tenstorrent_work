@@ -30,14 +30,25 @@
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
+1. **Architecture pressure.** Specify expected NaN, ±Inf, denormal, saturation, and
+   approximate-mode behavior at stored format, Unpack, Math/SFPU, destination, and Pack
+   boundaries for the architecture/configuration being studied.
 
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+2. **Flow to make explicit.** Draw explicit input bit patterns through L1 storage, format
+   interpretation, compute operation, destination accumulation, output conversion, stored
+   result, and host/device classification observation.
+
+3. **Invariant to prove.** Prove classification is performed on the representation that
+   actually reaches each stage and distinguish documented propagation/canonicalization/flush
+   behavior from host IEEE-754 assumptions.
+
+4. **TT-Metal evidence to connect.** Connect the report's `NaN` and `+/-Inf`
+   representation/detection rules to the architecture-matched Unpacker, Math/SFPU, Dst, and
+   Packer ISA/LLK paths used by a minimal kernel.
+
+5. **Experiment and expected observation.** Inject normal, subnormal, ±0, ±Inf,
+   quiet/signaling NaN patterns through one operation and format conversion; expected
+   result: each boundary matches the documented class/bit behavior and localizes any change.
 
 ## Code connection
 

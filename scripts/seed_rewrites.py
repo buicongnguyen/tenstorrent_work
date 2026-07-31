@@ -66,8 +66,8 @@ def seed_page(source: Path) -> str:
 !!! info "What ‘seed’ means"
     The official report and its assets are preserved verbatim under
     <code>upstream/tt-metal/tech_reports/{path}</code>. This learner page
-    establishes provenance, a reading map, and an improvement plan; its technical
-    explanation is still queued for a full visual rewrite.
+    establishes provenance and a reading map. Its report-specific architecture
+    explanation and evidence plan must be authored before publication.
 
 ## Original report map
 
@@ -84,14 +84,10 @@ def seed_page(source: Path) -> str:
 
 ## Improvement plan
 
-The learner edition should make these parts explicit before it can move beyond
-`seed`:
-
-1. State the problem and the hardware/software boundary involved.
-2. Draw the data or control flow, including ownership and synchronization.
-3. Extract correctness invariants and architecture-specific assumptions.
-4. Connect the concepts to concrete TT-Metal symbols or examples.
-5. Add a small verification exercise with an expected observation.
+SOURCE-SPECIFIC PLAN REQUIRED. This generated page intentionally cannot pass
+documentation validation until an author replaces this marker with five
+report-grounded items: architecture pressure, explicit flow, proved invariant,
+concrete TT-Metal evidence, and a falsifiable experiment with its expected result.
 
 ## Code connection
 
@@ -103,8 +99,8 @@ host → data-movement → compute → data-movement path.
 
 - **Original source:** [`tech_reports/{path}` at `{COMMIT[:7]}`]({source_url})
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/{path}`
-- **Current delta:** provenance, source metrics, outline, and improvement
-  checklist. Questions are added only when source-grounded answers are ready.
+- **Current delta:** provenance, source metrics, and outline. Architecture work
+  and questions are added only when source-grounded details and answers are ready.
 """
 
 
