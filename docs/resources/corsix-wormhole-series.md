@@ -10,6 +10,13 @@ Peter Cawley's series is a bottom-up tour of Wormhole based on code reading,
 hardware experiments, and reasoned inference. It is excellent study material,
 but it is not a substitute for Tenstorrent's maintained documentation.
 
+The series belongs in **Level 7: Hardware, TT-LLK, and ISA**. Parts 1–4 build
+the low-level system foundation; Parts 5–7 descend into the Tensix compute
+pipeline. Part 4 also bridges to Level 6 because it studies multi-ASIC Ethernet
+routing.
+
+[Open the Parts 1–7 reading and questioning workbook →](corsix-reading-workbook.md){ .md-button .md-button--primary }
+
 ## Read in order
 
 | Part | Original article | What to extract | Compare with |
@@ -27,7 +34,16 @@ The pagination URL originally supplied—[`/content/page3`](https://www.corsix.o
 Parts 3–7 together. The table above uses stable per-article URLs so sidebar
 links open exactly the chapter you intend.
 
-## A good comparison exercise
+## Recommended study rhythm
+
+1. Read one original article and draw its actors, addresses, and data movement.
+2. Answer that part's questions in the
+   [workbook](corsix-reading-workbook.md) before reading a summary.
+3. Classify important claims as official, observed, inferred, or open.
+4. Compare with the exact official ISA/report links beside that part.
+5. Record disagreements as architecture- and date-qualified research questions.
+
+## A good first comparison exercise
 
 For Part 7, make a three-column note:
 

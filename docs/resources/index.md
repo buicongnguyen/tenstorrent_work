@@ -14,6 +14,7 @@ properties.
 |---|---|---|
 | How do I build or optimize a TT-Metal/TT-NN operator? | [Pinned `tt-metal` reports](../reference/report-catalog.md) | Official · pinned |
 | How does Wormhole appear experimentally from PCIe down to a T tile? | [Corsix Wormhole series](corsix-wormhole-series.md) | Community · verify |
+| How should I actively study and question Corsix Parts 1–7? | [Corsix reading workbook](corsix-reading-workbook.md) | Community · verify against official |
 | What exactly does an Unpacker, Packer, register, or instruction do? | [Tenstorrent ISA deep dive](isa-reference.md) | Official · living |
 | How do I write at the low-level-kernel API? | [`tt-llk`](https://github.com/tenstorrent/tt-llk) | Official · living |
 
@@ -34,3 +35,7 @@ properties.
 Every Atlas rewrite links its original source at the top. When a chapter uses
 one of these supporting sources, it also links the exact Corsix article or ISA
 file—not merely the home page—so you can compare the explanation directly.
+
+For a complete lower-layer route, use the
+[Parts 1–7 reading workbook](corsix-reading-workbook.md). It places each article
+inside Level 7 and pairs it with questions and official comparison sources.

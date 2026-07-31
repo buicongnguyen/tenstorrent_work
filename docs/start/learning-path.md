@@ -155,9 +155,13 @@ and instructions without mixing Wormhole and Blackhole details.
 Use:
 
 1. [Matrix engine](../rewrites/matrix_engine/matrix_engine.md)
-2. [Resource guide and trust labels](../resources/index.md)
+2. [Corsix Parts 1–7 reading workbook](../resources/corsix-reading-workbook.md)
 3. [Official ISA deep dive](../resources/isa-reference.md)
-4. [Corsix Wormhole series](../resources/corsix-wormhole-series.md), especially Parts 5–7
+4. [Resource guide and trust labels](../resources/index.md)
+
+Parts 1–4 of the Corsix route establish board, PCIe, NoC, and Ethernet context;
+Parts 5–7 descend through the T tile, SFPU/vector ISA, and matrix pipeline. Use
+the official ISA links after each part to verify, qualify, or reject claims.
 
 **Checkpoint:** trace one tile from L1 through Unpack → `SrcA`/`SrcB` → Matrix
 or SFPU → `Dst` → Pack → L1, and label every architecture-specific claim.

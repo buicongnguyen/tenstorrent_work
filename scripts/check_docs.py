@@ -149,6 +149,32 @@ def check_diagrams(errors: list[str]) -> None:
             )
 
 
+def check_corsix_workbook(errors: list[str]) -> None:
+    series = (DOCS / "resources" / "corsix-wormhole-series.md").read_text(
+        encoding="utf-8"
+    )
+    workbook = (DOCS / "resources" / "corsix-reading-workbook.md").read_text(
+        encoding="utf-8"
+    )
+    navigation = (ROOT / "mkdocs.yml").read_text(encoding="utf-8")
+
+    for part in range(1, 8):
+        source_url = f"https://www.corsix.org/content/tt-wh-part{part}"
+        if source_url not in series:
+            errors.append(f"Corsix series map is missing Part {part} original link")
+        if source_url not in workbook:
+            errors.append(f"Corsix workbook is missing Part {part} original link")
+        if f"## Part {part} —" not in workbook:
+            errors.append(f"Corsix workbook is missing Part {part} section")
+
+    if workbook.count("### Questions while reading") != 7:
+        errors.append("Corsix workbook must contain one question section per part")
+    if workbook.count("### Verify after reading") != 7:
+        errors.append("Corsix workbook must contain one verification section per part")
+    if "resources/corsix-reading-workbook.md" not in navigation:
+        errors.append("sidebar navigation is missing the Corsix reading workbook")
+
+
 def main() -> int:
     errors: list[str] = []
     check_upstream(errors)
@@ -157,6 +183,7 @@ def main() -> int:
     check_links(errors)
     check_required_sections(errors)
     check_diagrams(errors)
+    check_corsix_workbook(errors)
 
     if errors:
         print("Documentation validation failed:")

@@ -142,12 +142,14 @@ nav:
           - Shared-exponent precision suite: rewrites/data_formats/shared_exponent_precision_testing_suite/Readme.md
           - Special values in Tensix compute: rewrites/Handling_Special_Value/special_values.md
           - Blackhole bring-up guide: rewrites/Blackhole/BlackholeBringUpProgrammingGuide.md
+          - Corsix Parts 1–7 workbook: resources/corsix-reading-workbook.md
+          - Official ISA route: resources/isa-reference.md
   - Project reference:
       - Rewrite roadmap: reference/rewrite-roadmap.md
       - Provenance and updates: reference/provenance.md
   - External & ISA:
       - Resource guide: resources/index.md
-      - Corsix Wormhole series: resources/corsix-wormhole-series.md
+      - Corsix series map and links: resources/corsix-wormhole-series.md
       - Official ISA deep dive: resources/isa-reference.md
   - Contribute:
       - Rewrite playbook: contributing/rewrite-playbook.md
