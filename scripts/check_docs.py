@@ -319,6 +319,58 @@ def check_deepwiki_optimization(errors: list[str]) -> None:
         if nav_path not in navigation:
             errors.append(f"sidebar navigation is missing {nav_path}")
 
+    course_pages = (
+        ("research-method.md", "https://deepwiki.com/tenstorrent/tt-metal", "deepwiki-research-method"),
+        ("fast-dispatch.md", "https://deepwiki.com/tenstorrent/tt-metal/2.5-fast-dispatch-and-command-queue-system", "deepwiki-fast-dispatch"),
+        ("program-cache.md", "https://deepwiki.com/tenstorrent/tt-metal/2.4-program-and-kernel-system", "deepwiki-program-cache"),
+        ("command-queues-events.md", "https://deepwiki.com/tenstorrent/tt-metal/7.4-performance-optimization-techniques", "deepwiki-command-queues"),
+        ("metal-trace.md", "https://deepwiki.com/tenstorrent/tt-metal/7.4-performance-optimization-techniques", "deepwiki-metal-trace"),
+        ("memory-placement.md", "https://deepwiki.com/tenstorrent/tt-metal/2.7-memory-management-and-allocators", "deepwiki-memory-placement"),
+        ("kernel-pipeline.md", "https://deepwiki.com/tenstorrent/tt-metal/2.12-data-movement-and-buffer-operations", "deepwiki-kernel-pipeline"),
+        ("profiling.md", "https://deepwiki.com/tenstorrent/tt-metal/8.4-profiling-and-performance-analysis", "deepwiki-profiling-ladder"),
+        ("model-to-operation.md", "https://deepwiki.com/tenstorrent/tt-metal/9.7-model-tracer-and-operation-extraction", "deepwiki-model-to-operation"),
+        ("llk-isa.md", "https://deepwiki.com/tenstorrent/tt-metal/3-low-level-kernel-apis-%28llk%29", "deepwiki-llk-isa"),
+    )
+    course_root = DOCS / "resources" / "deepwiki"
+    for filename, source_url, diagram in course_pages:
+        nav_path = f"resources/deepwiki/{filename}"
+        index_path = f"deepwiki/{filename}"
+        page_path = course_root / filename
+
+        if nav_path not in navigation:
+            errors.append(f"sidebar navigation is missing DeepWiki lesson {filename}")
+        if index_path not in guide:
+            errors.append(f"DeepWiki course index is missing lesson {filename}")
+        if not page_path.exists():
+            errors.append(f"DeepWiki lesson {filename} is missing")
+            continue
+
+        content = page_path.read_text(encoding="utf-8")
+        for marker in (
+            source_url,
+            "source-note",
+            "## Questions and expert answers",
+            "## Experiment to complete",
+            "???+ note \"Expert answer — reasoning\"",
+            diagram,
+        ):
+            if marker not in content:
+                errors.append(f"DeepWiki lesson {filename} is missing {marker!r}")
+
+        questions = len(re.findall(r"^### \d+\.", content, flags=re.MULTILINE))
+        answers = content.count('???+ note "Expert answer — reasoning"')
+        if questions != 3 or answers != 3:
+            errors.append(
+                f"DeepWiki lesson {filename} must contain three questions and "
+                f"three expanded expert answers; found {questions} questions and "
+                f"{answers} answers"
+            )
+
+        if len(content.split()) < 700:
+            errors.append(
+                f"DeepWiki lesson {filename} is too short for a detailed lesson"
+            )
+
 
 def check_status_summary(errors: list[str]) -> None:
     counts: dict[str, int] = {}

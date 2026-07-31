@@ -14,7 +14,7 @@ properties and should not be blended silently.
 | If you are asking… | Start with | Trust label |
 |---|---|---|
 | How do I build or optimize a TT-Metal/TT-NN operator? | [Pinned `tt-metal` reports](../reference/report-catalog.md) | Official · pinned |
-| Which subsystem or source files should I inspect for a question? | [How to use TT-Metal DeepWiki](deepwiki-research-guide.md) | Discovery index · verify |
+| Which subsystem or source files should I inspect for a question? | [DeepWiki optimization research course](deepwiki-research-guide.md) | Discovery index · ten detailed lessons · verify |
 | How do I diagnose and optimize a workload across layers? | [Performance optimization track](../start/optimization-path.md) | Atlas synthesis · source-linked |
 | How does Wormhole appear experimentally from PCIe down to a T tile? | [Corsix Wormhole series](corsix-wormhole-series.md) | Community · verify |
 | How should I actively study and question Corsix Parts 1–7? | [Seven-part Corsix guided course](corsix-reading-workbook.md) | Community · guided answers · verify against official |
@@ -52,5 +52,6 @@ inside Level 7 and pairs it with questions and official comparison sources.
 
 For a complete performance route, use the
 [optimization learning track](../start/optimization-path.md). For the research
-method and a reusable source-ledger template, use the
-[DeepWiki research guide](deepwiki-research-guide.md).
+method, mechanism-level investigations, answered architecture questions, and a
+reusable source-ledger template, use the ten-lesson
+[DeepWiki optimization research course](deepwiki-research-guide.md).

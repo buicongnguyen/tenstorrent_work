@@ -166,7 +166,18 @@ nav:
       - Provenance and updates: reference/provenance.md
   - Research sources & ISA:
       - Resource guide: resources/index.md
-      - How to use TT-Metal DeepWiki: resources/deepwiki-research-guide.md
+      - "DeepWiki optimization research course":
+          - Course overview: resources/deepwiki-research-guide.md
+          - "Lesson 1 · Code map to evidence": resources/deepwiki/research-method.md
+          - "Lesson 2 · Fast Dispatch": resources/deepwiki/fast-dispatch.md
+          - "Lesson 3 · Program-cache identity": resources/deepwiki/program-cache.md
+          - "Lesson 4 · Queues and events": resources/deepwiki/command-queues-events.md
+          - "Lesson 5 · Metal Trace": resources/deepwiki/metal-trace.md
+          - "Lesson 6 · Memory placement": resources/deepwiki/memory-placement.md
+          - "Lesson 7 · Kernel pipeline": resources/deepwiki/kernel-pipeline.md
+          - "Lesson 8 · Profiling investigation": resources/deepwiki/profiling.md
+          - "Lesson 9 · Model to operation": resources/deepwiki/model-to-operation.md
+          - "Lesson 10 · LLK and ISA": resources/deepwiki/llk-isa.md
       - Corsix series map and links: resources/corsix-wormhole-series.md
       - Official ISA deep dive: resources/isa-reference.md
   - Contribute:

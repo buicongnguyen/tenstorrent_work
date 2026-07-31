@@ -13,6 +13,10 @@ authority for an API contract, performance number, architecture detail, or
 interview answer. Use it to discover what to inspect; use official source,
 documentation, and measurements to decide what is true.
 
+This page is now the **course index**, not the explanation for every mechanism.
+The detailed lessons below build each mechanism from constraints, follow a
+concrete investigation, and answer the architecture questions they raise.
+
 !!! warning "The index can drift page by page"
     On 2026-07-31 the [DeepWiki home page](https://deepwiki.com/tenstorrent/tt-metal)
     reported repository commit
@@ -22,6 +26,32 @@ documentation, and measurements to decide what is true.
     displayed a different indexed commit and date. Record the **page's own**
     “Last indexed” value every time; do not assume the home-page value applies
     everywhere.
+
+## Detailed DeepWiki research course
+
+Read Lessons 1–3 first. After that, choose the branch that matches the measured
+symptom. Each lesson links its exact DeepWiki discovery page and commit-pinned
+official code so that generated interpretation and authoritative evidence never
+become indistinguishable.
+
+| Lesson | Engineering problem | What you will produce |
+|---|---|---|
+| [1 · Turn a code map into evidence](deepwiki/research-method.md) | How can a generated wiki help without becoming an accidental authority? | A claim ledger and a falsifiable source-reading path |
+| [2 · Reconstruct Fast Dispatch](deepwiki/fast-dispatch.md) | Why can workers be idle even when kernels are fast? | A command-lifecycle model from host issue to completion |
+| [3 · Reason about program-cache identity](deepwiki/program-cache.md) | Why is the first call slow, and why can a small configuration change compile again? | A cold/warm experiment and a cache-key hypothesis |
+| [4 · Design queues, events, and ownership](deepwiki/command-queues-events.md) | How can I/O overlap compute without stale reads or early overwrite? | A buffer ownership table and happens-before graph |
+| [5 · Decide whether Metal Trace fits](deepwiki/metal-trace.md) | When does replay remove overhead, and what state must remain stable? | A capture/replay lifecycle and trace-invariant audit |
+| [6 · Shorten the memory path](deepwiki/memory-placement.md) | Which layout, sharding, bank, and lifetime choices reduce movement? | A physical tensor contract and bytes-moved comparison |
+| [7 · Pipeline tiles inside a kernel](deepwiki/kernel-pipeline.md) | Why do reader, compute, or writer stages stall? | A bounded-buffer model and data-prefetch experiment |
+| [8 · Build a profiling investigation](deepwiki/profiling.md) | Which evidence distinguishes host, dispatch, NoC, compute, and load-balance limits? | A measurement ladder and one-variable A/B plan |
+| [9 · Reduce a model to operations](deepwiki/model-to-operation.md) | How can a model symptom become a reproducible operation configuration? | A model-to-op evidence chain and sweep candidate |
+| [10 · Descend to LLK and ISA](deepwiki/llk-isa.md) | When is a low-level explanation necessary rather than merely interesting? | An API-to-unit-to-instruction proof chain |
+
+!!! success "What makes these pages different from a summary"
+    A summary tells you what a feature is. These lessons make you decide
+    **whether the feature addresses the measured bottleneck**, identify the
+    state and ownership it introduces, predict a timeline change, and name the
+    evidence that would disprove your explanation.
 
 ## The evidence loop
 
@@ -73,33 +103,33 @@ when it answers your question.
 
 | Read | Use it to ask | Verify or continue with |
 |---|---|---|
-| [Overview](https://deepwiki.com/tenstorrent/tt-metal) | Where are TT-NN, TT-Metalium, LLRT, and hardware boundaries? | [Architecture mental model](../start/architecture-mental-model.md) and pinned [`METALIUM_GUIDE.md`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/METALIUM_GUIDE.md) |
+| [Overview](https://deepwiki.com/tenstorrent/tt-metal) | Where are TT-NN, TT-Metalium, LLRT, and hardware boundaries? | [Lesson 1 · code map to evidence](deepwiki/research-method.md), [architecture mental model](../start/architecture-mental-model.md), and pinned [`METALIUM_GUIDE.md`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/METALIUM_GUIDE.md) |
 | [System architecture](https://deepwiki.com/tenstorrent/tt-metal/1.2-system-architecture-overview) | Which runtime components initialize and own resources? | [Learning path](../start/learning-path.md) |
 | [Core runtime](https://deepwiki.com/tenstorrent/tt-metal/2-core-runtime-system-%28tt-metalium%29) | How does host state reach a device? | Official [TT-Metalium examples](https://docs.tenstorrent.com/tt-metal/latest/tt-metalium/tt_metal/examples/index.html) |
-| [Program and kernel system](https://deepwiki.com/tenstorrent/tt-metal/2.4-program-and-kernel-system) | What is compile-time, runtime, and per-core? | [Kernel code indexing](../rewrites/code-indexing/kernel-code-indexing.md) |
-| [Fast Dispatch and command queues](https://deepwiki.com/tenstorrent/tt-metal/2.5-fast-dispatch-and-command-queue-system) | How do issue, prefetch, dispatch, worker, and completion stages connect? | [Advanced model optimizations](../rewrites/AdvancedPerformanceOptimizationsForModels/AdvancedPerformanceOptimizationsForModels.md) and the official [Metalium Guide](https://github.com/tenstorrent/tt-metal/blob/main/METALIUM_GUIDE.md#fast-dispatch) |
+| [Program and kernel system](https://deepwiki.com/tenstorrent/tt-metal/2.4-program-and-kernel-system) | What is compile-time, runtime, and per-core? | [Lesson 3 · program-cache identity](deepwiki/program-cache.md) and [kernel code indexing](../rewrites/code-indexing/kernel-code-indexing.md) |
+| [Fast Dispatch and command queues](https://deepwiki.com/tenstorrent/tt-metal/2.5-fast-dispatch-and-command-queue-system) | How do issue, prefetch, dispatch, worker, and completion stages connect? | [Lesson 2 · Fast Dispatch](deepwiki/fast-dispatch.md), [Lesson 4 · queues and events](deepwiki/command-queues-events.md), and the official [Metalium Guide](https://github.com/tenstorrent/tt-metal/blob/main/METALIUM_GUIDE.md#fast-dispatch) |
 
 ### Memory and dataflow
 
 | Read | Use it to ask | Verify or continue with |
 |---|---|---|
-| [Memory management and allocators](https://deepwiki.com/tenstorrent/tt-metal/2.7-memory-management-and-allocators) | Who owns DRAM/L1 regions and bank placement? | [Device allocator](../rewrites/memory/allocator.md) |
-| [Data movement and buffer operations](https://deepwiki.com/tenstorrent/tt-metal/2.12-data-movement-and-buffer-operations) | How do buffers and transfers enter an execution flow? | [TensorAccessor](../rewrites/tensor_accessor/tensor_accessor.md) and [NoC tile transfer](../rewrites/prog_examples/NoC_tile_transfer/NoC_tile_transfer.md) |
-| [Program configuration and optimization](https://deepwiki.com/tenstorrent/tt-metal/4.10-program-configuration-and-optimization) | Which shapes, layouts, sharding choices, precision modes, and program hashes select a path? | [Tensor and memory layouts](../rewrites/tensor_layouts/tensor_layouts.md), [data formats](../rewrites/data_formats/data_formats.md), and current operation source |
+| [Memory management and allocators](https://deepwiki.com/tenstorrent/tt-metal/2.7-memory-management-and-allocators) | Who owns DRAM/L1 regions and bank placement? | [Lesson 6 · memory placement](deepwiki/memory-placement.md) and [device allocator](../rewrites/memory/allocator.md) |
+| [Data movement and buffer operations](https://deepwiki.com/tenstorrent/tt-metal/2.12-data-movement-and-buffer-operations) | How do buffers and transfers enter an execution flow? | [Lesson 7 · kernel pipeline](deepwiki/kernel-pipeline.md), [TensorAccessor](../rewrites/tensor_accessor/tensor_accessor.md), and [NoC tile transfer](../rewrites/prog_examples/NoC_tile_transfer/NoC_tile_transfer.md) |
+| [Program configuration and optimization](https://deepwiki.com/tenstorrent/tt-metal/4.10-program-configuration-and-optimization) | Which shapes, layouts, sharding choices, precision modes, and program hashes select a path? | [Lesson 3 · program-cache identity](deepwiki/program-cache.md), [Lesson 6 · memory placement](deepwiki/memory-placement.md), and current operation source |
 
 ### Optimization and proof
 
 | Read | Use it to ask | Verify or continue with |
 |---|---|---|
-| [Performance optimization techniques](https://deepwiki.com/tenstorrent/tt-metal/7.4-performance-optimization-techniques) | Which gap is trace, multiple CQs, async execution, or memory placement intended to remove? | [Performance optimization track](../start/optimization-path.md) and the [pinned advanced-optimization report](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/AdvancedPerformanceOptimizationsForModels/AdvancedPerformanceOptimizationsForModels.md) |
-| [Profiling and performance analysis](https://deepwiki.com/tenstorrent/tt-metal/8.4-profiling-and-performance-analysis) | Which host, device, NoC, or counter evidence can test the hypothesis? | [Metal profiler](../rewrites/MetalProfiler/metal-profiler.md), [performance counters](../rewrites/PerfCounters/perf-counters.md), and official [Tracy guide](https://docs.tenstorrent.com/tt-metal/latest/tt-metalium/tools/tracy_profiler.html) |
-| [Model tracer and operation extraction](https://deepwiki.com/tenstorrent/tt-metal/9.7-model-tracer-and-operation-extraction) | How can a model be reduced to the operation or program that needs study? | [Graph tracing](../rewrites/ttnn/graph-tracing.md) and [operation tracing](../rewrites/ttnn/operation-tracing.md) |
+| [Performance optimization techniques](https://deepwiki.com/tenstorrent/tt-metal/7.4-performance-optimization-techniques) | Which gap is trace, multiple CQs, async execution, or memory placement intended to remove? | [Lesson 4 · queues and events](deepwiki/command-queues-events.md), [Lesson 5 · Metal Trace](deepwiki/metal-trace.md), and the [pinned advanced-optimization report](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/AdvancedPerformanceOptimizationsForModels/AdvancedPerformanceOptimizationsForModels.md) |
+| [Profiling and performance analysis](https://deepwiki.com/tenstorrent/tt-metal/8.4-profiling-and-performance-analysis) | Which host, device, NoC, or counter evidence can test the hypothesis? | [Lesson 8 · profiling investigation](deepwiki/profiling.md), [Metal profiler](../rewrites/MetalProfiler/metal-profiler.md), and [performance counters](../rewrites/PerfCounters/perf-counters.md) |
+| [Model tracer and operation extraction](https://deepwiki.com/tenstorrent/tt-metal/9.7-model-tracer-and-operation-extraction) | How can a model be reduced to the operation or program that needs study? | [Lesson 9 · model to operation](deepwiki/model-to-operation.md), [graph tracing](../rewrites/ttnn/graph-tracing.md), and [operation tracing](../rewrites/ttnn/operation-tracing.md) |
 
 ### Lowest layers
 
 | Read | Use it to ask | Verify or continue with |
 |---|---|---|
-| [Low-Level Kernel APIs](https://deepwiki.com/tenstorrent/tt-metal/3-low-level-kernel-apis-%28llk%29) | Which compute API reaches Unpack, Math/SFPU, and Pack behavior? | [Official ISA route](isa-reference.md), [matrix engine](../rewrites/matrix_engine/matrix_engine.md), and architecture-matched source |
+| [Low-Level Kernel APIs](https://deepwiki.com/tenstorrent/tt-metal/3-low-level-kernel-apis-%28llk%29) | Which compute API reaches Unpack, Math/SFPU, and Pack behavior? | [Lesson 10 · LLK and ISA](deepwiki/llk-isa.md), [official ISA route](isa-reference.md), and architecture-matched source |
 
 Do not descend to LLK or ISA merely because a page exists. Descend after the
 profiler or a correctness question identifies a lower-layer mechanism.

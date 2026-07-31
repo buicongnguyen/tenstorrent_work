@@ -1,0 +1,13 @@
+flowchart TB
+    subgraph Locate["Locate the limiting boundary"]
+        direction LR
+        S["Stable symptom +<br/>measurement contract"] --> H["Host timeline<br/>construction · waits · gaps"]
+        H --> D["Dispatch/device timeline<br/>operation and kernel zones"]
+    end
+    subgraph Explain["Explain and test"]
+        direction LR
+        C["Per-core/per-RISC comparison"] --> B["NoC · DRAM<br/>counters · bytes"]
+        B --> A["LLK/ISA only if<br/>evidence points lower"]
+        A --> X["Change one mechanism<br/>repeat identical metric"]
+    end
+    D --> C

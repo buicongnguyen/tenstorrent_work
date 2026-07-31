@@ -1,0 +1,8 @@
+flowchart LR
+    A["Operation call"] --> K["Derive program identity<br/>attributes + tensor config"]
+    K --> Q{"Cache hit?"}
+    Q -->|no| B["Validate · build program<br/>compile kernels · cache"]
+    Q -->|yes| U["Reuse program<br/>update runtime-dependent state"]
+    B --> E["Enqueue and execute"]
+    U --> E
+    E --> V["Check result + cache count<br/>separate cold/warm timing"]

@@ -1,0 +1,16 @@
+flowchart TB
+    subgraph Discover["Discover and bound"]
+        direction LR
+        Q["Concrete question"] --> M["DeepWiki map<br/>terms + candidate files"]
+        M --> P["Pin page commit<br/>and official source"]
+        P --> C["State one claim<br/>and its boundary"]
+    end
+    subgraph Test["Predict and test"]
+        direction LR
+        H["Competing hypotheses"] --> X["Predicted observation<br/>for each hypothesis"]
+        X --> E["One-variable experiment"]
+        E --> D{"Evidence agrees?"}
+    end
+    C --> H
+    D -->|yes| N["Publish claim + limits"]
+    D -->|no| H

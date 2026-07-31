@@ -1,0 +1,11 @@
+sequenceDiagram
+    participant H as Host
+    participant Q1 as CQ1 · transfer
+    participant Q0 as CQ0 · compute
+    H->>Q1: write input n+1
+    Q1-->>Q1: record write_done
+    Q0->>Q0: finish consuming input n
+    Q0-->>Q1: consumer_done permits overwrite
+    Q1-->>Q0: wait write_done
+    Q0->>Q0: execute n+1
+    Q0-->>H: completion/read dependency

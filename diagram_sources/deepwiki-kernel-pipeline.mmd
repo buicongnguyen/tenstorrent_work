@@ -1,0 +1,8 @@
+flowchart LR
+    N["NoC/DRAM"] --> R["Reader<br/>reserve · async read · push"]
+    R --> I["Input circular buffers"]
+    I --> C["Compute<br/>wait · unpack · math · pack · pop"]
+    C --> O["Output circular buffer"]
+    O --> W["Writer<br/>wait · async write · pop"]
+    W --> N
+    I -. "depth controls overlap" .-> O

@@ -1,0 +1,13 @@
+flowchart TB
+    subgraph Capture["Capture model context"]
+        direction LR
+        M["Model run + exact arguments"] --> T["Trace TT-NN operation calls"]
+        T --> J["Canonical operation configs"]
+        J --> D["Deduplicate + attach<br/>hardware/commit/model provenance"]
+    end
+    subgraph Reproduce["Reproduce and return"]
+        direction LR
+        R["Reconstruct selected configs"] --> S["Sweep/reproducer"]
+        S --> P["Profile one operation<br/>without losing model context"]
+    end
+    D --> R

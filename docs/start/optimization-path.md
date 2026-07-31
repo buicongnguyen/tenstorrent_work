@@ -46,6 +46,9 @@ same optimization.
 
 ## Stage 1 — separate cold start from steady state
 
+For a full cache-identity investigation rather than a feature summary, use
+[DeepWiki Lesson 3 · Program-cache identity](../resources/deepwiki/program-cache.md).
+
 **Question:** Is the slow time compilation and program construction, or device
 execution?
 
@@ -73,6 +76,9 @@ select a different program. Predict whether the cache-entry count changes.
 
 ## Stage 2 — understand how work reaches workers
 
+Reconstruct the queues, prefetcher, dispatcher, workers, and completion path in
+[DeepWiki Lesson 2 · Fast Dispatch](../resources/deepwiki/fast-dispatch.md).
+
 **Question:** Can the device consume commands without the host synchronously
 launching every step?
 
@@ -97,6 +103,9 @@ an isolated compatible example when debugging or studying the contrast.
 
 ## Stage 3 — remove host gaps with Metal Trace
 
+Audit address stability, capture lifecycle, and the expected timeline change in
+[DeepWiki Lesson 5 · Metal Trace](../resources/deepwiki/metal-trace.md).
+
 **Question:** Does the device wait between operations because the host is still
 constructing or dispatching them?
 
@@ -114,6 +123,9 @@ against trace replay. Expect smaller host/inter-op gaps only when host dispatch
 was a meaningful part of the baseline.
 
 ## Stage 4 — overlap iterations with command queues and events
+
+Build the buffer-ownership table and cross-queue happens-before graph in
+[DeepWiki Lesson 4 · Queues and events](../resources/deepwiki/command-queues-events.md).
 
 **Question:** Can transfer for iteration `n+1` overlap compute for iteration
 `n`?
@@ -134,6 +146,9 @@ output, and correctness check. Draw the producer/consumer event graph first.
 Then confirm transfer/compute overlap and a reduced iteration gap.
 
 ## Stage 5 — shorten the memory path
+
+Work from the complete physical tensor contract in
+[DeepWiki Lesson 6 · Memory placement](../resources/deepwiki/memory-placement.md).
 
 **Question:** Are extra movement, conversion, or remote accesses limiting the
 operation?
@@ -156,6 +171,9 @@ placement. Compare the same operation with one memory decision changed and
 verify both traffic and latency.
 
 ## Stage 6 — pipeline tiles and reuse data
+
+Trace reserve/publish/consume/release ownership in
+[DeepWiki Lesson 7 · Kernel pipeline](../resources/deepwiki/kernel-pipeline.md).
 
 **Question:** Are Data Movement RISCs, circular buffers, compute engines, and
 the writer overlapped effectively?
@@ -191,6 +209,9 @@ Reuse the same producer/consumer reasoning from multiple command queues, but
 add device ownership, routing, link bandwidth, and collective topology.
 
 ## Stage 8 — descend to TT-LLK and ISA last
+
+Keep the question connected from public API to architecture-specific evidence in
+[DeepWiki Lesson 10 · LLK and ISA](../resources/deepwiki/llk-isa.md).
 
 **Question:** Has measurement shown that a compute engine, instruction path,
 format conversion, or low-level synchronization is the remaining limit?

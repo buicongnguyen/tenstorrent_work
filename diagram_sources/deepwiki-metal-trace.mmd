@@ -1,0 +1,15 @@
+flowchart TB
+    subgraph Prepare["Prepare and capture"]
+        direction LR
+        W["Warm program cache"] --> A["Allocate persistent state"]
+        A --> B["Begin capture"]
+        B --> R["Run stable operation sequence"]
+        R --> E["End capture<br/>retain trace ID"]
+    end
+    subgraph Replay["Steady-state replay"]
+        direction LR
+        U["Update input contents<br/>preserve required addresses"] --> X["Replay trace"]
+        X --> S["Synchronize at true dependency"]
+        S --> U
+    end
+    E --> U

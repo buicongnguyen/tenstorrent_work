@@ -1,0 +1,8 @@
+flowchart LR
+    H["Host API<br/>builds commands"] --> I["Issue queue<br/>system memory"]
+    I --> P["Prefetch core<br/>fetches command pages"]
+    P --> D["Dispatch core<br/>interprets commands"]
+    D --> W["Worker cores<br/>reader · compute · writer"]
+    W --> C["Completion queue"]
+    C --> H
+    S["Slow dispatch<br/>host drives each step"] -. debugging comparison .-> W

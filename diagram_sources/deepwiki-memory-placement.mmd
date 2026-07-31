@@ -1,0 +1,13 @@
+flowchart TB
+    subgraph Represent["Represent and place"]
+        direction LR
+        L["Logical tensor<br/>shape + dtype"] --> P["Physical contract<br/>tile/row-major + padding"]
+        P --> S["Shard mapping<br/>core grid + orientation"]
+        S --> B["Bank/address mapping<br/>DRAM or L1"]
+    end
+    subgraph Use["Move, reuse, and prove"]
+        direction LR
+        M["Movement plan<br/>read · multicast · reshard"] --> R["Reuse/lifetime plan"]
+        R --> E["Measure bytes, stalls,<br/>capacity, imbalance"]
+    end
+    B --> M

@@ -1,0 +1,14 @@
+flowchart TB
+    subgraph Descend["Prove the selected path"]
+        direction LR
+        O["Observed kernel symptom"] --> A["Public compute/dataflow API"]
+        A --> K["Architecture-specific<br/>API wrapper"]
+        K --> L["TT-LLK implementation"]
+    end
+    subgraph Return["Explain and test"]
+        direction LR
+        U["Hardware unit<br/>Unpack · Math/SFPU · Pack · NoC"] --> I["ISA/register documentation"]
+        I --> P["Prediction at API level"]
+        P --> X["Targeted microbenchmark"]
+    end
+    L --> U
