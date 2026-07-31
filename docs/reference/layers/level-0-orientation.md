@@ -82,6 +82,39 @@ contracts for the target workload.
 | Higher throughput | batching and parallelism | queueing latency and memory capacity rise |
 | Better efficiency | specialization and local memory | software scheduling complexity rises |
 
+## Report-by-report architecture decisions
+
+### TT-NN — why the stack keeps semantic operations above device programs
+
+[Pinned original](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/ttnn/ttnn.md) ·
+[learner analysis](../../rewrites/ttnn/ttnn.md)
+
+**Why this design exists.** A model author needs stable tensor and operator
+semantics, while the efficient implementation depends on shape, layout,
+placement, device generation, and program-cache state. Putting both concerns in
+one API would either expose hardware policy everywhere or freeze one physical
+implementation behind every operation.
+
+**Mechanism and benefit.** TT-NN separates framework-facing operations, the
+operation library and infrastructure, and runtime/device execution. An operation
+can validate semantic inputs, select or create a specialized device program,
+cache the reusable structure, and patch runtime addresses for each invocation.
+The benefit is not merely clean code: expensive specialization moves out of the
+steady-state path, while model code keeps one semantic contract.
+
+**Price and rejected shortcut.** The price is causal distance. A Python
+`matmul` can fail because of a tensor contract, cache identity, runtime
+argument, reader kernel, or matrix-engine assumption. Flattening the stack into
+“one kernel call” would make attribution appear simpler but would duplicate
+placement, dispatch, and compatibility policy in every operator.
+
+**Architect's evidence test.** Trace one operation from its public tensor
+metadata to operation selection, program identity/cache behavior, runtime
+arguments, queued kernels, and output tensor. At each boundary record the owner
+and invariant. If two layers both believe they own layout, lifetime, or
+synchronization, the abstraction is leaking and the design needs a single
+authoritative contract.
+
 ## Questions and expert answers
 
 ### 1. Why not debug directly at the lowest layer?

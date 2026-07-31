@@ -86,6 +86,188 @@ the dominant scarce resource while meeting capacity and accuracy.
 | Lower-bit format | less storage and bandwidth | precision, range, and conversion behavior |
 | Larger blocks | more reuse and fewer control operations | less load balance and higher L1 footprint |
 
+## Report-by-report architecture decisions
+
+### Tensor and memory layouts — why page shape and page placement are separate axes
+
+[Pinned original](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/tensor_layouts/tensor_layouts.md) ·
+[learner analysis](../../rewrites/tensor_layouts/tensor_layouts.md)
+
+**Why this design exists.** The compute engine cares how values form tiles or
+rows, while the memory system cares how those pages distribute across banks and
+cores. Treating “tiled,” “sharded,” and “in L1” as one choice prevents useful
+combinations and obscures which conversion is actually required.
+
+**Mechanism and benefit.** The design separates tensor layout (element-to-page
+mapping), memory layout (interleaved or sharded distribution), and storage class
+(DRAM/L1). These independent contracts let a tiled tensor be interleaved or
+sharded and allow placement policy to change without redefining element order.
+
+**Price and rejected shortcut.** More metadata must remain consistent across
+producer, allocator, accessor, and consumer. One monolithic layout enum is
+simpler to name but creates a combinatorial type system and hidden conversions.
+
+**Architect's evidence test.** For one tensor derive logical/padded 2D shape,
+tile/page count, payload/alignment bytes, bank/core assignment, and consumer
+access. Identify exactly which axis changes at every conversion.
+
+### Data formats — why values share an exponent in blocks
+
+[Pinned original](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/data_formats/data_formats.md) ·
+[learner analysis](../../rewrites/data_formats/data_formats.md)
+
+**Why this design exists.** Carrying a full exponent for every value consumes
+storage and movement bandwidth even when neighboring values have similar scale.
+Many tensor workloads can trade some local dynamic range for substantially
+denser representation.
+
+**Mechanism and benefit.** A block of 16 values shares the maximum exponent;
+individual mantissas are aligned, truncated, and rounded. Narrower BFP formats
+reduce page bytes and increase effective memory/compute throughput while keeping
+a floating scale for each local group.
+
+**Price and rejected shortcut.** Precision is coupled: one outlier raises the
+shared exponent and removes useful low bits from small neighbors. Per-value
+floating point avoids this coupling but buys it with more bits and traffic.
+
+**Architect's evidence test.** Test exact rounding boundaries, mantissa carry,
+mixed magnitudes, and one-outlier blocks. Report encoded bits and model-level
+accuracy, not only average random error.
+
+### Tensor sharding — why placement follows the consumer's work partition
+
+[Pinned original](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/tensor_sharding/tensor_sharding.md) ·
+[learner analysis](../../rewrites/tensor_sharding/tensor_sharding.md)
+
+**Why this design exists.** Interleaving balances storage but may force each
+worker to gather its repeated working set over NoC. Local L1 can remove those
+reads only if the shard geometry matches the work each consumer owns.
+
+**Mechanism and benefit.** A shard specification maps tensor regions to an
+ordered core grid using height, width, block, or N-D structure. Output ownership
+is chosen first; the required input shard and any halo/collective are then
+derived. The benefit is local reuse plus parallel ownership.
+
+**Price and rejected shortcut.** Sharding consumes L1 and introduces reshard,
+halo, imbalance, and padded-edge costs. Evenly dividing bytes without following
+consumer access can redistribute data yet save no communication.
+
+**Architect's evidence test.** Prove exact coverage and orientation, compute
+per-core useful/padded bytes, and measure downstream local versus remote traffic
+including the cost to create and later change the shards.
+
+### Allocator — why banks allocate in lockstep and classes grow from opposite ends
+
+[Pinned original](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/memory/allocator.md) ·
+[learner analysis](../../rewrites/memory/allocator.md)
+
+**Why this design exists.** Interleaved/sharded address calculation is cheaper
+when all participating banks share one allocation base and comparable free-list
+state. Program binaries and user buffers also have different size/lifetime
+patterns that would fragment a single mixed allocation stream.
+
+**Mechanism and benefit.** The allocator reserves the same aligned span in each
+bank even when a small buffer leaves some banks empty, and grows user data and
+binaries from opposite ends. One common base simplifies page-to-bank offset
+arithmetic; separated fronts reduce lifetime-class interleaving.
+
+**Price and rejected shortcut.** Lockstep wastes capacity through internal
+fragmentation and the most constrained bank limits the allocation. Packing each
+bank independently saves bytes but requires irregular per-bank bases and more
+metadata in hot address paths.
+
+**Architect's evidence test.** Inspect per-bank reserved ranges, alignment,
+largest free block, and failed-bank minimum. Distinguish internal padding from
+external holes; total free bytes alone cannot prove an allocation fits.
+
+### TensorAccessor — why distribution is split into static and runtime state
+
+[Pinned original](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/tensor_accessor/tensor_accessor.md) ·
+[learner analysis](../../rewrites/tensor_accessor/tensor_accessor.md)
+
+**Why this design exists.** Kernels need a uniform “page N to NoC address”
+operation across interleaved and sharded tensors, but hard-coding every shape and
+bank coordinate explodes variants, while computing everything dynamically adds
+per-page work.
+
+**Mechanism and benefit.** `TensorAccessorArgs` serializes one distribution
+description into compile-time and common-runtime portions. Stable rank, shape,
+or bank structure can be specialized; changing placement or compatible sizes
+can remain runtime data. Device code reconstructs one accessor contract.
+
+**Price and rejected shortcut.** Container-size dependencies must move together:
+a runtime rank cannot index a compile-time shape array. Manual address formulas
+look smaller but duplicate mapping logic and easily diverge from tensor metadata.
+
+**Architect's evidence test.** Enumerate every static/runtime field, derive
+addresses for first/last/boundary pages, and prove the accessor only calculates
+location—NoC APIs move bytes and circular buffers transfer ownership.
+
+### TensorAccessor iterators — why regular traversal carries state forward
+
+[Pinned original](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/tensor_accessor/tensor_accessor_iterator.md) ·
+[learner analysis](../../rewrites/tensor_accessor/tensor_accessor_iterator.md)
+
+**Why this design exists.** Repeated random-style address reconstruction wastes
+RISC cycles when a kernel walks consecutive pages whose bank, shard, and offset
+relationships are predictable.
+
+**Mechanism and benefit.** Page and shard iterators compute initial mapping
+state once and increment cached coordinates/offsets. This amortizes rank and
+shard arithmetic inside a data-movement loop and can keep NoC issue supplied.
+
+**Price and rejected shortcut.** Iterator state and boundary transitions add
+implementation complexity; true random access still needs direct lookup. A
+fast iterator that changes order is incorrect even if every address is valid.
+
+**Architect's evidence test.** Compare the iterator's complete address sequence
+against `get_noc_addr(page_id)` across bank/shard boundaries, then measure cycles
+per issued page for sequential and random patterns separately.
+
+### Multicore padding — why work is partitioned by output ownership
+
+[Pinned original](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/prog_examples/pad_multi_core/pad_multi_core.md) ·
+[learner analysis](../../rewrites/prog_examples/pad_multi_core/pad_multi_core.md)
+
+**Why this design exists.** Padding creates new output coordinates that have no
+source element. Partitioning by input alone leaves ambiguity over which core
+writes padding and risks overlapping or missing output ranges.
+
+**Mechanism and benefit.** Each core owns a disjoint output interval, classifies
+every coordinate as mapped input or pad, and writes it exactly once. This makes
+correctness local and allows parallel address generation/fill without atomics.
+
+**Price and rejected shortcut.** Cores assigned mostly padding may have less
+useful input work, and physical tile padding must be distinguished from logical
+model padding. Having all cores copy input and a separate global fill pass is
+simpler but adds traffic and synchronization.
+
+**Architect's evidence test.** Verify interior, every edge/corner, partial
+pages, and per-core write intervals with distinctive values. Count useful input
+bytes versus synthesized padding and check load balance.
+
+### Row-major sharding example — why global pages are staged into core-local ownership
+
+[Pinned original](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/prog_examples/shard_data_rm/shard_data_rm.md) ·
+[learner analysis](../../rewrites/prog_examples/shard_data_rm/shard_data_rm.md)
+
+**Why this design exists.** A globally interleaved row-major tensor is easy to
+allocate but forces later per-core work to repeatedly resolve and fetch remote
+pages. Staging is worthwhile when those pages have multiple local consumers or
+reuse.
+
+**Mechanism and benefit.** The host defines a deterministic page-range-to-core
+map; readers transfer assigned pages into L1 shards, and later kernels consume
+local ownership. The result is predictable locality and independent core work.
+
+**Price and rejected shortcut.** Staging adds one transfer, L1 lifetime, and a
+recomposition/reshard cost if the next operation wants another partition. Direct
+interleaved access wins when reuse is too low to amortize staging.
+
+**Architect's evidence test.** Derive first/last page for every core, reconstruct
+the logical tensor, and compare `staging bytes + later local bytes` with repeated
+remote bytes across the actual consumer chain.
+
 ## Questions and expert answers
 
 ### 1. Why are data format and layout separate decisions?

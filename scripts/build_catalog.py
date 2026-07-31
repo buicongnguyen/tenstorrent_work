@@ -62,20 +62,32 @@ def main() -> None:
         "dataflow. Levels 5 and 6 are advanced branches for measurement and scale.",
         "Level 7 is the lowest layer and should be architecture-qualified.",
         "",
-        "The catalog tells you **what to read**. Each expert guide teaches "
-        "**how to reason** at that layer through contracts, a worked problem, "
-        "tradeoffs, evidence, and fully explained answers.",
+        "The catalog tells you **what decision each layer owns**. Each expert guide "
+        "contains report-by-report architecture reviews: why the documented solution "
+        "exists, the benefit it purchases, the price it pays, and the evidence that "
+        "would justify it in a real implementation.",
         "",
-        "| Level | Abstraction | Main question | Expert guide | Reports |",
-        "|---:|---|---|---|---:|",
+        "### Use the catalog as a decision tree, not a table of contents",
+        "",
+        "1. Start with the violated invariant or limiting resource, not a product name.",
+        "2. Open the level whose contract owns that invariant.",
+        "3. In the level guide, find the report whose architectural pressure matches yours.",
+        "4. Compare its chosen mechanism with the rejected shortcut and explicit price paid.",
+        "5. Copy the evidence test into a microbenchmark or trace before copying the solution.",
+        "",
+        "A report is useful when it changes a design decision. Section counts and feature "
+        "lists are provenance aids; they are not architecture conclusions.",
+        "",
+        "| Level | Abstraction | Principal decision | Proof required | Expert guide |",
+        "|---:|---|---|---|---|",
     ]
 
     for layer in LAYERS:
         lines.append(
             f"| [{layer['number']}](#level-{layer['number']}-{layer['slug']}) "
-            f"| {layer['abstraction']} | {layer['focus']} "
-            f"| [Reason through Level {layer['number']}](layers/{layer['guide']}) "
-            f"| {len(layer['paths'])} |"
+            f"| {layer['abstraction']} | {layer['decision']} "
+            f"| {layer['evidence']} "
+            f"| [Architecture decisions for Level {layer['number']}](layers/{layer['guide']}) |"
         )
 
     sequence = 0
@@ -93,6 +105,14 @@ def main() -> None:
                 f"**Architect's task:** {layer['architect_task']}",
                 "",
                 f"**Reasoning path:** `{layer['reasoning_path']}`",
+                "",
+                f"**Chosen architecture pattern:** {layer['mechanism']}",
+                "",
+                f"**Benefit purchased:** {layer['benefit']}",
+                "",
+                f"**Price paid:** {layer['cost']}",
+                "",
+                f"**Evidence required:** {layer['evidence']}",
                 "",
                 f"[Open the Level {layer['number']} expert reasoning guide →]"
                 f"(layers/{layer['guide']})"

@@ -61,7 +61,16 @@ def check_report_layers(errors: list[str]) -> None:
         anchor = f"#level-{layer['number']}-{layer['slug']}"
         if anchor not in catalog:
             errors.append(f"report catalog is missing layer anchor {anchor}")
-        for field in ("architect_task", "reasoning_path", "guide"):
+        for field in (
+            "architect_task",
+            "reasoning_path",
+            "guide",
+            "decision",
+            "mechanism",
+            "benefit",
+            "cost",
+            "evidence",
+        ):
             if field not in layer:
                 errors.append(
                     f"report layer {layer['number']} is missing curriculum field {field!r}"
@@ -79,6 +88,7 @@ def check_layer_guides(errors: list[str]) -> None:
         "## Architecture reasoning loop",
         "## Worked problem",
         "## Tradeoffs an architect tracks",
+        "## Report-by-report architecture decisions",
         "## Questions and expert answers",
         "## Evidence checklist",
     )
@@ -113,6 +123,43 @@ def check_layer_guides(errors: list[str]) -> None:
 
         if f"layer{number}-" not in content:
             errors.append(f"Level {number} expert guide is missing its reasoning diagram")
+
+        if "## Report-by-report architecture decisions" in content:
+            decision_section = content.split(
+                "## Report-by-report architecture decisions", maxsplit=1
+            )[1].split("\n## Questions and expert answers", maxsplit=1)[0]
+            expected_records = len(layer["paths"])
+            headings = len(re.findall(r"^### ", decision_section, flags=re.MULTILINE))
+            for marker in (
+                "**Why this design exists.**",
+                "**Mechanism and benefit.**",
+                "**Price and rejected shortcut.**",
+                "**Architect's evidence test.**",
+            ):
+                count = decision_section.count(marker)
+                if count != expected_records:
+                    errors.append(
+                        f"Level {number} must contain {expected_records} instances "
+                        f"of {marker!r}; found {count}"
+                    )
+            if headings != expected_records:
+                errors.append(
+                    f"Level {number} must contain one architecture decision record "
+                    f"per report; expected {expected_records}, found {headings}"
+                )
+            for report_path in layer["paths"]:
+                if report_path not in decision_section:
+                    errors.append(
+                        f"Level {number} architecture decisions do not link "
+                        f"report {report_path}"
+                    )
+            decision_words = len(re.findall(r"\b[\w'-]+\b", decision_section))
+            minimum_words = expected_records * 120
+            if decision_words < minimum_words:
+                errors.append(
+                    f"Level {number} architecture decisions are too shallow: "
+                    f"expected at least {minimum_words} words, found {decision_words}"
+                )
 
 
 def check_rewrite_sources(errors: list[str]) -> None:

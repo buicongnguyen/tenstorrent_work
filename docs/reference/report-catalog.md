@@ -14,18 +14,28 @@ Levels 0–4 form the main descent from stack vocabulary to device-kernel
 dataflow. Levels 5 and 6 are advanced branches for measurement and scale.
 Level 7 is the lowest layer and should be architecture-qualified.
 
-The catalog tells you **what to read**. Each expert guide teaches **how to reason** at that layer through contracts, a worked problem, tradeoffs, evidence, and fully explained answers.
+The catalog tells you **what decision each layer owns**. Each expert guide contains report-by-report architecture reviews: why the documented solution exists, the benefit it purchases, the price it pays, and the evidence that would justify it in a real implementation.
 
-| Level | Abstraction | Main question | Expert guide | Reports |
-|---:|---|---|---|---:|
-| [0](#level-0-orientation) | Whole stack | Vocabulary, boundaries, and the TT-NN to hardware mental model. | [Reason through Level 0](layers/level-0-orientation.md) | 1 |
-| [1](#level-1-models-operators) | Highest | See how complete workloads and operators use TT-NN. | [Reason through Level 1](layers/level-1-models-operators.md) | 11 |
-| [2](#level-2-ttnn-runtime) | High | Devices, tracing, comparison, serialization, and runtime behavior. | [Reason through Level 2](layers/level-2-runtime-observability.md) | 5 |
-| [3](#level-3-tensor-memory) | Middle | Tiles, formats, layouts, sharding, allocation, and addressing. | [Reason through Level 3](layers/level-3-tensor-memory.md) | 8 |
-| [4](#level-4-kernels-dataflow) | Low | Host programs, reader/compute/writer kernels, NoC, and multicore flows. | [Reason through Level 4](layers/level-4-kernels-dataflow.md) | 8 |
-| [5](#level-5-performance-debugging) | Advanced cross-layer | Measure bottlenecks, debug kernels, and optimize with evidence. | [Reason through Level 5](layers/level-5-performance-debugging.md) | 10 |
-| [6](#level-6-distributed-systems) | Advanced system scale | Meshes, Ethernet, collectives, fabric, and multi-host execution. | [Reason through Level 6](layers/level-6-distributed-systems.md) | 9 |
-| [7](#level-7-hardware-isa) | Lowest | Tensix engines, formats at the hardware boundary, and architecture-specific details. | [Reason through Level 7](layers/level-7-hardware-isa.md) | 5 |
+### Use the catalog as a decision tree, not a table of contents
+
+1. Start with the violated invariant or limiting resource, not a product name.
+2. Open the level whose contract owns that invariant.
+3. In the level guide, find the report whose architectural pressure matches yours.
+4. Compare its chosen mechanism with the rejected shortcut and explicit price paid.
+5. Copy the evidence test into a microbenchmark or trace before copying the solution.
+
+A report is useful when it changes a design decision. Section counts and feature lists are provenance aids; they are not architecture conclusions.
+
+| Level | Abstraction | Principal decision | Proof required | Expert guide |
+|---:|---|---|---|---|
+| [0](#level-0-orientation) | Whole stack | Which layer owns the first violated invariant? | Trace one operator across every boundary and name the object, owner, invariant, and measurement at each handoff. | [Architecture decisions for Level 0](layers/level-0-orientation.md) |
+| [1](#level-1-models-operators) | Highest | Where should the model graph be split, specialized, fused, or kept resident? | A production shape histogram, subgraph byte/lifetime model, module-level golden checks, and end-to-end latency split by regime. | [Architecture decisions for Level 1](layers/level-1-models-operators.md) |
+| [2](#level-2-ttnn-runtime) | High | What state is reusable, what is runtime-patchable, and what must be ordered explicitly? | Cold/warm/replay distributions joined to operation identity, queue events, trace structure, and a numerical reference. | [Architecture decisions for Level 2](layers/level-2-runtime-observability.md) |
+| [3](#level-3-tensor-memory) | Middle | How should logical values become physical pages, bank/core placements, and addresses? | Exact byte footprints, boundary address derivations, per-bank/core balance, conversion counts, and measured movement stalls. | [Architecture decisions for Level 3](layers/level-3-tensor-memory.md) |
+| [4](#level-4-kernels-dataflow) | Low | Which core owns each output, and how do tiles move and change ownership without starving a stage? | Per-core ownership, CB state transitions, NoC barriers, stage timelines, and byte/reuse counts for one full block. | [Architecture decisions for Level 4](layers/level-4-kernels-dataflow.md) |
+| [5](#level-5-performance-debugging) | Advanced cross-layer | Which resource or control path is actually on the critical path? | A predicted counter/timeline response, one-variable experiment, end-to-end improvement, and unchanged correctness. | [Architecture decisions for Level 5](layers/level-5-performance-debugging.md) |
+| [6](#level-6-distributed-systems) | Advanced system scale | How should global work and state map onto meshes, hosts, routes, and collective schedules? | Global-to-physical maps, bytes per link, per-rank timelines, collective critical path, and explicit buffer state machines. | [Architecture decisions for Level 6](layers/level-6-distributed-systems.md) |
+| [7](#level-7-hardware-isa) | Lowest | Which engine, format, state transition, or instruction property explains the localized limit? | An API-to-ISA call path, official source, isolated benchmark, counter/timeline signature, and upper-level impact. | [Architecture decisions for Level 7](layers/level-7-hardware-isa.md) |
 
 ## Level 0 — Orientation and stack { #level-0-orientation }
 
@@ -36,6 +46,14 @@ Vocabulary, boundaries, and the TT-NN to hardware mental model.
 **Architect's task:** Locate the first broken contract and assign the problem to the layer that owns it.
 
 **Reasoning path:** `symptom → invariant → owning layer → evidence above/below → one change → original metric`
+
+**Chosen architecture pattern:** A contract map from model semantics through TT-NN, runtime, kernels, and hardware.
+
+**Benefit purchased:** The investigation starts with a bounded hypothesis instead of an ISA-sized search space.
+
+**Price paid:** Layering hides detail, so identity must be carried across traces and profiles.
+
+**Evidence required:** Trace one operator across every boundary and name the object, owner, invariant, and measurement at each handoff.
 
 [Open the Level 0 expert reasoning guide →](layers/level-0-orientation.md){ .md-button .md-button--primary }
 
@@ -52,6 +70,14 @@ See how complete workloads and operators use TT-NN.
 **Architect's task:** Partition the graph so accuracy is preserved while movement, fallback, and repeated work are minimized.
 
 **Reasoning path:** `workload distribution → tensor lifetimes → fusion/residency choices → accuracy budget → end-to-end validation`
+
+**Chosen architecture pattern:** Operator variants and graph boundaries chosen from tensor lifetime, reuse, and workload regime.
+
+**Benefit purchased:** Useful model work reaches the accelerator without paying avoidable conversion, transfer, or materialization costs.
+
+**Price paid:** More specialization increases program variants, validation surface, and resident-state pressure.
+
+**Evidence required:** A production shape histogram, subgraph byte/lifetime model, module-level golden checks, and end-to-end latency split by regime.
 
 [Open the Level 1 expert reasoning guide →](layers/level-1-models-operators.md){ .md-button .md-button--primary }
 
@@ -79,6 +105,14 @@ Devices, tracing, comparison, serialization, and runtime behavior.
 
 **Reasoning path:** `cold/warm/replay split → cache identity → queue ownership → trace structure + profile time → comparison`
 
+**Chosen architecture pattern:** Programs, queues, traces, sub-devices, serialization, and observability keyed by stable identity and lifetime.
+
+**Benefit purchased:** Compilation and host submission are amortized while repeated execution remains correct and explainable.
+
+**Price paid:** Cached and asynchronous paths create stricter address, ownership, version, and event invariants.
+
+**Evidence required:** Cold/warm/replay distributions joined to operation identity, queue events, trace structure, and a numerical reference.
+
 [Open the Level 2 expert reasoning guide →](layers/level-2-runtime-observability.md){ .md-button .md-button--primary }
 
 | Step | Report | Upstream original | Learner edition | Status |
@@ -98,6 +132,14 @@ Tiles, formats, layouts, sharding, allocation, and addressing.
 **Architect's task:** Choose one physical tensor contract that balances accuracy, capacity, locality, parallelism, and conversion cost.
 
 **Reasoning path:** `access pattern → format/layout → placement/sharding → address proof → bytes and balance measurement`
+
+**Chosen architecture pattern:** A composed format, page layout, memory layout, shard specification, allocation, and accessor contract.
+
+**Benefit purchased:** Consumers receive engine-compatible data with predictable locality, parallelism, and address arithmetic.
+
+**Price paid:** Padding, fragmentation, resharding, conversion, and scarce L1 capacity become first-class costs.
+
+**Evidence required:** Exact byte footprints, boundary address derivations, per-bank/core balance, conversion counts, and measured movement stalls.
 
 [Open the Level 3 expert reasoning guide →](layers/level-3-tensor-memory.md){ .md-button .md-button--primary }
 
@@ -122,6 +164,14 @@ Host programs, reader/compute/writer kernels, NoC, and multicore flows.
 
 **Reasoning path:** `core ownership → input reuse → circular-buffer protocol → stage timeline → wait-state evidence`
 
+**Chosen architecture pattern:** Reader–compute–writer kernels connected by circular-buffer and NoC completion protocols.
+
+**Benefit purchased:** Movement overlaps compute while data reuse and multicast reduce external traffic.
+
+**Price paid:** Loop counts, buffer capacity, semaphore state, and completion order become distributed correctness state.
+
+**Evidence required:** Per-core ownership, CB state transitions, NoC barriers, stage timelines, and byte/reuse counts for one full block.
+
 [Open the Level 4 expert reasoning guide →](layers/level-4-kernels-dataflow.md){ .md-button .md-button--primary }
 
 | Step | Report | Upstream original | Learner edition | Status |
@@ -144,6 +194,14 @@ Measure bottlenecks, debug kernels, and optimize with evidence.
 **Architect's task:** Turn a symptom into a falsifiable bottleneck hypothesis and prove the optimization moved the critical path.
 
 **Reasoning path:** `metric → bounds → timeline/counters → competing hypotheses → one-variable experiment → correctness`
+
+**Chosen architecture pattern:** Bounds, synchronized host/device timelines, hardware counters, and controlled perturbation experiments.
+
+**Benefit purchased:** Optimization effort targets the limiting mechanism and produces a reproducible causal explanation.
+
+**Price paid:** Instrumentation perturbs execution and every result is scoped to workload, commit, architecture, and timing boundary.
+
+**Evidence required:** A predicted counter/timeline response, one-variable experiment, end-to-end improvement, and unchanged correctness.
 
 [Open the Level 5 expert reasoning guide →](layers/level-5-performance-debugging.md){ .md-button .md-button--primary }
 
@@ -170,6 +228,14 @@ Meshes, Ethernet, collectives, fabric, and multi-host execution.
 
 **Reasoning path:** `global partition → rank/topology map → collective/link cost → ownership/events → per-rank critical path`
 
+**Chosen architecture pattern:** Logical mesh abstractions lowered to topology-aware routing, transport, buffers, ranks, and events.
+
+**Benefit purchased:** The same global program scales while communication can exploit physical locality and link concurrency.
+
+**Price paid:** Stragglers, failure domains, congestion, teardown, and cross-rank ownership enter the correctness contract.
+
+**Evidence required:** Global-to-physical maps, bytes per link, per-rank timelines, collective critical path, and explicit buffer state machines.
+
 [Open the Level 6 expert reasoning guide →](layers/level-6-distributed-systems.md){ .md-button .md-button--primary }
 
 | Step | Report | Upstream original | Learner edition | Status |
@@ -193,6 +259,14 @@ Tensix engines, formats at the hardware boundary, and architecture-specific deta
 **Architect's task:** Explain a localized engine-level limit without confusing documented behavior with inferred microarchitecture.
 
 **Reasoning path:** `localized symptom → supported API → TT-LLK → official ISA → microbenchmark → end-to-end proof`
+
+**Chosen architecture pattern:** Architecture-qualified TT-LLK/ISA semantics tested through minimal kernels and model-level validation.
+
+**Benefit purchased:** Software can exploit native shapes, selectable precision, and specialized engines deliberately.
+
+**Price paid:** The conclusion becomes generation-specific and inherits hazards, finite state, and numerical edge behavior.
+
+**Evidence required:** An API-to-ISA call path, official source, isolated benchmark, counter/timeline signature, and upper-level impact.
 
 [Open the Level 7 expert reasoning guide →](layers/level-7-hardware-isa.md){ .md-button .md-button--primary }
 

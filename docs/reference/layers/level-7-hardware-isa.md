@@ -85,6 +85,129 @@ workload—not a universal claim that one fidelity is “best.”
 | Config/replay/MOP state | amortized setup and high issue rate | hidden state becomes a correctness invariant |
 | Simplified special values | cheaper/faster datapath | numerical behavior differs from full IEEE expectations |
 
+## Report-by-report architecture decisions
+
+### Matrix engine — why native work shape and fidelity are visible to software
+
+[Pinned original](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/matrix_engine/matrix_engine.md) ·
+[learner analysis](../../rewrites/matrix_engine/matrix_engine.md) ·
+[official Wormhole matrix-unit ISA](https://github.com/tenstorrent/tt-isa-documentation/blob/main/WormholeB0/TensixTile/TensixCoprocessor/MatrixUnit.md)
+
+**Why this design exists.** Dense low-precision workloads reward many compact
+MAC lanes and regular data reuse more than a small number of fully general
+wide-precision scalar units. Software already knows its matrix shape and accuracy
+budget, so exposing those choices avoids paying maximum precision universally.
+
+**Mechanism and benefit.** The documented engine issues a native
+`(8×16) × (16×16)` work shape. Narrow multiplier contributions are revisited in
+LoFi/HiFi phases, while `SrcA`, `SrcB`, and `Dst` state keeps data near compute.
+This buys high low-precision throughput and selectable accuracy.
+
+**Price and rejected shortcut.** Under-filled rows waste native lanes, extra
+fidelity phases divide peak issue rate, and FP32 destination state reduces tile
+capacity. Full-width hardware everywhere would simplify software but consume
+area/energy even when models do not need it.
+
+**Architect's evidence test.** Derive useful-lane fraction and phase-adjusted
+ceiling from the exact architecture, then measure matrix-active cycles and model
+accuracy. Recompute blocking when destination capacity changes; do not copy
+Wormhole numbers to Blackhole by analogy.
+
+### Data-format reconfiguration — why Unpack and Pack state changes inside a kernel
+
+[Pinned original](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/data_formats/reconfig_data_format.md) ·
+[learner analysis](../../rewrites/data_formats/reconfig_data_format.md) ·
+[official unpacker ISA](https://github.com/tenstorrent/tt-isa-documentation/blob/main/WormholeB0/TensixTile/TensixCoprocessor/Unpackers/README.md)
+
+**Why this design exists.** A fused kernel may consume or produce circular
+buffers with different formats. Launching a separate conversion kernel for every
+boundary adds traffic, synchronization, and dispatch even though Unpack/Pack
+hardware already interprets representations.
+
+**Mechanism and benefit.** Explicit reconfiguration changes the input/output
+format state at a quiescent tile boundary, allowing one compute program to move
+between compatible CB contracts. Conversion stays adjacent to the engine that
+consumes or produces the tile.
+
+**Price and rejected shortcut.** Format configuration is hidden mutable hardware
+state: reconfiguring too early, too late, or on one participant only causes bit
+misinterpretation. One fixed-format kernel per boundary is safer but materializes
+intermediates and loses fusion.
+
+**Architect's evidence test.** Trace `stored page → reconfigure → Unpack →
+compute/Dst → reconfigure → Pack → stored page`; prove previous work is complete
+at each state change and test every supported format pair.
+
+### Shared-exponent precision suite — why verification is organized around quantizer decisions
+
+[Pinned original](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/data_formats/shared_exponent_precision_testing_suite/Readme.md) ·
+[learner analysis](../../rewrites/data_formats/shared_exponent_precision_testing_suite/Readme.md)
+
+**Why this design exists.** Random tensors rarely land on exponent-selection,
+rounding-tie, mantissa-carry, saturation, and outlier boundaries where compressed
+formats diverge. Average error can pass while a hardware conversion rule is wrong.
+
+**Mechanism and benefit.** The suite generates controlled blocks, applies an
+independent shared-exponent/rounding oracle, runs representative operations, and
+compares encoded/results with reproducible metrics. Tests follow the state
+machine of the quantizer rather than the names of models.
+
+**Price and rejected shortcut.** The oracle must match architecture-visible
+rules without copying implementation bugs, and the case matrix grows across
+formats/operations. Pure end-to-end PCC is cheaper but cannot identify which
+conversion decision failed.
+
+**Architect's evidence test.** Cover below/at/above-half ties, carry overflow,
+mixed magnitudes, outliers, zeros, and repeated conversions. Record seeds,
+encoded bits, expected rule, and stage of first divergence.
+
+### Special values — why numerical behavior is specified at every engine boundary
+
+[Pinned original](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/Handling_Special_Value/special_values.md) ·
+[learner analysis](../../rewrites/Handling_Special_Value/special_values.md) ·
+[official packer ISA](https://github.com/tenstorrent/tt-isa-documentation/blob/main/WormholeB0/TensixTile/TensixCoprocessor/Packers/README.md)
+
+**Why this design exists.** Full IEEE-754 behavior in every low-precision,
+high-throughput path has area, power, and latency cost, while many ML workloads
+use restricted formats and approximation modes. The actual contract can change
+at Unpack, Math/SFPU, destination, or Pack.
+
+**Mechanism and benefit.** The report documents representation and detection of
+Inf, NaN, and denormals in Tensix compute so software can select formats/modes
+deliberately and debug the representation that really reaches each stage.
+
+**Price and rejected shortcut.** Host expectations may not transfer; values can
+flush, clamp, canonicalize, or change during conversion. Testing only host input
+and final output cannot localize the boundary.
+
+**Architect's evidence test.** Inject explicit bit patterns and observe the full
+L1→Unpack→Math/SFPU→Dst→Pack→L1 path for every configuration. Separate documented
+results from inferred circuitry and qualify by architecture.
+
+### Blackhole bring-up — why a new generation is validated by dependency layer
+
+[Pinned original](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/Blackhole/BlackholeBringUpProgrammingGuide.md) ·
+[learner analysis](../../rewrites/Blackhole/BlackholeBringUpProgrammingGuide.md)
+
+**Why this design exists.** A new generation changes L1/cache behavior,
+Ethernet, DRAM, NoC, reset, descriptors, firmware, and tools at once. A large
+application failure cannot reveal which prerequisite is absent or still carries
+a Wormhole assumption.
+
+**Mechanism and benefit.** Bring-up proceeds through known reset, detected
+architecture/descriptor, firmware/service cores, memory/NoC/link checks, minimal
+kernels, then CI expansion. Debug and issue tracking attach evidence to the
+first failing layer. This creates a stable platform before performance claims.
+
+**Price and rejected shortcut.** Staged gates and generation-specific feature
+flags slow initial coverage and duplicate validation. Running a mature Wormhole
+test suite immediately creates many correlated failures with poor attribution.
+
+**Architect's evidence test.** For every promoted layer publish reset state,
+binary/descriptor identity, minimal test, expected observation, and regression
+owner. Success in compute must not be used as proof of Ethernet, DRAM, or later
+runtime behavior.
+
 ## Questions and expert answers
 
 ### 1. When is an ISA-level optimization justified?
