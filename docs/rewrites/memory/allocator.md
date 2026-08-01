@@ -177,5 +177,7 @@ to reason about the address span reserved in each bank.
 - **Original:** [Allocator at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/memory/allocator.md)
 - **Added here:** an address-space map, lockstep benefit/cost model,
   fragmentation diagnosis, ownership/lifetime boundary, and review checkpoints.
-- **Still to review:** exact reserved regions and bank counts for later device
-  descriptors.
+- **Review conclusion:** lockstep allocation, opposite growth directions, and
+  fragmentation reasoning are scoped to the pinned allocator report. Exact bank
+  counts and reserved regions are device-descriptor inputs, not durable constants,
+  and no later-device values are asserted here.

@@ -151,5 +151,7 @@ pinned to the TT-Metal report commit above.
 - **Original:** [Data Formats at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/data_formats/data_formats.md)
 - **Added here:** an end-to-end conversion flow, explicit rounding decisions,
   invariants, failure modes, and unpack/pack study links.
-- **Still to review:** exact bit layouts and architecture-dependent pack/unpack
-  behavior against a hardware practitioner and current implementation.
+- **Review conclusion:** rounding, exponent-sharing, and bit-layout statements
+  above are claims of the pinned report. The living Unpacker/Packer links are
+  mechanism references, not evidence that Wormhole encodings transfer to
+  Blackhole. No cross-generation bit-layout equivalence is claimed.

@@ -165,5 +165,7 @@ report remains the comparison source for the performance claims above.
 - **Original:** [Matrix Engine at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/matrix_engine/matrix_engine.md)
 - **Added here:** native-shape utilization, a fidelity/operation matrix, knob
   boundaries, an end-to-end engine flow, and ISA cross-links.
-- **Still to review:** generation-specific equivalence of the pinned Wormhole
-  wording and Blackhole behavior.
+- **Review conclusion:** the arithmetic table remains explicitly scoped to the
+  pinned report. The durable work-shape/utilization/fidelity reasoning transfers,
+  but Wormhole and Blackhole capacities, state, encodings, and timing require
+  their separate official ISA trees; this page does not claim equivalence.

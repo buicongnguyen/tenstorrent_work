@@ -171,5 +171,8 @@ different command sets.
 - **Original:** [Kernel code indexing at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/code-indexing/kernel-code-indexing.md)
 - **Added here:** a strategy decision, reconstruction flow, explicit trust
   boundary for generated entries, and editor verification checklist.
-- **Still to review:** current CLI flags and duplicate-selection behavior after
-  later TT-Metal changes.
+- **Review conclusion:** command-generation details and flags on this page are
+  scoped to `992f3ca`. Duplicate entries are treated as distinct compile
+  contexts and selected by the full compiler/wrapper/define/include identity,
+  not filename alone. For another revision, inspect that revision's helper
+  `--help` and generated commands rather than transferring these flags.

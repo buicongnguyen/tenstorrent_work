@@ -214,6 +214,6 @@ owner of an invariant and proving a causal change remains valid.
 
 To decide whether a report, current source path, DeepWiki explanation, or
 community claim is strong enough to guide an implementation, use
-[Source trust and claim verification](provenance.md). Contributor workflow
-belongs in the [rewrite playbook](../contributing/rewrite-playbook.md), outside
-this learning guide.
+[Source trust and claim verification](provenance.md). To evaluate whether an
+explanation has causal proof rather than only accurate prose, use
+[Architecture claim review](../contributing/rewrite-playbook.md).

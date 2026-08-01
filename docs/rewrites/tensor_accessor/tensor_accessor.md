@@ -127,13 +127,15 @@ configuration mismatch. Preserve these invariants:
 
 ## Performance reasoning
 
-The pinned report states:
+The pinned report supports a qualitative cost model:
 
-- static rank allows zero-cost accessor construction because precomputation can
-  happen at compile time;
-- address calculation grows approximately linearly with rank;
+- static rank lets the compiler specialize rank-dependent structure and avoids
+  carrying runtime rank metadata;
+- direct address calculation may perform more shape/stride decomposition as the
+  number of mapped dimensions grows, but its exact cycle cost depends on layout,
+  compiler, and architecture;
 - iterators can outperform repeated `get_noc_addr()` calls by caching traversal
-  state, especially for shard pages.
+  state, especially for regular shard-page traversal.
 
 Choose runtime flexibility only for dimensions that actually vary across cache
 hits or program uses. The custom runtime page-size constructor exists for cases
@@ -203,4 +205,7 @@ where a cached program is reused with a different aligned page size.
 - **Original:** [Tensor Accessor Guide at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/tensor_accessor/tensor_accessor.md)
 - **Added here:** host/device phase separation, argument-dependency rule,
   address/movement/ownership boundaries, invariants, and performance choices.
-- **Still to review:** cycle-level cost across ranks and architectures.
+- **Review conclusion:** the source supports the specialization and state-reuse
+  mechanism, not a universal cycle formula. Direct lookup versus iterator cost
+  remains an experiment parameter and is not claimed as verified hardware
+  behavior here.

@@ -148,5 +148,8 @@ runs the workload, reads the destination buffer, and compares the first result.
 - **Original:** [NoC Tile Transfer at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/prog_examples/NoC_tile_transfer/NoC_tile_transfer.md)
 - **Added here:** an ownership table, explicit two-way semaphore protocol,
   logical-versus-physical address boundary, and failure analysis.
-- **Still to review:** multi-tile generalization and NoC-selection details for
-  different architectures.
+- **Review conclusion:** the one-tile ownership and semaphore chain is verified
+  against the pinned example. The multi-tile answer is a protocol derivation,
+  not a claim that the example implements pipelining. NoC processor/default
+  selection is configuration- and architecture-specific and is intentionally
+  not generalized here.

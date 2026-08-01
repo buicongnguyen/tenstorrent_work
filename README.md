@@ -24,12 +24,11 @@ official source, and upstream updates never silently overwrite learner notes.
 
 - 57 upstream Markdown reports copied at commit
   `992f3ca634aac8733c70e48da395aab5361b4166`
-- 57 source-linked learner pages: 7 substantive improved drafts and 50
-  explicitly labeled seeds awaiting deeper technical review
-- Foundational improved drafts cover tensor layouts, data formats, the matrix
-  engine, TensorAccessor, allocation, NoC tile transfer, and kernel indexing
-- A phased [rewrite roadmap](docs/reference/rewrite-roadmap.md) orders the
-  remaining kernel, performance, model, and distributed-system work
+- 57 source-linked learner pages with architecture walkthroughs, concrete code
+  boundaries, and 233 answered verification questions; no seed pages are public
+- Eight source-grounded levels from models and runtime through memory, kernels,
+  performance, distributed systems, TT-LLK, and ISA
+- Architecture dependency, source-verification, and claim-review guides
 - GitHub Pages-ready MkDocs Material site
 - Automated link/content checks and deployment workflow
 - Sidebar resource guides for the Corsix series and the official ISA hierarchy
@@ -66,8 +65,7 @@ questions:
 5. Which performance trade-offs matter?
 6. How can the reader verify the idea in code or on hardware?
 
-See the [rewrite playbook](docs/contributing/rewrite-playbook.md) before
-improving another report.
+See [CONTRIBUTING.md](CONTRIBUTING.md) before improving another report.
 
 ## Attribution and status
 

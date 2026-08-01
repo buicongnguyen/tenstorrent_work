@@ -245,6 +245,11 @@ def check_rewrite_sources(errors: list[str]) -> None:
             errors.append(
                 f"{rewrite.relative_to(ROOT)}: missing commit-pinned original source link"
             )
+        elif content.count(expected_url) < 2:
+            errors.append(
+                f"{rewrite.relative_to(ROOT)}: pinned original source must appear in "
+                "both the source note and Source and delta section"
+            )
         status = STATUS_RE.search(content)
         if not status:
             errors.append(f"{rewrite.relative_to(ROOT)}: missing rewrite-status marker")
@@ -308,6 +313,7 @@ def check_required_sections(errors: list[str]) -> None:
         "source-linked learner seed",
         "a full visual rewrite remains queued",
         "## Improvement plan",
+        "Still to review:",
     )
     forbidden_code_text = (
         "During the full rewrite, each important symbol will be mapped",
@@ -776,6 +782,52 @@ def check_resource_investigation_guide(errors: list[str]) -> None:
             )
 
 
+def check_architecture_review_guide(errors: list[str]) -> None:
+    """Keep the former playbook route as technical learning, not author workflow."""
+    page = (DOCS / "contributing" / "rewrite-playbook.md").read_text(
+        encoding="utf-8"
+    )
+    required = (
+        "# Architecture claim review: from plausible prose to causal proof",
+        "## The four proofs an architecture explanation needs",
+        "## Review from the consumer backward",
+        "## Worked review — NoC tile transfer",
+        "## Worked review — matrix-engine throughput",
+        "## Worked review — TensorAccessor cost",
+        "## Detect architectural overclaiming",
+        "## Numeric-claim review",
+        "## Symbol and source review",
+        "## Review questions and expert answers",
+        "## The transferable review habit",
+        EXPECTED_COMMIT,
+    )
+    for marker in required:
+        if marker not in page:
+            errors.append(f"architecture claim review is missing {marker!r}")
+
+    forbidden = (
+        "# Rewrite playbook",
+        "## Required page anatomy",
+        "## Technical review",
+        "## Status values",
+        "Before marking a rewrite complete",
+        "[ ]",
+    )
+    for marker in forbidden:
+        if marker in page:
+            errors.append(
+                f"architecture claim review contains contributor-process text {marker!r}"
+            )
+
+    questions = len(re.findall(r"^### \d+\.", page, flags=re.MULTILINE))
+    answers = page.count('???+ note "Expert answer — reasoning"')
+    if questions != 4 or answers != 4:
+        errors.append(
+            "architecture claim review must contain four questions and four "
+            f"expanded answers; found {questions} questions and {answers} answers"
+        )
+
+
 def main() -> int:
     errors: list[str] = []
     check_navigation_and_structure(errors)
@@ -792,6 +844,7 @@ def main() -> int:
     check_architecture_dependency_map(errors)
     check_source_verification_guide(errors)
     check_resource_investigation_guide(errors)
+    check_architecture_review_guide(errors)
 
     if errors:
         print("Documentation validation failed:")
