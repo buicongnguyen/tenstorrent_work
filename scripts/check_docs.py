@@ -656,22 +656,57 @@ def check_deepwiki_optimization(errors: list[str]) -> None:
             )
 
 
-def check_status_summary(errors: list[str]) -> None:
-    counts: dict[str, int] = {}
-    for rewrite in markdown_files(DOCS / "rewrites"):
-        match = STATUS_RE.search(rewrite.read_text(encoding="utf-8"))
-        if match:
-            counts[match.group(1)] = counts.get(match.group(1), 0) + 1
-
-    roadmap = (DOCS / "reference" / "rewrite-roadmap.md").read_text(
+def check_catalog_statuses(errors: list[str]) -> None:
+    """Keep authoring metadata in the catalog, not in learner guidance."""
+    catalog = (DOCS / "reference" / "report-catalog.md").read_text(
         encoding="utf-8"
     )
-    for status in ("improved-draft", "seed"):
-        expected_row = f"| `{status}` | {counts.get(status, 0)} |"
-        if expected_row not in roadmap:
+    for rewrite in markdown_files(DOCS / "rewrites"):
+        relative = rewrite.relative_to(DOCS / "rewrites").as_posix()
+        match = STATUS_RE.search(rewrite.read_text(encoding="utf-8"))
+        if not match:
+            continue
+        expected_cells = (
+            f"[Open learner page](../rewrites/{relative}) | `{match.group(1)}` |"
+        )
+        if expected_cells not in catalog:
             errors.append(
-                f"rewrite roadmap status summary is stale for {status!r}: "
-                f"expected row starting {expected_row!r}"
+                f"report catalog status is stale for {relative!r}: "
+                f"expected {match.group(1)!r}"
+            )
+
+
+def check_architecture_dependency_map(errors: list[str]) -> None:
+    """Prevent contributor planning from returning to the learner-facing page."""
+    page = (DOCS / "reference" / "rewrite-roadmap.md").read_text(
+        encoding="utf-8"
+    )
+    required = (
+        "# Tenstorrent architecture dependency map",
+        "## The dependency rule",
+        "## Trace A — bring up a model without hiding the first error",
+        "## Trace B — diagnose latency before choosing an optimization",
+        "## Trace C — design a kernel by ownership, not by API sequence",
+        "## Trace D — extend one-device reasoning across a mesh",
+        "## When an ISA-level descent is justified",
+        "## A reusable architecture decision record",
+        EXPECTED_COMMIT,
+    )
+    for marker in required:
+        if marker not in page:
+            errors.append(f"architecture dependency map is missing {marker!r}")
+
+    forbidden = (
+        "# Rewrite roadmap",
+        "## Coverage now",
+        "## Phase ",
+        "## Promotion rule",
+        "Review and expand these next",
+    )
+    for marker in forbidden:
+        if marker in page:
+            errors.append(
+                f"architecture dependency map contains project-planning text {marker!r}"
             )
 
 
@@ -687,7 +722,8 @@ def main() -> int:
     check_diagrams(errors)
     check_corsix_workbook(errors)
     check_deepwiki_optimization(errors)
-    check_status_summary(errors)
+    check_catalog_statuses(errors)
+    check_architecture_dependency_map(errors)
 
     if errors:
         print("Documentation validation failed:")

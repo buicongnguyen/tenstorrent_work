@@ -161,8 +161,9 @@ nav:
               - "Part 6 · Vector ISA": resources/corsix-parts/part6-vector-isa.md
               - "Part 7 · Matrix pipeline": resources/corsix-parts/part7-matmul.md
           - Official ISA route: resources/isa-reference.md
+  - Architecture reference:
+      - Architecture dependency map: reference/rewrite-roadmap.md
   - Project reference:
-      - Rewrite roadmap: reference/rewrite-roadmap.md
       - Provenance and updates: reference/provenance.md
   - Research sources & ISA:
       - Resource guide: resources/index.md

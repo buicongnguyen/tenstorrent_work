@@ -73,11 +73,11 @@ questions for any operator:
 
 </div>
 
-!!! warning "Project status"
-    The upstream snapshot is complete, but the learner-focused rewrite is a
-    work in progress. Every report now has a source-linked learner page; the
-    catalog distinguishes substantive `improved-draft` chapters from `seed`
-    reading maps that still await a full rewrite.
+!!! tip "Diagnose by contract"
+    When an operation is wrong or slow, start with the
+    [architecture dependency map](reference/rewrite-roadmap.md). It connects a
+    symptom to the layer that owns the first violated invariant, then shows the
+    evidence required before descending toward kernels, TT-LLK, or ISA.
 
 ## Recommended next page
 
