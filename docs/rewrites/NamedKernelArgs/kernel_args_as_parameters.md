@@ -11,33 +11,71 @@
 
 ### Why the design is shaped this way
 
-The design is shaped by the need to identify the positional ABI failures the proposal
-must eliminate: compile-time versus runtime kind, common versus per-core scope,
-type/order drift, and index shifts when a new argument is inserted.
+Metal 2.0 already gives arguments names and kinds: the host registers compile-time
+arguments (CTA), per-core runtime arguments (RTA), and common runtime arguments (CRTA);
+JIT emits `kernel_args_generated.h`; and kernels read `get_arg(args::<name>)`. The
+remaining failure surface is duplicated entry boilerplate: every kernel hand-writes
+`kernel_main()` and a fetch for each name. The proposal makes an ordinary C++ signature
+the consumer interface and generates the adapter. Template parameters carry the one
+semantic distinction the body needs—true compile-time constants usable in `if
+constexpr` and array bounds—while function parameters carry runtime values. Whether a
+runtime value is common or per-core stays in the host schema because the body should not
+change when storage scope changes.
+
+This is an ABI simplification, not dynamic reflection on device. Generation still
+happens before JIT compile and resolves every name to the existing typed accessor layer.
 
 ### How work and data move
 
-The complete path is one named value from host declaration through generated argument
-schema/wrapper, program compile/runtime storage, device kernel signature, and typed
-access at the consuming instruction path.
+The user marks one typed function with `TT_KERNEL`, defined in
+`experimental/kernel_args.h`. In phase 1 the marker expands to `FORCE_INLINE`, so no
+runtime call boundary remains. `genfiles` strips comments, strings, and preprocessor
+content, finds the lone real marker, matches the optional `template<...>` and function
+`(...)` lists, splits only top-level commas, and extracts each trailing identifier.
+
+It then emits a `kernel_main()` after both `kernel_args_generated.h` and user source are
+in scope. CTA names appear as template actuals—`my_kernel<get_arg(args::Ht),...>`—and
+RTA/CRTA names as function actuals—`get_arg(args::start_tile_id)`,
+`get_arg(args::scaler)`. The `args::<name>` accessor, generated from the host schema,
+selects compile-time, per-core runtime, or common runtime storage. Thus a value travels
+`host schema -> generated named accessor -> generated shim -> typed user parameter`,
+with no positional index repeated in handwritten kernel code.
 
 ### What must never break
 
-The non-negotiable invariant is that host binding and kernel signature share one
-authoritative name, type, kind, order, and scope; generation or compilation must reject
-drift rather than silently read a neighboring slot.
+There must be exactly one `TT_KERNEL` entry, and every extracted parameter name must
+exist in the generated `args` schema with a compatible kind. Template parameters must
+resolve to compile-time accessors; function parameters may resolve to RTA or CRTA without
+body-visible distinction. Phase 1 restricts parameters to `uint32_t`, because the manual
+parser is a name extractor, not a complete C++ parser. Comments, strings, macros, nested
+templates, or decoy marker text must not become false entries. A mismatch should fail
+generation or compilation rather than shift an index and silently read an adjacent
+argument—the central correctness benefit over legacy positional calls.
 
 ### Where the report makes it concrete
 
-The report makes the decision concrete by connecting the proposal to
-`kernel_args_generated.h`, `args::<name>`, `args::start_tile_id`,
-`get_arg(args::<name>)`, `constexpr` template parameters, and the generated
-`kernel_main()` wrapper.
+The legacy example manually binds CTA indices 0–2, RTA indices 0–2, and CRTA index 0.
+The proposed function instead names `Ht`, `Wt`, `untilize`, `start_tile_id`,
+`num_tiles`, `start_row`, and `scaler` once in its signature. A synthetic 8.49 MB source
+containing thousands of functions and decoy markers parses in about 37 ms (roughly
+227 MB/s) in the pinned experiment, negligible beside JIT for real kernels of a few KB.
+That number supports the phase-1 tokenizer's engineering cost, not arbitrary C++
+correctness. Planned `uint64_t` and `std::array` support needs multi-word accessors; if
+type spellings defeat trailing-identifier extraction, libclang/Clang AST tooling can
+replace parsing behind the same shim interface. Those wider types and AST parser are
+future work.
 
 ### How the decision is tested
 
-The controlled procedure is to insert and reorder one argument in a test schema. **Expected observation:** regenerated host/device interfaces remain aligned or fail
-loudly, whereas an intentionally stale positional consumer is detected before runtime.
+Generate a kernel containing CTAs, per-core RTAs, and a CRTA, then run different values
+on multiple cores to prove that scope resolution comes from the accessor schema. Insert
+and reorder signature parameters, regenerate, and verify identical named binding. Add
+negative cases: an unknown name, CTA/function-kind mismatch, duplicate or absent
+`TT_KERNEL`, unsupported non-`uint32_t` type, and marker text inside comments, strings,
+and preprocessor lines. Finally compare generated assembly or runtime timing with the
+legacy kernel to confirm `FORCE_INLINE` removes call indirection. The acceptance result
+is either correct values or a loud build-time error—never a successful build that reads
+the neighboring positional slot.
 
 ## Code connection
 

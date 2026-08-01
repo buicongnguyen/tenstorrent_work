@@ -11,34 +11,68 @@
 
 ### Why the design is shaped this way
 
-The design is shaped by the need to specify global mesh/rank identity,
-one-controller-per-device ownership, local versus cross-host responsibilities, SPMD
-workload epochs, host coordination, error propagation, and aggregate completion.
+The proposal targets one large uniform 2-D/3-D logical mesh and SPMD tensor/data
+parallel workloads, explicitly not MPMD, pipeline/model parallel, or multiple meshes.
+Its central trade is **replicated definition instead of serialized remote dispatch**:
+one process (normally one MPI rank) per host runs the same application and constructs
+the same global `MeshDevice`, `MeshBuffer`, and `MeshWorkload`. Each rank then owns only
+its local sub-mesh and dispatches locally. This avoids a single controller's command
+serialization and network bottleneck, but moves correctness onto determinism: every
+rank must allocate, free, and define work in the same logical order.
 
 ### How work and data move
 
-The complete path is launcher/topology distribution through per-host rank
-initialization, local `MeshDevice`/`MeshBuffer`/`MeshWorkload`, device command
-submission, fabric communication, host rendezvous, global completion, and failure
-cleanup.
+All ranks first establish the same global coordinate system. In the report's 16x8
+example, four ranks each own an 8x4 region but all construct the 16x8 view. A global
+`MeshWorkload` is submitted to the host-local `MeshCommandQueue`; its dispatch logic
+filters commands by global coordinates and forwards only matching work to the 32 local
+device `CommandQueue`s. Bulk collective/device traffic then traverses the unified
+TT-Fabric without host relay. The host coordination layer—MPI for the proof of
+concept—carries barriers, validation, broadcast/all-reduce metadata, and failures, not
+model tensors.
+
+This split makes ownership explicit: the virtual objects are identical specifications,
+but only one rank controls a physical device and its CQ. A pluggable
+`DistributedContext` is proposed so `barrier`, `allreduce`, `bcast`, and possibly
+point-to-point coordination do not hard-wire MPI into single-host builds. Production
+launch is associated in the source with `tt-run`; that launcher and the coordination
+backend establish ranks, while the data plane remains TT-Fabric.
 
 ### What must never break
 
-The non-negotiable invariant is that all ranks agree on topology and epoch/workload
-order, each physical device has one controlling process, and no rank advances beyond an
-unpublished dependency or reports success when a peer failed.
+Every rank must generate byte-for-byte-equivalent resource/workload order before local
+filtering. Rank-dependent branches, races, and unordered iteration that changes
+`MeshWorkload` construction make behavior undefined. Python lifetime is a particular
+hazard: garbage-collection timing cannot drive allocator mutations, so the proposal
+requires explicit deterministic release—preferably a context manager, or `free()` at
+the same logical point on every rank. Likewise Python hash randomization must not decide
+operation order; use ordered structures or a controlled `PYTHONHASHSEED`. Global
+coordinates must map to exactly one local owner, and host synchronization must never be
+mistaken for completion of TT-Fabric data movement.
 
 ### Where the report makes it concrete
 
-The report makes the decision concrete by connecting the design to `MeshDevice`,
-`MeshWorkload`, `MeshBuffer`, the proposed multiple-lockstep-controller model, and the
-explicit host-coordination dependency in the source.
+The layered boundary is `global MeshDevice/MeshBuffer/MeshWorkload -> MeshCQ -> local
+dispatch -> per-Device CQ`. This makes a useful debugging property possible: global
+definition can often run under `mpirun -np 1` because the application-visible objects
+are rank symmetric up to submission. The source contrasts this with a single-controller
+model: centralization prevents user-code divergence but needs command
+serialization/deserialization, executor services, and a controller capable of feeding
+all hosts. The SPMD choice is therefore justified for regular TP/DP scaling, not claimed
+as a universal distributed runtime.
 
 ### How the decision is tested
 
-The controlled procedure is to inject one delayed and one failed rank during a two-epoch
-workload. **Expected observation:** delay appears as the global critical participant
-and failure is propagated consistently without other ranks committing a later epoch.
+Hash a canonical serialization of mesh shape, allocation sequence, program placement,
+runtime arguments, and frees on every rank before each submission; all hashes must
+match. Repeat with randomized Python GC, different process hash seeds, and intentionally
+unordered construction to prove the validation catches divergence. For the 16x8 case,
+stamp outputs with global coordinates and verify each is produced once by the rank that
+owns its 8x4 region. Finally delay and terminate one rank at a coordination barrier:
+healthy ranks must receive one defined failure rather than dispatching a later global
+workload. Separately measure coordination bytes and TT-Fabric payload bytes; substantial
+model traffic in MPI would violate the architectural separation even if results are
+correct.
 
 ## Code connection
 

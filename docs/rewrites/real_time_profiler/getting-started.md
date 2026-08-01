@@ -11,34 +11,76 @@
 
 ### Why the design is shaped this way
 
-The design is shaped by the need to define the live use case, event schema,
-timestamp/source identity, acceptable observation latency, producer-overhead budget,
-buffering/backpressure behavior, and required durability on abnormal termination.
+The pinned real-time profiler is a streaming observation path, not a post-run device
+dump. Completed programs already return information over the fast-dispatch D2H socket,
+so the profiler attaches per-program timing to that path and delivers batches to host
+callbacks. This avoids a second polling/control channel and makes records available while
+the workload runs. The tradeoff is bounded consumer capacity: callbacks are concurrent,
+and a slow sink can lose records, which is why every callback receives `batch.dropped`
+rather than an implied guarantee of lossless tracing.
+
+The record schema is chosen so one timestamp interval remains attributable after it
+leaves the runtime. `runtime_id` identifies the dispatched program, `chip_id` identifies
+its clock domain, `kernel_sources` explains which kernels contributed, and raw
+`start_timestamp`/`end_timestamp` preserve device cycles. `frequency` in cycles per
+nanosecond supplies the conversion scale. Raw timestamps from different chips should not
+be ordered as if they share one clock without an explicit calibration mechanism; the
+pinned Tracy handler provides per-chip context and calibration for that visualization.
 
 ### How work and data move
 
-The complete path is `ProgramRealtimeRecord` emission through runtime queueing, callback
-registration/invocation, JSON-line or Tracy sink, incremental consumer, flush, and
-`UnregisterProgramRealtimeProfilerCallback(handle)`.
+A completed program produces a `ProgramRealtimeRecord`, and the runtime groups available
+records into a callback batch delivered from the fast-dispatch D2H path. Registration is
+additive: `ttnn.device.RegisterProgramRealtimeProfilerCallback(on_record_batch)` returns
+a handle and does not replace Metal's `RealtimeProfilerTracyHandler`. Multiple user
+callbacks and the Tracy handler can therefore consume the same stream concurrently.
+
+The JSON-lines example increments a process-level `dropped_total`, serializes all six
+record fields, writes one record per line, and calls `flush()` per batch. JSONL makes a
+partially written run incrementally readable and keeps one malformed/truncated tail from
+destroying earlier records. The callback owns thread-safety for shared state: if multiple
+callbacks or meshes share a file, counter, or analysis object, they need a lock or
+separate per-callback sink. Cleanup calls
+`UnregisterProgramRealtimeProfilerCallback(handle)` in `finally` before closing the file,
+preventing a concurrent invocation from writing through a dead resource.
+
+Not every dispatch setup can activate the stream. The source names ETH dispatch and
+remote chips lacking required resources as examples. Code must query
+`ttnn.device.IsProgramRealtimeProfilerActive()` before asserting that program count and
+record count match; inactivity is a capability state, distinct from dropped batches.
 
 ### What must never break
 
-The non-negotiable invariant is that callback processing preserves complete event
-identity/order without blocking producers beyond budget, handles concurrency/failure,
-and flushes every accepted record before unregister/shutdown.
+Within each accepted record, start/end/frequency/chip identity must remain together;
+converting timestamps and discarding the source clock makes later audit impossible.
+`end_timestamp` must not be interpreted before `start_timestamp`, and a duration must be
+converted with that record's frequency. Shared callback resources must be synchronized.
+The dropped count must be accumulated and reported, not silently ignored. Registration
+handle lifetime must enclose callback resource lifetime: unregister first, then close the
+sink. Inactive profiler, active profiler with zero completed programs, and active
+profiler with dropped records are three different outcomes.
 
 ### Where the report makes it concrete
 
-The report makes the decision concrete by connecting fields such as `runtime_id`,
-`start_timestamp`, `end_timestamp`, `frequency`, `chip_id`, and `kernel_sources` to the
-JSON/Tracy representation and consuming analysis.
+The C++ boundary is
+`tt::tt_metal::experimental::RegisterProgramRealtimeProfilerCallback` in
+`realtime_profiler.hpp`; `test_realtime_profiler_csv.cpp` demonstrates a disk sink.
+Python's callback has the same ownership pattern. Tracy's built-in handler turns records
+into per-chip device-timeline program zones and optional synchronization markers. A
+custom JSON callback is therefore best for machine-readable online analysis, while
+Tracy adds calibrated visual causality; registering one does not disable the other.
 
 ### How the decision is tested
 
-The controlled procedure is to deliberately slow and then fail the callback consumer
-under a steady workload. **Expected observation:** documented buffering/backpressure
-or loss behavior occurs without silent record corruption, and measured producer
-perturbation remains within budget.
+Run a known number of synchronized programs after first checking active status. For each
+record, assert nonnegative raw duration, known `chip_id`, nonempty/expected kernel paths,
+and a duration conversion based on its own frequency. Compare a no-callback baseline,
+Tracy-only capture, and JSONL callback to quantify workload perturbation. Then delay the
+callback deliberately and confirm `batch.dropped` accounts for loss while surviving
+JSON lines remain parseable. Register two callbacks writing separate sinks to exercise
+concurrency, unregister one mid-run, and verify the other continues. Finally inspect the
+Tracy per-chip zones against JSON durations; disagreement should trigger clock-domain,
+calibration, or dropped-record investigation rather than timeline reordering by hand.
 
 ## Code connection
 

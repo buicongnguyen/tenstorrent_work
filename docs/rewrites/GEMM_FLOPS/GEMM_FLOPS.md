@@ -11,35 +11,74 @@
 
 ### Why the design is shaped this way
 
-The design is shaped by the need to define the precise GEMM roofline under test: M/N/K,
-useful native lanes, fidelity, clock, cores, FLOP convention, residency, warm state, and
-timed boundary. Do not compare application FLOPs with a microbenchmark denominator.
+GEMM throughput is meaningful only relative to the hardware work actually available.
+The pinned report starts from one matrix-engine issue:
+`8x16 * 16x16 -> 8x16`, or `2*8*16*16 = 4096` FLOPs per cycle under its multiply-plus-add
+convention. At 1 GHz that gives about 4 TFLOP/s per Wormhole engine; at 1.35 GHz about
+5.4 TFLOP/s per Blackhole engine. Inputs shorter than the native eight rows still occupy
+the same engine operation—a `1x16` left operand therefore realizes one eighth of the
+useful throughput. Math fidelity adds another denominator: the report models LoFi,
+HiFi2, and HiFi4 as progressively lower peak rates. A measured number without shape,
+fidelity, active grid, clock, and useful-lane adjustment can thus appear fast while
+leaving most issued work empty.
+
+The benchmark separates compute supply from movement and host supply. `tuned_2d_l1`
+keeps in0 and output L1-sharded, `tuned_2d_dram` uses DRAM-interleaved in0/output, and
+`oob` accepts automatic selection. Trace replay removes repeated host dispatch work. The
+three modes answer different architectural questions and should not be collapsed into
+one peak claim.
 
 ### How work and data move
 
-The complete path is input tiles through reader/Unpack, matrix issue and K accumulation,
-destination state, Pack/writer, device timing zone, CSV aggregation, and host
-correctness check.
+`test_matmul_2d_host_perf` sweeps M, K, N, datatype, fidelity, storage, grid, and trace.
+Reader work supplies tiles from L1 or DRAM; Unpack feeds the two operands to the matrix
+engine; Math accumulates over K; Pack returns destination state; and the writer commits
+the output to the configured memory. Device profiling establishes kernel time, while
+the host benchmark also sees dispatch and synchronization. The runner writes all modes
+to `generated/matmul_benchmark_report.csv`, preserving both host- and device-based
+utilization so the timing boundary remains explicit.
+
+The useful arithmetic numerator is `2*M*K*N`. Its ceiling is not simply per-engine peak
+times all physical cores: it must use the selected grid and fidelity and account for
+native-lane occupancy. Comparing host time with device time then identifies dispatch
+loss. Comparing L1 and DRAM storage at identical arithmetic identifies supply loss. The
+source reports that a one-L1/one-DRAM arrangement often incurs only a single-digit
+penalty, while DRAM-only small matrices suffer most; larger problems amortize fixed
+costs and use bandwidth more effectively.
 
 ### What must never break
 
-The non-negotiable invariant is that the benchmark executes the declared arithmetic
-exactly once, excludes compile/setup from steady timing, synchronizes before stopping
-measurement, and verifies output independently of the FLOP calculation.
+Every CSV row must preserve its M/K/N, grid, storage, datatype, fidelity, trace state,
+and timing domain. The FLOP numerator must not include padded or idle engine lanes while
+the ceiling assumes useful lanes, nor may compile/setup contaminate steady-state device
+time. Output must be checked independently; high TFLOP/s with wrong accumulation is not
+a result. Trace and non-trace must execute the same matmul and residency. A utilization
+above 100%, or a device value inexplicably below host value for the same interval, is a
+signal to audit denominator, clock, grid, or synchronization rather than celebrate.
 
 ### Where the report makes it concrete
 
-The report makes the decision concrete by connecting evidence to
-`TTNN_RUN_GEMM_FLOPS_BENCHMARK=1`, `test_matmul_2d_host_perf`,
-`generated/matmul_benchmark_report.csv`, and configurations such as `tuned_2d_l1`,
-`tuned_2d_dram`, and the architecture YAML.
+The reproducible entry point is `tech_reports/GEMM_FLOPS/run_bench.sh`; direct execution
+requires `TTNN_RUN_GEMM_FLOPS_BENCHMARK=1`,
+`TT_METAL_PROFILER_MID_RUN_DUMP=1`, and `TT_METAL_DEVICE_PROFILER=1`. Manual tuning
+varies packer-L1 accumulation, input/output sharding, residency, and fidelity. The pinned
+plots report roughly 190 TFLOP/s for Wormhole and 580 TFLOP/s for Blackhole in their
+best tested cases, with peak utilization of about 93% and 96% respectively. BFLOAT8_B
+HiFi2 is reported 1.5–1.8x faster than BFLOAT16 HiFi4, and BFLOAT4_B LoFi 2–3.5x faster
+without trace. These are measured snapshot results over the documented matrices, not a
+promise for arbitrary shapes. Rectangularity and small M expose native-shape waste;
+trace helps small problems most because host overhead is a larger fraction of runtime.
 
 ### How the decision is tested
 
-The controlled procedure is to run resident-input and DRAM-input variants at the same
-shape/fidelity. **Expected observation:** resident data approaches the
-phase/lane-adjusted compute ceiling, while a large gap only in DRAM mode identifies
-movement or reader supply.
+Run the single benchmark and group rows by identical M/K/N, grid, datatype, and fidelity.
+Within each group compare `oob`, `tuned_2d_l1`, and `tuned_2d_dram`, then trace versus
+non-trace using both timing domains. Add one square matrix, one narrow-M matrix, and one
+large DRAM-resident matrix. Expected signatures differ: narrow M lowers lane-adjusted
+useful throughput, trace mainly closes host/device gaps for short kernels, and L1 versus
+DRAM separates compute from reader bandwidth. Recalculate `2*M*K*N/time` from raw CSV
+times and the fidelity/grid ceiling before accepting utilization. Correct output and
+repeatable warm timings are required for every peak row.
 
 ## Code connection
 

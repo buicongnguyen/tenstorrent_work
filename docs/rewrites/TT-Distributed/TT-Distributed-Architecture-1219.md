@@ -11,34 +11,73 @@
 
 ### Why the design is shaped this way
 
-The design is shaped by the need to define the lowering boundary between global TT-NN
-intent and physical per-device programs: logical mesh identity, virtual queues, mesh
-buffers/allocator, workload expansion, controller ownership, and completion aggregation.
+This pinned document is an architecture specification with sections marked for V1 and
+V1.2, so its proposed structures must not be presented as timeless implemented APIs.
+Its governing constraint is to extend the single-device `Device`/`Program` model to a
+virtual mesh without making TT-NN create and synchronize one object per chip. A
+`MeshDevice` therefore combines a logical coordinate query layer, lock-step allocator,
+and virtual fast-dispatch interfaces; physical devices remain hidden. `MeshBuffer`
+virtualizes `(device_y, device_x, bank_id, address)`, and `MeshWorkload` preserves the
+useful hierarchy: first optimize a `Program` for one device, then place programs or
+vary runtime arguments over `LogicalDeviceRange`s.
 
 ### How work and data move
 
-The complete path is a TT-NN distributed operation through `MeshDevice`, virtual command
-queue, `MeshWorkload`, per-device program selection, `MeshBuffer` resolution, controller
-enqueue, fabric/CCL movement, and logical completion.
+A user obtains a `DeviceHandle` from `CreateMeshDevice`, then a VCQ via
+`GetCommandQueue(device, cq_id)`. A replicated or sharded `MeshBuffer::create` asks the
+mesh allocator for one lock-step address and combines a mesh-level config with
+`DeviceLocalBufferConfig` (`page_size`, `BufferType`, local layout and optional
+`ShardSpecBuffer`). A homogeneous operation inserts one `Program` over
+`MaxDeviceRange`; heterogeneous work uses disjoint `LogicalDeviceRange`s, or preserves
+one broadcastable program and calls distributed `SetRuntimeArgs` per coordinate. The
+VCQ lowers broadcastable commands through TT-Fabric and unicasts differing runtime
+arguments.
+
+The forward dispatch path described in the source is credit-coupled:
+`Mcast Prefetch_h` feeds a Packetizer, fabric routers deliver to Depacketizers, a DRAM
+spill buffer prevents a full L1 CB from backpressuring shared fabric resources, and
+`Mcast Prefetch_d` supplies the Dispatcher. Broadcast/unicast transitions require
+ordering—either counterpart event commands on a type toggle or transaction IDs read by
+the Dispatcher. Completion returns through a per-mesh Event Notification Table or a
+device Aggregator/Event Notification Queue, avoiding one host reader thread per device.
 
 ### What must never break
 
-The non-negotiable invariant is that each logical coordinate resolves to one owning
-device for buffer/workload lifetime, every intended shard executes exactly once, and
-logical completion includes all physical program and communication dependencies.
+Lock-step allocation means the same buffer address and identical SubDevice
+configuration must hold across the virtual mesh; a workload cannot target an allocation
+that violates that assumption. Program `LogicalDeviceRange`s must be in bounds and
+disjoint where programs differ, and one program cannot span multiple SubDevices in the
+described constraint. Consecutive mesh workloads may overlap on different devices or
+SubDevices, so order exists only where a `MeshEvent` or same-SubDevice dependency makes
+it explicit. Broadcast and unicast commands feeding one Dispatcher must retain host
+enqueue order. Finally `MeshEventSynchronize`/`Finish` may report completion only after
+every device in the event's `device_range` has acknowledged the intended `event_id`.
 
 ### Where the report makes it concrete
 
-The report makes the decision concrete by connecting the plan to the report's
-`MeshDevice`, virtual command queues, `MeshBuffer`, `MeshAllocator`, `MeshWorkload`,
-controller, and virtualization sections rather than using a generic distributed diagram.
+The data-parallel matmul example wraps `create_program` with
+`InsertProgramInMeshWorkload`; the all-gather example keeps one Program but calls
+`update_runtime_args_for_device_coord` for each logical coordinate. Event APIs
+distinguish mesh-local `EnqueueRecordMeshEvent` from host-visible
+`EnqueueRecordMeshEventToHost`; `BeginMeshTraceCapture`, `EndMeshTraceCapture`, and
+`EnqueueMeshTrace` cache fast-dispatch commands in distributed trace regions. These
+interfaces expose the main benefit—broadcast common configuration once—while retaining
+the tradeoff that spatially heterogeneous workloads can allocate unused buffers on
+devices and require more host construction.
 
 ### How the decision is tested
 
-The controlled procedure is to trace a small two-device operation with unique shard
-markers through virtual and physical identities. **Expected observation:**
-exactly-once local execution, correct composition, and no logical completion before both
-device/fabric paths finish.
+On a two-by-two mesh, allocate replicated and sharded buffers and verify equal physical
+addresses plus correct coordinate-to-shard contents. Submit (1) one broadcast Program,
+(2) the same Program with coordinate-stamped runtime args, and (3) two Programs on
+disjoint ranges; confirm exactly-once placement and permitted overlap. Interleave
+broadcast and unicast commands that touch the same buffer to test the chosen ordering
+mechanism, then stall one receiver until its spill-buffer credits reach zero: unrelated
+fabric paths must still progress. Record a host-visible `MeshEvent` and ensure it does
+not complete early; compare Event Notification Table polling with aggregation if both
+exist. Because much of the pinned text is a proposed delivery plan, the test must first
+map each claimed symbol to the pinned implementation status rather than assuming every
+sketched API is available.
 
 ## Code connection
 

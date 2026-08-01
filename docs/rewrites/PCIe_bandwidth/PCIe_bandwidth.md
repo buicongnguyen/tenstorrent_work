@@ -11,33 +11,82 @@
 
 ### Why the design is shaped this way
 
-The design is shaped by the need to separate host memory/API overhead, PCIe DMA, device
-DRAM/L1 placement, and on-device NoC redistribution for both H2D and D2H; declare which
-path each reported GB/s number actually measures.
+The pinned report intentionally measures two different systems that happen to traverse
+PCIe. Tests 606/607 time `distributed::WriteShard` and `distributed::ReadShard` from the
+host. Those numbers include command-queue serialization, the runtime's dispatch path,
+DMA setup, and the transfer itself. Tests 604/605 instead run a tight data-movement
+kernel on Tensix core `{0, 0}` and issue raw `noc_async_write` or `noc_async_read`
+transactions to the PCIe core. Mixing these results would attribute software launch
+cost to the link, or report an internal microbenchmark as application-visible
+throughput. The architecture is shaped around preserving that boundary.
+
+The two sweeps also answer different optimization questions. Host tests vary total
+buffer size from 4 KB to 16 MB with a fixed 4 KB page to reveal when dispatch and DMA
+startup are amortized. Device tests vary transaction size at fixed repeated work to
+reveal the NoC/PCIe packet-size knee. The pinned architecture-specific ranges begin at
+one flit—32 B on Wormhole and 64 B on Blackhole—and end at 8 KB and 16 KB respectively.
 
 ### How work and data move
 
-The complete path is payload movement from pinned/host buffer through `WriteShard` or
-`ReadShard`, PCIe, device buffer, optional `noc_async_read/write`, completion/barrier,
-and final data validation.
+On the host path, a caller supplies a shard and invokes `distributed::WriteShard` for
+H2D or `distributed::ReadShard` for D2H. The command is serialized into the mesh command
+queue, consumed by the dispatch machinery, and completed by DMA. `std::chrono` surrounds
+that full operation, so the measured owner is the host API, not a kernel. Buffer size is
+the numerator and host elapsed time is the denominator.
+
+On the device path, the host first resolves the translated coordinates of the PCIe core
+from the SoC descriptor. The test targets an offset 50 MB into the PCIe BAR so that the
+benchmark does not collide with runtime-reserved regions. Coordinates, local addresses,
+transaction bytes, count, and clock are compile-time arguments; this keeps runtime
+argument loading out of the measured loop. The kernel constructs
+`NOC_XY_PCIE_ENCODING(pcie_x_coord, pcie_y_coord) | pcie_l1_local_addr`, then issues
+`num_of_transactions` operations between that address and a local L1 address. A read
+uses `noc_async_read(noc_addr, l1_local_addr, bytes_per_transaction)`; a write reverses
+the data direction with `noc_async_write`. The matching
+`noc_async_read_barrier()`/write barrier establishes completion ownership before the
+zone ends.
+
+`DeviceZoneScopedN("RISCV0")` records cycle duration. The byte count is
+`num_transactions * transaction_size`; division by cycles gives bytes/cycle. The host
+queries `device->get_clock_rate_mhz()` and the kernel emits it with
+`DeviceTimestampedData("Clock frequency MHz", ...)`, allowing the Python stats collector
+to convert to GB/s using the observed clock instead of an assumed nominal value. The
+`bandwidth_unit` in `test_information.yaml` controls whether reporting remains in
+bytes/cycle or is converted.
 
 ### What must never break
 
-The non-negotiable invariant is that timed bytes, direction, buffer lifetime, placement,
-and synchronization are identical across comparisons and that the timer stops only after
-transfer completion, not asynchronous enqueue.
+Direction, numerator, and completion boundary must describe the same transaction. For
+D2H, request/response traffic and read completion belong to the measurement; for posted
+H2D writes, enqueue completion alone is not transfer completion. Source and destination
+ranges must remain live, non-overlapping with runtime state, aligned for the selected
+test, and large enough for every transaction. Changing core, NoC, dispatch mode, BAR
+offset, page size, or clock conversion while comparing only the headline GB/s breaks the
+experiment. Host and device measurements must retain separate labels because neither is
+a correction factor for the other.
 
 ### Where the report makes it concrete
 
-The report makes the decision concrete by connecting tests to `distributed::WriteShard`,
-`distributed::ReadShard`, `std::chrono`, `noc_async_read`, `noc_async_write`, and device
-zones such as `DeviceZoneScopedN("RISCV0")`.
+The transaction sweep explains the expected curve. A 32/64-byte transfer pays fixed
+issue, routing, and protocol overhead for little payload, so sustained bandwidth is low.
+Larger transactions amortize that cost until some link, DMA, NoC, or endpoint resource
+sets the plateau. Reads may trail writes because a PCIe read requires a request and
+returning completion data, whereas a write can be posted. On the host sweep, the same
+amortization applies at a coarser level; very large buffers can plateau or regress when
+dispatch chunking or allocation behavior becomes relevant. Those are hypotheses to
+separate with the two tests, not conclusions to infer from one curve.
 
 ### How the decision is tested
 
-The controlled procedure is to sweep transfer size in both directions and compare direct
-host path with device NoC redistribution. **Expected observation:** small sizes expose
-startup/API cost, large sizes approach the negotiated-link or device-path ceiling.
+Run the report's filters independently: `*PCIeHost*` for tests 606/607 and
+`*PCIeBandwidthSweep*` for 604/605; use `dmtest ... --plot` for device profiler plots.
+For every point, record direction, total bytes, transaction/page size, transaction
+count, core, NoC, fast-dispatch state, measured clock, cycles, and validation result.
+First sweep the pinned powers of two, then repeat enough times to report distribution,
+not one best sample. A sound result shows a small-transfer overhead region followed by
+a stable plateau; host API bandwidth should generally remain below the raw-kernel path
+because it includes more work. If a curve changes without a corresponding change in
+cycles or byte accounting, audit barriers and units before claiming a hardware effect.
 
 ## Code connection
 

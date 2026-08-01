@@ -11,34 +11,92 @@
 
 ### Why the design is shaped this way
 
-The design is shaped by the need to calculate per-bank and aggregate bandwidth targets,
-outstanding-read depth, burst/page size, reader-core placement, L1 destination capacity,
-and NoC route pressure instead of assuming more readers imply more bandwidth.
+The pinned report reaches DRAM bandwidth by solving two separate queueing problems.
+Within one bank, a reader that issues one block and immediately waits at a global read
+barrier leaves a request gap: after the bank returns the last data, it receives no next
+command until the RISC resumes. Across banks, adding readers can still underperform when
+their deterministic NoC routes share links or one reader monopolizes a virtual channel.
+The chosen architecture therefore pipelines tagged block requests for temporal
+continuity, then places one reader per bank and engineers routes/VCs for spatial
+independence.
+
+This is why “more outstanding reads” and “more cores” are not sufficient explanations.
+Outstanding work needs destination capacity and a completion boundary per consumer
+block; extra cores must correspond to independent banks and non-conflicting return
+paths. The pinned claim—over 92% on its Wormhole/Grayskull microbenchmark—depends on all
+three conditions.
 
 ### How work and data move
 
-The complete path is pages interleaved/sharded across DRAM banks through one reader per
-bank, asynchronous NoC reads, reserved L1/CB pages, read barriers, consumer publication,
-and page reclamation.
+For a single bank, one data-movement RISC issues asynchronous NoC reads for
+application-sized blocks. Instead of draining block 1 before issuing block 2, the report
+assigns transaction tag 1 to the first block and tag 2 to the second. It primes both requests,
+then waits only for the tag of the block needed by compute: wait tag 1 while tag 2
+remains in flight, issue the next tag-1 block, then wait tag 2, alternating. At least one
+future request is therefore visible to DRAM while the current block crosses its
+producer-consumer boundary. This is double buffering at the transaction/completion
+level; the report does not name a specific API, so the tag/barrier mechanism should not
+be replaced here by an invented symbol.
+
+At full-device scale, the source assigns exactly one reader to each bank—8 on Grayskull,
+12 on Wormhole—and each reader accesses only its bank. Concentrating Wormhole readers on
+top rows creates overlapping NoC-0 paths because the pinned routing goes horizontally
+right, then downward; the example identifies bank-2 and bank-10 routes as a conflict.
+Placing each reader next to its bank reduces returned data to one hop and separates
+routes. Two banks can still share a row, so their request traffic uses different NoC
+virtual channels. Since arbitration is first-come-first-served within one VC but
+round-robins across VCs, this prevents one reader from starving its row peer.
+
+Harvesting complicates the geometric solution. N150 has one harvested worker row and
+N300 two in this pinned Wormhole scope, with positions not fixed. If a bank-adjacent core
+is unavailable, the placement procedure moves the reader right/up until it finds an
+unused row whose route does not overlap an assigned route. Placement must therefore be
+computed from the available physical grid, not hard-coded from logical row number.
+
+The model example converts placement into tensor ownership. `in1` is width-sharded over
+12 DRAM banks so each reader consumes only its local partition; `in0` is width-sharded
+on top-row workers and multicasted to the bank-local compute cores. Both input streams
+are double buffered so compute overlaps data movement. After local matmul, output shards
+return to top rows to satisfy the pinned contiguous-shard allocation convention.
 
 ### What must never break
 
-The non-negotiable invariant is that every transfer is aligned and in range,
-destinations are reserved before issue, pages publish only after completion, and
-bank/core work is balanced enough that one channel does not determine the device rate.
+Each transaction tag must identify a distinct destination block, and compute may consume
+only the tag whose completion barrier has passed. A buffer cannot be overwritten while
+its request is outstanding or its prior contents are in use. Full-device mapping must be
+one reader/one bank; allowing two readers to target one bank reintroduces contention and
+invalidates aggregate scaling. Physical routes and VCs must match the harvested device,
+and per-bank byte counts must be balanced. In the matmul mapping, every `in1` shard is
+owned once, every compute core receives the matching `in0` shard, and output return
+cannot overwrite contiguous top-row storage still in use.
 
 ### Where the report makes it concrete
 
-The report makes the decision concrete by connecting the report's single-bank and
-full-device reader examples to architecture bank placement, `noc_async_read`/barrier
-loops, CB depth, Wormhole reader/core mapping, and sharded-DRAM examples.
+The pinned measurements separate theoretical channel rate from application realization.
+At 12 GB/s and 14 GB/s bank settings, aggregate specifications are 288 and 336 GB/s;
+the microbenchmark reports 267 and 310 GB/s. Llama3-70 decode is 239–260 and 247–294
+GB/s; Mixtral8x7b is 243–261 and 267–300 GB/s. The gap from microbenchmark to matmul is
+expected: multicast, compute balance, output traffic, and shard padding enter the latter.
+The report's future-work note explains one remaining imbalance—tile width 32 rarely
+divides an `in1` width evenly across 12 banks; proposed 32x16 or 32x8 tiles reduce padding
+but are not demonstrated as an implemented result in this source.
 
 ### How the decision is tested
 
-The controlled procedure is to scale from one bank/reader to all banks while recording
-per-bank bytes and aggregate rate. **Expected observation:** near-linear growth until
-NoC, issue, or consumer capacity becomes the new ceiling, with no gain from extra
-readers on one hot bank.
+Start with one reader/bank and compare block-then-barrier against the two-tag pipeline at
+identical bytes and block size. A timeline should show the idle request gap disappear;
+verify block contents before measuring bandwidth. Scale one bank at a time, recording
+per-bank service rate, reader issue/barrier time, link/VC utilization, and aggregate
+GB/s. Compare concentrated readers with bank-adjacent placement, then enable distinct
+VCs for same-row pairs. On harvested systems, log the actual physical mapping and audit
+route overlap before attributing a regression to DRAM.
+
+For the sharded matmul, compare interleaved and bank-sharded `in1` with identical math,
+including double buffering and `in0` multicast. Measure useful (unpadded) bytes as well
+as transferred bytes and slowest-core work. The causal success pattern is continuous
+single-bank requests, near-linear bank scaling, balanced per-bank traffic, and model
+bandwidth below but tracking the microbenchmark ceiling. Adding readers to a hot bank or
+padding one shard heavily should not be reported as a DRAM-frequency limitation.
 
 ## Code connection
 

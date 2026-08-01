@@ -11,34 +11,62 @@
 
 ### Why the design is shaped this way
 
-The design is shaped by the need to define the minimum structured invocation schema
-needed to reproduce cache/config behavior—operation ID/name, shapes, dtypes, layouts,
-memory/program configs, scalar parameters, version, and unsupported-field markers.
+Operation tracing answers a narrower question than graph tracing: “with exactly which
+Python-visible parameters and returns was each TT-NN operation invoked?” The pinned
+implementation writes one JSON file per call so a long workload can be filtered without
+loading a monolithic trace. It requires the non-fast runtime path, hence requires
+`enable_fast_runtime_mode=false`; when disabled the tracer adds only the documented
+boolean check. Tensor metadata is the default because serializing device values would
+require a CPU transfer and can dominate execution.
+Per-call files also isolate failures: records published before a later crash remain
+independently inspectable, subject to the implementation's actual file-write behavior.
 
 ### How work and data move
 
-The complete path is TT-NN wrapper entry through parameter serialization, unique
-filename/record append, generated operation-parameter directory, offline
-filtering/aggregation, and minimal reproducer construction.
+After `ttnn.operation_tracer.enable_tracing(True)`, call number N is written as
+`{operation_id}_{operation_name}_{timestamp}.json` under
+`generated/ttnn/operation_parameters/` or `ttnn.CONFIG.root_report_path`. The record
+contains sequential `operation_id`, `operation_name`, positional `args` with position
+and value, `kwargs`, and serialized `return_value`. A `ttnn.Tensor` contributes shape,
+dtype, layout, and `storage_type`; a Torch tensor has its corresponding type metadata.
+If `enable_tensor_value_serialization(True)` is active, values join the record—device
+tensors first move to CPU—then normal execution returns the original result.
 
 ### What must never break
 
-The non-negotiable invariant is that one record corresponds to one invocation, preserves
-thread-safe order/identity, distinguishes program-selecting variants, and exposes
-missing values instead of silently producing an incomplete replay description.
+The sequential ID and operation name in the JSON must match the file name and actual
+call, and argument position/keyword identity must survive serialization. Tensor
+metadata may describe an invocation but cannot reproduce it unless values are captured
+or supplied separately; the default must never be described as a replay artifact.
+Enabling values must not mutate device tensors or their storage. The source does not
+state concurrency ordering, atomic file publication, schema versioning, or behavior for
+non-serializable custom arguments, so those properties must not be inferred. Trace
+directories also require run isolation: stale files can have perfectly valid IDs and
+still belong to another workload.
 
 ### Where the report makes it concrete
 
-The report makes the decision concrete by connecting the workflow to
-`enable_fast_runtime_mode=false`, `generated/ttnn/operation_parameters/`, record fields
-`operation_id`/`operation_name`, JSON examples such as `3_ttnn_add_...json`, and
-`operation_tracing_examples/`.
+The source's `3_ttnn_add_20260115_104616_345678.json` example encodes logical order and
+a timestamp-like suffix; it does not specify uniqueness or collision handling.
+`operation_tracing_examples/` is the reference for actual nested JSON values. The
+overhead table is qualitative: disabled is one boolean check, metadata-only is
+“minimal,” and values are “significant.” Those labels are not
+cycle measurements. The primary architecture trade is diagnostic completeness versus
+perturbation and storage: keep metadata for broad capture, then rerun the smallest
+failing region with values.
+That staged workflow avoids moving every model activation to CPU to diagnose one call.
 
 ### How the decision is tested
 
-The controlled procedure is to trace two calls differing in one program-selecting
-attribute and replay from their records. **Expected observation:** distinct captured
-configurations/cache identities with equivalent outputs to the original calls.
+Start with a clean run-specific directory and issue two `ttnn.add` calls that differ in
+shape/layout or a keyword. Verify IDs 1 and 2, argument positions, tensor metadata,
+returns, and filenames. Repeat with values enabled on tiny host and device tensors;
+compare the recorded data and returned tensors exactly while measuring CPU-transfer,
+JSON size, and latency separately. Invoke tracing from multiple threads and pass a
+custom/non-serializable value to establish the pinned behavior rather than assume it.
+Finally disable tracing and fast-mode override, confirm no new files appear and outputs
+remain unchanged. A successful metadata record proves observability, not deterministic
+replay or cache-key completeness.
 
 ## Code connection
 

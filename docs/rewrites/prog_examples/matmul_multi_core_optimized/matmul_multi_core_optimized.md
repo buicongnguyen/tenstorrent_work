@@ -11,34 +11,67 @@
 
 ### Why the design is shaped this way
 
-The design is shaped by the need to start from disjoint C-output ownership across the
-core grid, then derive each core's A/B ranges, K reduction, data reuse, multicast group,
-buffer capacity, and edge/tail work.
+This pinned page is an index, not a complete kernel specification. Its architectural
+claim is that multi-core matmul performance comes from explicit control of three
+different costs: reuse of blocks within a core, multicast of blocks reused by multiple
+cores, and eventually a multidimensional systolic organization. The first two are
+implemented by the linked executables; the page labels the systolic-array step “coming
+soon.” Treating that third item as implemented would go beyond the source.
+
+The sequence is deliberate. Local reuse establishes how A/B blocks feed multiple output
+tiles and how partial C subblocks spill/reload when registers must be reused. Multicast
+then changes who fetches shared A/B blocks from DRAM and who receives them over the NoC.
+Applying multicast
+before establishing correct per-core C ownership and partial accumulation would make
+communication look faster while leaving no reliable consumer contract.
 
 ### How work and data move
 
-The complete path is host partition/runtime arguments through per-core readers, optional
-shared-operand multicast, compute K loop and partial sums, Pack/writer, non-overlapping
-output placement, and host recomposition/check.
+In `matmul_multi_core_reuse`, host partitioning assigns each core a C region, readers
+bring its A and B K blocks into circular buffers, and the compute kernel accumulates a
+destination-register-sized subblock. Non-final partials can be packed to an intermediate
+CB and reloaded for the next K block; only the complete reduction reaches the output
+writer. `matmul_multi_core_reuse_mcast` retains that local lifecycle but assigns the
+left edge and top edge additional sender roles. A row-shared A block and column-shared B
+block are fetched once at their origin and distributed to receivers before the same K
+accumulation proceeds.
+
+Thus the optimization boundary is not “matmul becomes distributed.” It is a change in
+operand ownership around an unchanged mathematical contract: each output tile has one
+writer and contains the complete dot product. The two build targets named by the report
+are executable evidence for those separate mechanisms.
 
 ### What must never break
 
-The non-negotiable invariant is that complete non-overlapping C coverage and full K
-accumulation for normal and edge cores; runtime arguments, CB sizes, multicast
-participants, and writer ranges must encode the same partition.
+Across both stages, C ownership must be complete and non-overlapping, and every owner
+must accumulate all K blocks exactly once. Reader start/stride arguments, CB page counts,
+compute subblock dimensions, writer ranges, and—when enabled—multicast membership must
+encode the same partition. A shared operand cannot be reclaimed before every required
+receiver has acquired it, and a partial C tile cannot be exposed as final. Those
+invariants matter more than the particular core grid because they survive a retuning of
+block size or fanout.
 
 ### Where the report makes it concrete
 
-The report makes the decision concrete by connecting the overview to the concrete
-example build/run path and its reuse/multicast kernels, program configs,
-core-grid/runtime arguments, CB creation, and validation code rather than leaving only a
-conceptual matmul diagram.
+The page's concrete scope is exactly two binaries:
+`./build/programming_examples/matmul_multi_core_reuse` and
+`./build/programming_examples/matmul_multi_core_reuse_mcast`. The linked reuse report
+defines `get_large_matmul_params`, intermediate CB 24, and
+`bmm_large_block_zm.cpp`; the multicast report defines four edge/interior dataflow roles,
+semaphores, and `bmm_large_block_zm_fused_bias_activation.cpp`. Details beyond those
+links—including the promised multidimensional systolic array—need another pinned source.
 
 ### How the decision is tested
 
-The controlled procedure is to sweep core-grid shape for one matrix including a tail.
-**Expected observation:** throughput improves while per-core finish times remain
-balanced, then degrades when smaller shards or communication/tail imbalance dominate.
+Build and run both named examples with identical matrices and math configuration. First
+prove output equivalence to a host matmul, including a case with multiple K blocks.
+Then measure DRAM operand bytes, intermediate partial traffic, NoC bytes, and slowest-core
+completion. Compare the reuse binary with a non-reuse baseline by traffic class; count
+intermediate-C spills separately instead of assuming they fall with reused A/B reads.
+The multicast binary should additionally reduce duplicated external reads while
+increasing on-chip traffic and synchronization. Sweep grid aspect ratio and block width
+separately. A speedup without matching byte/cycle evidence is not enough to identify
+which mechanism caused it.
 
 ## Code connection
 

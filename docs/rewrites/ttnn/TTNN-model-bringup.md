@@ -11,35 +11,66 @@
 
 ### Why the design is shaped this way
 
-The design is shaped by the need to decompose model porting into its actual architecture
-boundaries: preprocessing, each unsupported or converted operator, module composition,
-end-to-end post-processing, numerical acceptance, and only then measured optimization
-for the target model.
+The pinned workflow orders correctness before performance because an end-to-end model
+contains too many coupled transformations to debug from its final output. A model card,
+Torch graph, and model summary first freeze the semantic inventory: modules, operator
+types, shapes, parameters, and preprocessing. For the YOLOv4 example that inventory is
+nine modules and operations including convolution, max-pool, concat, batch norm, Mish,
+LeakyReLU, upsample, and add. Only then are TT-NN op and module tests written. This
+creates checkpoints narrow enough to distinguish a missing kernel or unsupported
+configuration from a composition bug, before sharding, lower precision, trace, or
+multiple command queues make the execution harder to compare.
 
 ### How work and data move
 
-The complete path is `reference input → TT preprocessing → per-op TT-NN tests → module
-tests → composed TT-NN model → output post-processing → golden comparison →
-profiler-driven optimization`, naming checkpoint tensors and layouts.
+The Torch implementation produces the graph and golden tensors; a summary script such
+as `models/demos/yolov4/reference/yolov4_summary.py` exposes every op's arguments. Each
+TT-NN op is tested against Torch with PCC, followed by a module test such as YOLOv4
+Downsample1, and then the composed model. Missing functionality is isolated in an issue
+(the report cites ConvTranspose2D issue 6326) or temporarily falls back to Torch rather
+than being hidden in a full-model mismatch.
+
+After parity, optimization moves through three boundaries. Per-op changes select
+height/width/block sharding, `bfloat8_b`, and `MathFidelity.LoFi` subject to PCC.
+Module/full-model changes preserve layouts across consecutive consumers and set
+`deallocate_activation=True` only after the final graph consumer. A profiler build and
+`tools/tracy/profile_this.py` generate the CSV performance sheet; device-kernel duration,
+core count, and the report's utilization formula
+`(PM ideal / device kernel duration) * (108 / core_count)` select measured targets.
+Trace and two CQs are introduced independently, tested independently, then combined.
 
 ### What must never break
 
-The non-negotiable invariant is that each checkpoint receives semantically identical
-inputs and preserves shape/order/broadcast/padding with an agreed PCC or error
-threshold; an optimization may change representation but not the model contract.
+Reference and TT-NN checkpoints must see identical inputs, weights, preprocessing,
+module boundaries, and output interpretation. PCC thresholds must be chosen before
+tuning and paired with task-level accuracy where correlation alone is insufficient.
+Sharding or dtype may change physical representation, but logical shape, channel/token
+order, and graph dependencies must remain. A tensor may be deallocated only after its
+last fan-out consumer. Trace replay and 2-CQ overlap must preserve the queue/event
+dependencies of the proven single-CQ sequence. A profiler's fastest kernel cannot be
+accepted if it introduces an adjacent reshard that worsens end-to-end time.
 
 ### Where the report makes it concrete
 
-The report makes the decision concrete by connecting every model module to its concrete
-TT-NN operations, golden implementation, device program/config, preprocessing utility,
-test file, and profiler zone instead of leaving symbols deferred to a future rewrite.
+The source names executable evidence: max-pool and convolution unit-test directories,
+YOLOv4 Torch/TT-NN Downsample1 modules, `test_ttnn_yolov4.py` PCC checks, Tracy's CSV,
+and visualizer configuration fields such as `enable_detailed_buffer_report`. It also
+gives a safe sequencing rule for advanced performance: first make trace alone correct,
+then 2CQ alone, then their combination, with a separate unit test for each. This is an
+architectural isolation strategy—each stage changes one control mechanism—rather than
+a ceremonial checklist.
 
 ### How the decision is tested
 
-The controlled procedure is to introduce one module at a time and record the first
-failing checkpoint, then optimize one measured boundary. **Expected observation:**
-failures localize to one module and the accepted change improves end-to-end latency
-without reducing model accuracy.
+Freeze inputs and weights, save Torch outputs for every op/module boundary, and bring up
+one TT-NN boundary at a time. Record PCC and an error metric appropriate to the output,
+then run the complete task accuracy test. Once correct, profile cold and steady-state
+runs; sort device-kernel duration, but include reshard/conversion and host overhead in
+the optimization delta. For each selected change—sharding, dtype, fidelity,
+deallocation, trace, or 2CQ—rerun the smallest unit, affected module, full model, peak
+memory, and end-to-end latency. The expected result is not merely “higher utilization”:
+the same accepted semantics must complete faster or with lower memory, and attribution
+must point to the one changed boundary.
 
 ## Code connection
 

@@ -11,33 +11,72 @@
 
 ### Why the design is shaped this way
 
-The design is shaped by the need to treat each downsample, residual/route, neck
-upsample/concat, and three detection heads as a named tensor contract; identify where
-sharding, format, or deallocation should follow the next branch consumer.
+YOLOv4 is a branched, multi-scale graph, so the next consumer—not the current
+convolution alone—determines layout and lifetime. Five downsample modules retain
+different-resolution routes; the neck upsamples deep features and concatenates them
+with earlier maps; the head emits three raw detection tensors. The pinned TT-NN design
+therefore centralizes convolution policy in `common.py`'s `Conv`: batch-normalization
+parameters are folded into weights/bias, `Conv2dConfig` selects shard layout, dtype,
+fidelity, reshard, and activation lifetime, and each branch explicitly preserves a
+tensor until its final concat/add. This reduces separate BN traffic and allows adjacent
+ops to retain shards, but makes an incorrect deallocation or concat order a model
+correctness failure.
 
 ### How work and data move
 
-The complete path is one image through five downsample stages, retained multi-scale
-feature maps, neck routes/upsamples/concats, scale-specific heads, raw output tensors,
-and host decoding.
+`TtYOLOv4` produces `d1` through `d5`, releases `d1/d2` after their only downstream
+consumers, and passes `[d5,d4,d3]` into `TtNeck`. In Downsample1, `conv3` preserves the
+left branch while `conv4`-`conv7` form a residual path; after the add, both branches are
+converted to `ROW_MAJOR_LAYOUT` because concat requires it. A height-sharded output
+config with shard shape `[512,128]` combines two `[512,64]` shards along channels,
+then `conv8` consumes the result. The CB/layout transformation is therefore driven by
+the concat's semantic C-axis, not merely by tensor size.
+
+The neck applies spatial-pyramid max pools (5x5, 9x9, 13x13) to the 10x10 feature,
+normalizes their layouts, and concatenates `[pool_3,pool_2,pool_1,output]`. Two paths
+convert to row-major, upsample with `(1,4,1)`, return to tile layout, and concat with
+retained 20x20 and 40x40 features. It returns three maps to `TtHead`; the head alternates
+convolutions, downsampling, and route concats, finally returning `conv2`, `conv10`, and
+`conv18` outputs as the three scales. Those three convolutions use `fused_op=False`
+because they are detection outputs rather than conv+BN blocks in the pinned graph.
 
 ### What must never break
 
-The non-negotiable invariant is that feature shape/channel order, route source, concat
-order, upsample alignment, and head-to-scale/anchor meaning; physical padding or
-sharding must not change logical multi-scale semantics.
+Every retained feature must come from the named downsample/neck branch and remain live
+until its concat. Channel concatenation order is semantic: reversing pool or route
+inputs changes learned weight interpretation even when shape is valid. Upsampling must
+align the same spatial cells expected by the skip feature. BN folding must implement
+the checkpoint's running mean/variance, scale, and bias exactly; the source formula has
+no epsilon term shown, so the actual preprocessing implementation must be the oracle.
+`deallocate_activation=True` is legal only when no later branch consumes the input;
+the report explicitly keeps inputs to Downsample1 `conv3` and `conv5`. Physical shard
+padding, `bfloat8_b` weights, and LoFi math must still meet raw-head and task accuracy
+contracts.
 
 ### Where the report makes it concrete
 
-The report makes the decision concrete by connecting the plan to
-`ttnn.deallocate(tensor)`, `bfloat8_b`, `BLOCK_SHARDED`, `HEIGHT_SHARDED`,
-`WIDTH_SHARDED`, `common.py`, and `MathFidelity::LoFi` choices in the source.
+`Conv.__call__` uses `weights_dtype=ttnn.bfloat8_b`, `MathFidelity.LoFi`, approximate
+math, `fp32_dest_acc_enabled=False`, optional `act_block_h_override`,
+`reshard_if_not_optimal`, and a chosen `TensorMemoryLayout`. The pinned heuristic uses
+height sharding when `N*H*W >> C`, block when the quantities are comparable, and width
+when C dominates: its examples are `[1,128,128,32]`, `[1,32,32,640]`, and
+`[1,16,16,1024]`. This is a candidate-selection rule, not a proof. The report's
+neck/head plots cite a maximum-kernel-duration reduction from about 80,000 ns to 50,000
+ns after changing convolution weight dtype, but the measurement is tied to that model,
+device, and profiler snapshot.
 
 ### How the decision is tested
 
-The controlled procedure is to capture raw values and layouts at every neck merge and
-head before decoding, then remove one conversion/deallocation boundary. **Expected observation:** exact/PCC parity at raw heads and a measurable end-to-end benefit without
-higher peak memory.
+Freeze one image and checkpoint, then compare TT-NN with Torch at every downsample
+output, residual add, neck pre/post-upsample concat, and each raw head. Record logical
+NHWC shape, shard spec/core count, layout, dtype, PCC plus an error metric, and verify
+decoded boxes/mAP separately. Run liveness poisoning around each
+`deallocate_activation`/`ttnn.deallocate` boundary to catch a surviving branch. For
+performance, A/B one convolution layout or weight dtype at a time while measuring
+kernel duration, reshard/layout-conversion bytes, peak L1/DRAM, and full-model latency;
+include warm cached runs. Accept the source heuristic only when the higher core count
+reduces end-to-end time after adjacent conversions and all three raw heads plus detection
+accuracy remain within the predeclared tolerance.
 
 ## Code connection
 

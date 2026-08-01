@@ -11,34 +11,68 @@
 
 ### Why the design is shaped this way
 
-The design is shaped by the need to define the integral-image recurrence and `[B, W, H,
-C]` axis mapping, then assign tile/core wavefront work and the exact horizontal/vertical
-prefix state that must cross every boundary.
+An integral image is a two-dimensional inclusive scan, but the pinned kernel cannot hold
+an entire `[B,W,H,C]` image in one core's L1. It decomposes the recurrence into local
+tile scans plus two compact carries. Along W, the last prefix tile of a column block is
+enough to seed the next block; along H, the last row of the already completed upper
+block is enough to seed every row of the block below. This is why the architecture has
+separate reader, compute, and writer roles and several SRAM circular buffers: retain
+only boundary state while streaming bulk tiles. The implementation supports `B=1`,
+splits C across cores as `core_y * cores_x + core_x`, and uses blocks of at most
+`block_depth` tiles (the report's default is 32).
 
 ### How work and data move
 
-The complete path is `X[B=1,W,H,C]` tiles through reader initialization,
-`cumsum_cube_axis_2`/`cumsum_cube_axis_3`, local scan, incoming edge-state addition,
-output writer, feedback of row/column context, and dependent tile release.
+For each `row_chunk_i` and `column_block_i`, the reader calls
+`prepare_start_tile_for_cumsum_axis_2` to publish one zero tile in `cb_start`, computes
+the edge depth as `min(remaining_W, ctas.block_depth)`, and `send_block`s input tiles to
+`cb_input` in W order. `cumsum_cube_axis_2` repeatedly adds `cb_input` to `cb_start` or
+the rolling `cb_acc`, publishes within-block results in `cb_cumsum_stage_0`, and saves
+the final prefix in `cb_axis_2_buffer` when another block follows. For non-first blocks,
+`propagate_tile_into_cube` adds that left carry to every current prefix and optionally
+replaces it with the new final tile.
+
+`cumsum_cube_axis_3` then applies `cumsum_tile()` top-to-bottom within each tile. For
+later row chunks, the writer has already used `receive_upper_block` to reload the
+previous chunk's output from DRAM into `cb_axis_3_buffer_0`; it calls
+`broadcast_last_row_to_all_rows_in_cube` and publishes the result in
+`cb_axis_3_buffer_1`. Compute's `get_and_propagate_adder_cube` adds that vertical carry
+to the local H prefix and emits `cb_output`, which `output_block` writes using the same
+`get_tile_id` mapping as the reader.
 
 ### What must never break
 
-The non-negotiable invariant is that each output equals the origin-to-position rectangle
-sum and that boundary state belongs to the same batch/channel and immediately preceding
-row/column tile; no dependent tile may read incomplete context.
+Every output must equal `sum(X[0,0:x+1,0:y+1,c])`. The W carry must be the globally
+propagated final tile of the immediately preceding column block—not merely that block's
+local sum. The H carry must be the final row of the fully written upper row chunk for
+the same column block and channel. Reader and writer `get_tile_id` calculations must
+agree. `cb_wait_front`/`cb_reserve_back` and the report's `ReadCBGuard`/`WriteCBGuard`
+must prevent a carry from being popped before its last consumer or overwritten before
+publication. Edge `block_depth`, numeric range, and the B=1 constraint are correctness
+conditions; overflow can satisfy all synchronization invariants while corrupting the
+summed-area table.
 
 ### Where the report makes it concrete
 
-The report makes the decision concrete by connecting the plan to
-`ttnn.cumsum(ttnn.cumsum(x, dim=-2), dim=-3)`, `cumsum_cube_axis_2`,
-`cumsum_cube_axis_3`, `column_block_i`, `row_chunk_i`, signals, CBs, and feedback
-buffers.
+The CB names encode ownership: `cb_input` is reader-to-compute traffic; `cb_acc` is a
+rolling W accumulator; stages 0/1/2 distinguish local W, propagated W, and local H;
+`cb_axis_2_buffer` carries left state; `cb_axis_3_buffer_0/1` hold raw upper output and
+its broadcast row; `cb_output` is writer-owned final data. `zero_buffer` obtains zeros
+through a NoC read from `MEM_ZEROS_BASE`, avoiding scalar initialization. The extra
+DRAM read by the writer for vertical feedback is the key tradeoff: it bounds L1 state
+and enables streaming, but adds bandwidth and makes row chunks causally sequential.
 
 ### How the decision is tested
 
-The controlled procedure is to use a small increasing-value tensor spanning multiple
-tiles/cores and compare every boundary with a host summed-area table. **Expected observation:** exact recurrence and a timeline exposing whether wavefront waits or local
-scan compute dominates.
+Use coordinate-coded data spanning a short edge block, at least two W blocks, two H row
+chunks, and multiple channel cores. Compare every element with a wide-precision host
+reference and inspect the first element after each W/H boundary; those locations isolate
+the two carry paths. Poison each CB before use to reveal missing waits or zeroing, and
+run the largest values allowed by each input/output format to expose overflow. Profile
+CB occupancy, DRAM feedback bytes, and stalls separately. A valid optimization may
+overlap reader/writer with compute, but cannot begin a dependent W block without
+`cb_axis_2_buffer` or a dependent H chunk before the upper result has been written and
+rebroadcast.
 
 ## Code connection
 

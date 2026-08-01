@@ -11,34 +11,71 @@
 
 ### Why the design is shaped this way
 
-The design is shaped by the need to define socket direction, endpoint ownership,
-transfer mode, ring depth, backing memory, producer/consumer rates, and host/device
-failure/teardown semantics for the intended streaming workload.
+At the pinned Blackhole snapshot, a PCIe “socket” is a hardware streaming FIFO, not a
+POSIX socket. `H2DSocket` and `D2HSocket` hide TLB mapping, PCIe/NoC address encoding,
+and credits behind host `write()`/`read()` plus `barrier()`, while device kernels use
+`SocketReceiverInterface` or `SocketSenderInterface`. The architecture is shaped by
+who can drive the bulk transfer efficiently. D2H and H2D `DEVICE_PULL` put the ring in
+vIOMMU-mapped pinned host memory; H2D `HOST_PUSH` puts it in Tensix L1 so posted host
+writes land directly on device. Even `HOST_PUSH` still requires vIOMMU host buffers for
+credits and barrier pages. Page size and FIFO depth are therefore protocol parameters:
+Blackhole's cited 64-byte NoC word width makes 64 B the minimum practical page in the
+benchmark, while the cited 1464 KB L1/core limits device-side buffering.
 
 ### How work and data move
 
-The complete path is slot reservation, payload fill/reference, publication, PCIe/DMA
-transfer, remote availability, consumer read, completion, credit return, wraparound, and
-endpoint close for both H2D and D2H.
+All modes use monotonically advancing `bytes_sent` and `bytes_acked`; available space is
+`fifo_size - (bytes_sent - bytes_acked)`. In `HOST_PUSH`, host `write()` checks credits,
+posts the page into the L1 FIFO through a TLB window, then updates `bytes_sent` in L1.
+The kernel `socket_wait_for_pages`, copies the already resident page from
+`receiver_socket.read_ptr` to its destination with `noc_async_write`, barriers, then
+`socket_pop_pages` and `socket_notify_sender` publish consumption.
+
+In `DEVICE_PULL`, the host instead copies locally into pinned RAM and performs only the
+notification TLB write. The receiver calculates
+`pcie_data_addr + read_ptr - fifo_addr`, issues chunked `noc_read_with_state` requests
+up to `max_noc_burst_bytes`, waits for PCIe completions at
+`noc_async_read_barrier`, then copies the filled L1 FIFO slot onward. This permits
+multiple device-initiated reads to be in flight. D2H reverses ownership: the sender
+`socket_reserve_pages`, builds a 64-bit host address from `data_addr_hi`,
+`downstream_fifo_addr`, and `write_ptr`, calls `noc_write_page_chunked`, barriers before
+`socket_push_pages`, and notifies host. Host `read()` polls the host-local `bytes_sent`,
+copies from pinned RAM, and acknowledges the freed slot.
 
 ### What must never break
 
-The non-negotiable invariant is that a producer never overwrites an unread slot, a
-consumer never reads an unpublished slot, credits/indices describe the same ring state,
-and endpoints/buffers outlive every in-flight transfer.
+The sender may publish a page only after its payload is visible, and may reuse its slot
+only after the receiver advances `bytes_acked`. Host `set_page_size(page_size)` must
+match device `set_receiver_socket_page_size` or `set_sender_socket_page_size`, because
+both sides derive ring pointers at that granularity. A device write must retire before
+`socket_push_pages`; a device pull must complete before consuming the L1 data. Finally,
+`update_socket_config` must preserve the cached `read_ptr`/`write_ptr` and counters
+across kernel invocations. An incorrect barrier location can produce valid counter
+progress with stale payload, the most dangerous failure mode in this protocol.
 
 ### Where the report makes it concrete
 
-The report makes the decision concrete by connecting the design to `H2DSocket`,
-`D2HSocket`, `MeshSocket`, and `tt_metal/api/tt-metalium/experimental/sockets/`,
-including the report's transfer-mode and flow-control APIs.
+Host setup constructs the socket, sets page size, creates a `MeshBuffer`, passes
+`get_config_buffer_address()` as a kernel compile-time argument, then calls
+`EnqueueMeshWorkload(..., false)` before its page loop and `barrier()` afterward.
+Device initialization uses `create_receiver_socket_interface(socket_config_addr)` or
+`create_sender_socket_interface`. This makes completion precise: host enqueue is not
+remote consumption; socket `barrier()` waits until sent bytes are acknowledged. The
+source also separates `MeshSocket` over TT-Fabric as a different device-to-device
+transport. Its semantics must not be imported into these PCIe rings.
 
 ### How the decision is tested
 
-The controlled procedure is to run producer faster than consumer and then reverse the
-rates across multiple wraparounds. **Expected observation:** bounded backpressure
-prevents corruption/underrun and steady-state throughput separates from
-connection/fill/drain latency.
+Run the pinned benchmark families (`BM_D2HSocketThroughput`, latency/ping and multi-chip
+variants, plus the H2D equivalents) across page and FIFO sizes, separating startup from
+steady state. Add payload sequence numbers and deliberately stall each endpoint through
+multiple ring wraps; verify `0 <= bytes_sent - bytes_acked <= fifo_size` and exact data
+order. Compare `HOST_PUSH` and `DEVICE_PULL` on the same high-bandwidth and
+low-bandwidth chip classes while recording CPU load and link width. The expected
+mechanism is that larger pages/FIFOs amortize signaling and that pipelined device pulls
+can outpace CPU-driven writes for substantial pages; the report's Gen4/Gen5 and
+per-chip measurements are snapshot-specific, so reproduce them before using them as a
+capacity promise.
 
 ## Code connection
 

@@ -11,35 +11,73 @@
 
 ### Why the design is shaped this way
 
-The design is shaped by the need to specify which fused kernel consumes or produces
-multiple CB data formats and why a separate conversion kernel would add material traffic
-or dispatch. Name the exact safe points where Unpack or Pack state must change.
+Data format is active hardware state in the Unpack, Math, and Pack stages, not only
+metadata attached to a circular buffer. A fused kernel that changes operand CBs can
+therefore present valid bytes to the wrong decoder unless it reprograms the stage before
+the next operation. The pinned API deliberately splits input-side reconfiguration from
+output-side reconfiguration because they run on different compute RISCs:
+`reconfig_data_format*` updates Unpack (`trisc0`) and Math (`trisc1`), whereas
+`pack_reconfig_data_format` updates Pack (`trisc2`). Reconfiguring only the stage whose
+operand changes avoids unnecessary state writes, but it makes stage ownership explicit
+in the program.
+
+The source also exposes two overload styles. Passing only a new operand is sufficient to
+identify the target format; passing both old and new CB operands lets the implementation
+use faster reconfiguration paths and perform dynamic eligibility checks. For that
+reason, the report says programmers should always prefer the old-plus-new overload.
 
 ### How work and data move
 
-The complete path is `producer CB format A → wait/ownership →
-reconfig_data_format(_srca/_srcb) → Unpack/compute → pack_reconfig_data_format →
-destination CB format B → publish`, including completion of work using the old
-configuration.
+Consider two consecutive operations in one compute kernel. After the first operation has
+finished consuming its SrcA/SrcB tiles, call
+`reconfig_data_format(srca_old_operand, srca_new_operand, srcb_old_operand,
+srcb_new_operand)` if both sources change. If only one source changes, use
+`reconfig_data_format_srca(old,new)` or `reconfig_data_format_srcb(old,new)`; changing
+both globally would do needless work. The next CB tile can then be unpacked and consumed
+under its own interpretation. If the result moves to an output CB with a different
+format, trisc2 independently executes `pack_reconfig_data_format(old_operand,
+new_operand)` before packing that result and publishing it to the destination CB.
+
+The supported set in this snapshot is precise. Input-side FLOAT32, BFLOAT16,
+BFLOAT8_B, and BFLOAT4_B may reconfigure among themselves. Crossing between that set
+and UINT8 requires `to_from_int8=true` and `DST_ACCUM_MODE==true`. Pack supports the
+same FLOAT/UINT8 transitions without those two requirements. This asymmetry is why one
+combined "current format" variable is not an adequate model of the three-stage machine.
 
 ### What must never break
 
-The non-negotiable invariant is that each tile's physical bytes agree with active
-Unpack/Pack interpretation and that reconfiguration occurs after prior-format work
-completes but before the next tile is consumed or published.
+At every tile boundary, the CB's declared format, the active SrcA/SrcB decode state, the
+Math mode, and the output Pack state must describe the same intended value path. All
+uses of the old format must finish before state changes, and no new-format tile may be
+unpacked or packed before its corresponding reconfiguration. FLOAT/UINT8 input
+transitions additionally require destination accumulation mode. A missed input switch
+corrupts source values before arithmetic; a missed Pack switch corrupts representation
+after correct arithmetic. Both can produce finite, shape-correct numbers, making this a
+dangerous silent failure rather than necessarily a hang.
 
 ### Where the report makes it concrete
 
-The report makes the decision concrete by connecting examples to `reconfig_data_format`,
-`reconfig_data_format_srca`, `reconfig_data_format_srcb`, and
-`pack_reconfig_data_format`, then trace the corresponding LLK/configuration path for the
-target Tensix generation.
+Choose the narrow API by the state that actually changes: both source registers,
+SrcA only, SrcB only, or Pack only. The template parameter belongs only to the
+input-side APIs, reflecting the extra FLOAT/INT8 contract there. The old/new operand
+pair is an architectural hint as well as a safety check: the report says it enables a
+faster reconfiguration path and dynamic eligibility checks, but does not expose the
+register-level mechanism. This report contains no worked example and does not specify
+cycle counts or exact register writes;
+those details must not be inferred from the signatures. Its defensible claim is the
+stage boundary, supported transition table, and usage rule at commit `992f3ca`.
 
 ### How the decision is tested
 
-The controlled procedure is to alternate two supported input/output formats in one
-controlled kernel and compare with fixed-format reference kernels. **Expected observation:** identical decoded values and fewer materialized conversion boundaries,
-with no corruption at the reconfiguration transition.
+Build a fused two-operation test whose first CB uses BFLOAT16 and second uses BFLOAT8_B,
+then compare against two fixed-format reference kernels with a materialized boundary.
+Exercise SrcA-only, SrcB-only, both-source, and Pack-only changes separately and use
+old-plus-new overloads. Add a UINT8 crossing with `to_from_int8=true` and
+`DST_ACCUM_MODE==true`, plus a negative configuration that should be rejected when those
+conditions are absent. Use values near representational boundaries so a stale decoder
+cannot pass by coincidence. Expected evidence is reference-equivalent decoded output at
+every transition; performance claims require a separate measurement because the pinned
+source supplies no latency numbers.
 
 ## Code connection
 

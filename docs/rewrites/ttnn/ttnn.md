@@ -11,36 +11,61 @@
 
 ### Why the design is shaped this way
 
-The design is shaped by the need to turn the stack overview into one concrete operation
-lifecycle: public semantic contract, validation/registration, implementation selection,
-device-operation attributes, program creation/cache hit, runtime argument patching,
-dispatch, and output ownership.
+The pinned source is a 35-line stack index, not an implementation specification. Its
+supported architectural claim is the layering itself: an ML-framework-facing interface
+sits over a library of accelerated operations; OP Infra supplies common `Tensor` and
+`Operation` primitives; TT-NN Runtime executes them and exposes graph tracing and
+profiling. This boundary keeps framework ergonomics separate from reusable operation
+contracts and from device execution machinery. It allows the op library to grow without
+duplicating tensor ownership, registration, and debugging behavior in each frontend.
+It also gives tracing and profiling a stable interception point below framework syntax
+but above individual kernels.
+Program factories, hashes, and cache callbacks are not named by this source and must be
+learned from the linked operation-development documentation, not invented here.
 
 ### How work and data move
 
-The complete path is a framework/user call through TT-NN operation
-library/infrastructure, tensor metadata validation, program hash/factory, TT-Metal
-command queue, reader/compute/writer kernels, and returned tensor.
+A supported walkthrough begins with a framework/user invoking an OP Library symbol.
+OP Infra receives TT-NN `Tensor` objects and applies the shared operation contract;
+runtime then schedules the operation on TT-Metal and returns TT-NN tensor state to the
+caller. Graph tracing observes that runtime boundary, while the profiler supplies
+performance evidence. The diagrams referenced by “ML Framework,” “OP Library,” “OP
+Infra,” and “TT-NN Runtime” are the pinned source of this flow. Exact validation,
+lowering, queue, and kernel steps depend on the chosen operation and are intentionally
+outside this overview.
+That separation helps diagnosis: a wrong public contract belongs at the framework/op
+boundary, while a correct contract with a bad result must be followed into the chosen
+operation implementation.
 
 ### What must never break
 
-The non-negotiable invariant is that logical shape/dtype/layout/placement/ownership
-remain coherent across layers and that cached programs include every compile-time choice
-while only documented runtime state is patched.
+Each layer must preserve the operation's logical semantics and tensor identity while
+making its own representation explicit. The frontend cannot assume a Torch tensor is a
+device allocation; OP Library cannot bypass common Tensor lifetime rules; Runtime
+completion cannot be equated with host visibility unless its API says so. Diagnostics
+must attach to the same invocation that crosses these layers. Cache-key completeness is
+a useful general runtime invariant, but it is not established by this short report and
+therefore should not be attributed to it.
 
 ### Where the report makes it concrete
 
-The report makes the decision concrete by connecting the report's ML Framework, OP
-Library, OP Infra, TT-NN Runtime, and TT-Metal boundaries to one actual registered
-operation, its program factory/hash/cache-hit callback, tensor objects, and command
-queue.
+Concrete source links are the `Tensor` documentation, the “adding a new TT-NN
+operation” guide, graph-tracing report, and profiler documentation. Use them as a
+drill-down path: choose one public op, identify the Tensor metadata it accepts and
+returns, find its registration/operation definition, then observe it at the runtime
+with graph tracing and profiling. This respects the overview's function as a map while
+avoiding unsupported claims about symbols absent from the pinned page.
 
 ### How the decision is tested
 
-The controlled procedure is to trace the same operation cold, warm, and with one
-shape/layout change. **Expected observation:** identical semantics, a cache hit only
-for compatible identity, and a timeline that separates construction from steady
-dispatch/device execution.
+Select one documented accelerated operation and build a layer-evidence table: framework
+call, OP Library name, OP Infra Tensor/Operation contract, runtime trace node, and
+profiler row. Execute it with fixed inputs and compare the output to its golden test;
+then inspect graph identity, allocation/lifetime events, and device timing. Repeat with
+one tensor layout or shape change, but interpret cache behavior only if the operation's
+own implementation documentation exposes it. The success criterion is a continuous,
+source-backed causal chain across the four TT-NN layers—not a generic diagram decorated
+with implementation details from another operation or revision.
 
 ## Code connection
 

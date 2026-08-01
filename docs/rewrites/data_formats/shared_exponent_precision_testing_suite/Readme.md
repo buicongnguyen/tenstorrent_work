@@ -11,35 +11,75 @@
 
 ### Why the design is shaped this way
 
-The design is shaped by the need to organize the precision investigation around
-shared-exponent decision boundaries—maximum exponent selection, alignment, rounding
-ties, carry/saturation, cancellation, and outliers—rather than around a large
-undifferentiated random corpus.
+`bfloat8_b` shares exponent information, so precision depends on which magnitudes occur
+together, not merely on the marginal distribution of individual values. The pinned
+suite therefore crosses *statistical distributions* with *spatial patterns*. A standard
+normal baseline cannot reveal whether a large value in one row, column, block, or tile
+changes the error of nearby small values. The generators deliberately add gradients
+from `10^-3` to `10^3`, 1000x row outliers, checkerboards, tile-boundary magnitudes, and
+8x8 blocks spanning `1e-3` through `1e4`. Comparing a pattern with its reverse tests
+directional sensitivity instead of assuming that equal histograms imply equal encoded
+behavior.
+
+The report describes the representation as particularly relevant to column-based shared
+exponents but does not specify the exact sharing-group width or bit-level encoding.
+Consequently, this learner page treats grouping details as an experimental question;
+it does not infer a fixed block size from the datatype name.
 
 ### How work and data move
 
-The complete path is `generator → 16-value exponent-sharing block → independent
-encoder/oracle → TT format conversion → operation under test → decode → elementwise and
-aggregate error report`, recording seeds and encoded bits.
+`main.py` orchestrates a Cartesian test matrix. `generators.py` creates a named pattern
+and distribution for a shape; `runner.py` executes a BFLOAT16 reference and the
+BFLOAT8_B path for `sum`, `mean`, `max`, `softmax`, `matmul`, or `matmul_tt`.
+Reductions are exercised on axis 0 and axis 1, while `matmul_tt` also varies tile width
+16/32 and transpose state. The shape dimension is causal evidence too: `32x32` isolates
+one tile, `512x512` spans a 16x16 tile grid, and `32x128`, `128x32`, and `64x256`
+separate orientation from element count.
+
+`postprocessing.py` then records PCC, allclose at `1e-2` and `1e-3`, absolute and
+relative error, ULP mean/max/percentiles, and input min/max/mean/standard deviation.
+`raw_results.json` preserves machine-readable cases; `worst_cases_analysis.md` ranks the
+top ten per metric; `pattern_impact_analysis.md` aggregates distributions by pattern.
+This pipeline keeps case identity—shape, pattern, distribution, operation, axis/config—
+attached to every measurement so an aggregate score can be traced back to a causal
+input arrangement.
 
 ### What must never break
 
-The non-negotiable invariant requires oracle and device paths to agree on block
-grouping, shared exponent, rounding, operation semantics, and output interpretation
-while keeping the oracle implementation independent enough to expose device bugs.
+The BFLOAT16 and BFLOAT8_B executions must receive the same generated logical input and
+operation parameters; only the precision path may differ. Axis numbering, transpose
+choice, tile width, shape, and output alignment must match before metrics are computed.
+PCC alone is insufficient: constant or nearly constant outputs can make correlation
+misleading, large outputs can hide relative problems in absolute error, and one outlier
+can disappear inside a mean. A conclusion should therefore agree across relevant
+allclose, absolute/relative, ULP, and distribution statistics. Negative variants must
+also preserve the intended sign transform. A generator bug or mismatched operation
+config invalidates the comparison even if the report format looks complete.
 
 ### Where the report makes it concrete
 
-The report makes the decision concrete by connecting cases to `generators.py` and the
-named distributions `constant`, `normal_0_1`, `normal_skewed_mean`,
-`normal_high_var_10/100`, `normal_with_outliers`, and `fa_rand_default`.
+The most diagnostic comparisons change one spatial cause at a time. Column versus row
+gradients ask whether orientation relative to shared-exponent grouping matters;
+forward versus reverse gradients test direction; `tile_boundaries` asks whether an
+error resets or changes at 32x32 boundaries; `row_outliers` and `fa_rand_aggressive`
+measure sparse large-value contamination. Operation choice then reveals propagation:
+`max` selects a value, `sum`/`mean` accumulate quantization error, `softmax` amplifies
+relative logit differences, and matmul repeatedly accumulates products. The suite is a
+precision-characterization architecture, not proof that one datatype is globally safe
+or unsafe.
 
 ### How the decision is tested
 
-The controlled procedure is to compare fifteen small values with and without one large
-outlier in the same block. **Expected observation:** the outlier raises the shared
-exponent and increases error or code collisions for the small values, matching the
-reference encoder.
+Start with `constant` and `normal_0_1` on `32x32`, then add one causal factor:
+`column_magnitude_gradient`, its reverse, the corresponding row pair, and
+`tile_boundaries`. Run both reduction axes and compare the complete metric vector.
+Repeat on `512x512` to determine whether the effect is local or accumulates across
+tiles. Then introduce `normal_with_outliers` and `row_outliers`, inspecting
+`worst_cases_analysis.md` rather than only averages. A credible result is a reproducible
+error signature tied to pattern orientation, boundary, operation, and axis. If forward
+and reversed cases differ, that is evidence of directional sensitivity; discovering the
+exact exponent-sharing group responsible requires additional format-level evidence not
+provided by this pinned report.
 
 ## Code connection
 

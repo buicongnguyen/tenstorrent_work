@@ -11,34 +11,84 @@
 
 ### Why the design is shaped this way
 
-The design is shaped by the need to separate local NoC movement, ERISC/channel service,
-physical Ethernet link behavior, remote ejection, and application acknowledgement.
-Quantify small-packet latency and sustained bandwidth as different regimes.
+The pinned report marks itself **outdated**: current users no longer need to program
+Ethernet cores directly because the fabric infrastructure manages them. Treat this page
+as a mechanism-level explanation of the legacy direct-ERISC path, not as the recommended
+application-facing API. Its handshakes, credits, buffer lifetimes, and measurements are
+still useful for understanding what a fabric layer must make correct and efficient.
+
+An on-chip `noc_async_write` has completion queries such as
+`noc_async_writes_flushed()` and `noc_async_write_barrier()`. The pinned Ethernet model
+does not give the sending ERISC an equivalent way to know, by itself, that a write left
+source L1 or committed to destination L1. That missing observation forces reliability
+into software: endpoint handshakes, acknowledgements, credits, stable source buffers,
+and teardown are part of the data path. ERISC is also a finite routing resource on each
+hop, unlike the NoC abstraction in which arbitrary unicasts eventually complete without
+user allocation of every intermediate buffer. Static or dynamic routes must therefore
+budget ERISC buffers and schedules as well as physical links.
+
+The transaction layer is asynchronous. Two `tx_cmd_q` queues exist, although only queue
+0 is available in this report and queue 1 is reserved. Commands are ordered within one
+queue but not across queues; a busy queue cannot accept another command. This explains
+both the opportunity—advance other work after `eth_txq_is_busy()`—and the hazard—never
+reuse source L1 merely because a send was submitted.
 
 ### How work and data move
 
-The complete path is one packet from a worker/source buffer through local NoC, sending
-Ethernet core, channel packetization, physical link, peer Ethernet core, remote NoC,
-destination storage, and consumer completion/credit.
+Before payload traffic, the two linked ERISCs establish a consistent startup handshake.
+The source example reserves a 16-byte scratch region at
+`eth_l1_mem::address_map::ERISC_L1_UNRESERVED_BASE`: the master calls
+`eth_send_bytes(...,16)` then `eth_wait_for_receiver_done()`, while its peer calls
+`eth_wait_for_bytes(16)` then `eth_receiver_channel_done(0)`. The guide recommends
+channel 0 of `erisc_info` only for this bootstrap.
+
+For a flow-controlled payload, the sender fills its channel buffer and an
+`eth_channel_sync_t`. `bytes_sent` carries the nonzero payload byte count; the receiver
+sets `receiver_ack` after receipt, and later clears both fields to advertise that the
+buffer may be overwritten. Packing this 16-byte sync structure immediately after the
+payload and sending both together avoids a command-queue gap in which payload submission
+succeeds but the separate availability signal is back-pressured. The source further
+recommends different receiver source addresses for acknowledgement and completion so
+two completion meanings cannot race through the same word.
+
+At kernel end, every sender channel waits until its receiver-done credit returns, calling
+`run_routing()` periodically if required. This drains messages belonging to the current
+kernel before a temporally later kernel reuses the same ERISC state.
 
 ### What must never break
 
-The non-negotiable invariant is that both endpoints agree on peer link, channel, packet
-size, route, destination, and flow-control state and that source storage is not reused
-merely because the local NoC write completed.
+Both endpoints must agree on link, channel, addresses, byte count, and the meaning of
+each sync field. Source storage remains immutable from command submission until receiver
+acknowledgement makes reuse safe. Dependent sends use one command queue unless software
+adds an ordering protocol. Startup must complete before either endpoint writes payload
+into remote L1, and teardown must receive all outstanding credits before kernel exit.
+Otherwise a late credit from operation A can be interpreted as operation B's handshake,
+or B can overwrite a buffer A still consumes. These are temporal ownership violations,
+not physical-link corruption.
 
 ### Where the report makes it concrete
 
-The report makes the decision concrete by connecting the path to `run_routing()`,
-`eth/dataflow_api.hpp`, `dataflow_api.hpp`, `eth_send_packet()`, and the source report's
-packet-size/channel-count and ring/round-trip measurements.
+Host code acquires connected Ethernet cores and creates ERISC kernels with
+`tt_metal::EthernetConfig{.noc=noc_id,.compile_args=...}`. The worked ring sends from a
+master receiver over the local NoC to a sender, across Ethernet to the next chip's
+receiver, then repeats. It performs one unmeasured round trip first to flush launch
+skew. The pinned microbenchmarks report roughly 650 ns per hop in the newer merged-signal
+ring formulation, about 5.2 microseconds for eight hops, and 530–620 ns one-way link-send
+latency derived from round trip. Around 5 KB, serialization bandwidth begins to dominate
+the fixed latency in that benchmark. Those numbers characterize this setup and snapshot;
+they are not universal routing constants.
 
 ### How the decision is tested
 
-The controlled procedure is to sweep packet size and channel count on one fixed link in
-both directions. **Expected observation:** small messages expose startup latency while
-larger concurrent packets approach the link bandwidth until channel or routing
-contention saturates.
+First test startup/payload/teardown with one channel and a sequence number in every sync
+record. Delay one chip's launch: the handshake must prevent early payload overwrite.
+Then delay receiver consumption: the sender must not modify its buffer until the ack/
+credit returns. Run a second kernel immediately afterward to detect stale-credit aliasing.
+For performance, sweep packet size and channel count bidirectionally, checking
+`eth_txq_is_busy()` rather than spin-submitting. The expected curve separates fixed
+small-message latency from link serialization and eventually ERISC/queue contention.
+If merging payload and sync removes gaps without changing sequence correctness, that is
+evidence that command-queue backpressure—not computation—was the exposed bottleneck.
 
 ## Code connection
 

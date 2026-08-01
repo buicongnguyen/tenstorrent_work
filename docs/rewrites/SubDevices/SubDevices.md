@@ -11,35 +11,108 @@
 
 ### Why the design is shaped this way
 
-The design is shaped by the need to define which cores, dispatch resources, buffers,
-queues, and synchronization scope each independent workload owns and which rare
-dependencies genuinely require global semaphores or circular buffers.
+Without sub-devices, the pinned runtime treats allocation and completion as chip-wide
+state. A sharded L1 allocation on one core reserves the same address globally, and a
+read/write command waits for all prior programs so it cannot race any user. This is safe
+but serializes unrelated work—for example, a persistent program on one core group blocks
+host interaction with another group. A sub-device makes core membership, allocator
+state, and dispatch completion independently trackable. The gain is overlap; the cost is
+that the user now owns cross-sub-device dependency correctness and can create a deadlock
+that global serialization previously prevented.
+
+Global semaphores and global circular buffers are not alternative partitioning APIs.
+They restore only the explicit communication edges that independent dispatch domains
+need. A normal program semaphore/CB has a program-scoped address and pointer lifetime;
+a global object reserves persistent L1 state so later or concurrent programs agree on
+the same synchronization/data location.
 
 ### How work and data move
 
-The complete path is sub-device manager creation/loading, targeted buffer/program
-enqueue, local completion, optional global object publication, cross-sub-device
-wait/consume, stall-group synchronization, and manager teardown.
+`ttnn.SubDevice([...CoreRangeSet...])` defines logical core membership by programmable
+core type. `device.create_sub_device_manager([sub_device_0, sub_device_1], 3200)` builds
+metadata and reserves a 3200-byte local-allocator region per Tensix-bearing sub-device,
+but does not activate it. `device.load_sub_device_manager(id)` first waits for existing
+programs and requires local allocators to be empty, then installs the configuration.
+Each local allocator occupies the lower L1 address range in this pinned version; the
+global allocator shrinks by the configured size. `CreateBuffer(..., sub_device_id_0)`
+uses that local allocator, while an unspecified ID remains global. A zero local size
+keeps all memory in the global allocator while still permitting independent execution
+tracking.
+
+Programs retain the ordinary host API. Dispatch infers which sub-device their cores
+occupy and serializes only against prior programs on that sub-device. The pinned report
+limits a program to one sub-device and says a program cannot be rerun under a different
+manager configuration. Cross-domain host/device commands default to waiting on all
+sub-devices for compatibility. `ttnn.set_sub_device_stall_group([...])` narrows that
+default; `ttnn.synchronize_device(..., sub_device_ids=...)` waits on the host, while
+`ttnn.record_event(..., sub_device_ids=...)` creates a device-side ordering point.
+Excluding a persistent sub-device from the stall group is safe only if the command does
+not consume its results.
+
+For a scalar dependency, `ttnn.create_global_semaphore(device, cores, initial_value,
+BufferType.L1)` allocates a persistent address on Tensix cores. Kernels can exchange
+state through that address across program lifetimes; the host can inspect it with
+`get_global_semaphore_address` and issue a new generation value with
+`reset_global_semaphore_value`.
+
+For streaming data, `ttnn.create_global_circular_buffer` allocates per-core L1 storage
+from a sender-to-receiver mapping. A program binds it with
+`CircularBufferConfig::remote_index`—the report uses remote index 31 and local index 0.
+The remote interface handles cross-core flow control; an in-placed local CB feeds LLKs,
+which cannot consume the remote configuration directly. A sender calls
+`remote_cb_reserve_back` and
+`remote_cb_push_back_and_write_pages(...)`; receivers call `remote_cb_wait_front` and
+`remote_cb_pop_front`. Page-size changes use the paired resize APIs followed by
+`align_local_cbs_to_remote_cb` for in-placed locals. Because hot execution caches
+read/write pointers in a struct, exactly one RISC per core must call
+`update_remote_cb_config_in_l1(remote_cb_index)` at program end so a later program resumes
+at the correct persistent position.
 
 ### What must never break
 
-The non-negotiable invariant is that core/resource sets are disjoint by default,
-commands cannot consume another sub-device's local resources, and shared storage becomes
-visible and reusable only through explicit cross-owner dependencies.
+Sub-device core sets and local allocator ownership must match the active manager. No
+local buffers may exist while loading/clearing a manager, and the active manager cannot
+be removed. A program cannot span sub-devices in the pinned feature set. Narrowing a
+stall group must never omit a producer on which the command depends; circular waits
+between a long-running program and a host/event wait cause a hang.
+
+Global state needs generation discipline. Semaphore reset cannot race a producer still
+using the previous value. For a remote CB, sender reserve precedes every write/push,
+receiver wait precedes consumption, and pop is the acknowledgement that releases
+capacity. Local and remote CB index ranges cannot overlap; the maximum local index must
+remain below the minimum remote index. Resizing requires all linked interfaces to agree,
+and one owner writes final cached pointers back to L1. Losing that writeback makes the
+next program replay old pointer state and can overwrite unconsumed data.
 
 ### Where the report makes it concrete
 
-The report makes the decision concrete by connecting the lifecycle to
-`device.load_sub_device_manager`, `clear_loaded_sub_device_manager`,
-`remove_sub_device_manager`, `CreateBuffer(..., sub_device_id)`,
-`set_sub_device_stall_group`, `Synchronize`, and `EnqueueRecordEvent`.
+The allocator split is a space/overlap tradeoff: a larger local range enables more
+independent L1 allocation but removes that range from global allocation. In the pinned
+report, global semaphores use the global allocator and Tensix L1, while TT-NN tensors do
+not yet accept sub-device allocation. The feature is marked under active development;
+planned Ethernet-core changes are not durable API promises.
+
+Remote CB indices conventionally start high and local indices low for dispatch
+performance; non-overlap is mandatory. `UpdateDynamicCircularBufferAddress` may retarget
+a bound CB only when the new global object contains every configured core.
 
 ### How the decision is tested
 
-The controlled procedure is to run two independent sub-device programs with and without
-a global barrier, then add one shared buffer/event. **Expected observation:**
-independent work overlaps, while only the declared producer-consumer edge serializes
-shared use.
+Create two disjoint worker sub-devices and run a long persistent program on one while
+dispatching a finite program/read on the other. Compare the default all-domain stall
+group with a correctly narrowed group; the second command should overlap only when it has
+no dependency on the persistent work. Record per-sub-device events and confirm that
+waiting on one ID does not wait on the other. Exercise manager load/clear with live local
+buffers and require the runtime to reject the invalid lifecycle.
+
+Then add one producer-consumer edge. For a global semaphore, tag successive generations
+and verify no stale wakeup. For a global CB, send more pages than its capacity so reserve,
+wait, push, and pop all execute; split the transfer across two programs and verify the
+second resumes from the L1-persisted pointer. Deliberately omit final pointer writeback
+in a diagnostic build to show why it is required. Measure overlap, CB full/empty waits,
+and serialized edges. The architecture succeeds when unrelated work overlaps and only
+the declared global object/event imposes ordering—not when global stalls are merely
+removed.
 
 ## Code connection
 

@@ -11,33 +11,83 @@
 
 ### Why the design is shaped this way
 
-The design is shaped by the need to derive A/B reuse from the M/N/K block nest and
-select fine-grained block sizes that fit input CBs, destination/intermediate state, and
-double buffering while keeping edge cores useful.
+The pinned example organizes the K reduction inside each core's output region. Output
+work is divided first into per-core regions and then into destination-register-sized
+subblocks. A subblock is the unit of accumulation; circular buffer 24 preserves its
+partial C state when destination registers must be reused before the next K block. The
+design therefore pays explicit Pack/L1/reload traffic for partials while reusing each
+A/B block across several output tiles and keeping the writer-visible stream final-only.
+The report does not provide a naïve baseline or prove that partial-C traffic itself is
+reduced, so that component must be measured rather than assumed.
+
+`bmm_op_utils::get_large_matmul_params(Mt, Nt, num_cores_y, num_cores_x,
+in0_block_w)` couples that hierarchy: it returns `per_core_M`, `per_core_N`,
+`out_subblock_h`, and `out_subblock_w`. The provided `SUBBLOCK_HW_CHOICES` prefers
+shapes such as 4x2, 2x4, 8x1, down to 1x1 because the destination-register footprint
+must remain legal. Picking block width, grid, and subblock independently can produce a
+partition that fits mathematically but cannot be buffered or accumulated efficiently.
 
 ### How work and data move
 
-The complete path is A/B block reads, CB reserve/publish, repeated output-subblock
-compute with one resident operand, intermediate K accumulation, final pack, output CB
-publication, and writer reclamation.
+For each core, `reader_bmm_tile_layout.cpp` runs as `RISCV_1` and reads the A range
+starting at `Kt * per_core_M * output_idx_y` and the B range starting at
+`per_core_N * output_idx_x`. Strides encode the tiled row-major matrices: A advances by
+`Kt` per tile row and `in0_block_w` per K block; B advances by `Nt` per tile row and
+`in0_block_w * Nt` per K block. The reader therefore publishes exactly the
+`in0_block_w * per_core_M` A tiles and `per_core_N * in0_block_w` B tiles needed for one
+K slice. `writer_bmm_tile_layout.cpp` runs as `RISCV_0`; its start tile and subblock
+strides place each core's final C subblocks without overlap.
+
+`bmm_large_block_zm.cpp` consumes those streams. Its compile-time tuple fixes input
+block sizes, subblock counts, `num_blocks`, output subblock dimensions, and batch. For
+each destination tile, the nested `h`, `w`, and `inner_dim` loops call
+`matmul_tiles(c_0, c_1, in0_index, in1_index, dst_index)` across `in0_block_w`. The index
+increments reuse an A row across output columns and a B column across output rows before
+the input CB pages are reclaimed.
+
+If this is not the last K block, the kernel calls
+`cb_reserve_back(tt::CBIndex::c_24, out_subblock_num_tiles)`, packs each partial with
+`pack_tile`, then `cb_push_back` publishes it. On a later block, `enable_reload` causes
+`cb_wait_front(c_24, ...)`, `copy_tile(c_24, i, i)` into destination registers, and
+`cb_pop_front` only after the reload has ownership. New products accumulate into that
+state. The final K block is packed to the output stream for the writer rather than
+cycled through the intermediate CB again.
 
 ### What must never break
 
-The non-negotiable invariant is that each output tile receives all K-block products
-exactly once and that partial state is never packed, overwritten, or exposed as final
-before the reduction completes.
+Every C tile must receive every K-block contribution exactly once and in the intended
+batch. `num_blocks` must agree with `Kt / in0_block_w`; reader strides, compute indices,
+and writer coordinates must describe the same tiling. A partial in `c_24` is not an
+output: it cannot be consumed by the writer, overwritten before `cb_wait_front`, or
+discarded before `copy_tile`. Conversely, the producer cannot push a partial until all
+of its packed pages are complete. CB capacity and page size must cover
+`out_subblock_num_tiles`, and the destination footprint implied by
+`out_subblock_h * out_subblock_w` must be legal for the selected kernel.
 
 ### Where the report makes it concrete
 
-The report makes the decision concrete by connecting the plan to
-`get_large_matmul_params`, `interm0_cb_index`, `bmm_tile_layout.cpp`,
-`bmm_large_block_zm.cpp`, `cb_reserve_back`, `cb_wait_front`, and `pack_tile`.
+The intermediate and final streams deliberately share one
+`CircularBufferConfig` data-format map with output index `CBIndex::c_16` and
+`interm0_cb_index = 24`, but they have different ownership lifetimes. The runtime
+arguments expose the architectural decomposition rather than hiding it in a library op:
+`per_core_M/N` define output ownership, `in0_block_w` defines reduction granularity,
+`out_subblock_h/w` define register working set, and start/stride fields map them back to
+global DRAM. This makes the optimization tunable, but also makes a mismatch a silent
+data-placement bug rather than a type error.
 
 ### How the decision is tested
 
-The controlled procedure is to sweep one block/reuse dimension at fixed math and output
-partition. **Expected observation:** operand read bytes and compute input waits
-decrease until L1 pressure, reduced buffering, or imbalance offsets additional reuse.
+Use matrices whose tile coordinates are encoded in their values, including dimensions
+that exercise multiple K blocks and batches. Compare the full C tensor against a host
+reference, then inspect one core: number of input publications must equal `num_blocks`,
+intermediate push/reload pairs must equal all non-final transitions, and the writer must
+emit each owned output tile once. For performance, hold `Mt`, `Nt`, grid, and math
+fidelity fixed while sweeping `in0_block_w` and legal subblock shapes. Record DRAM
+bytes, CB wait time, reload/Pack activity, and the slowest core. More reuse should reduce
+operand traffic per useful MAC; intermediate spill traffic can move in the opposite
+direction as K-blocking and subblock shape change. Larger buffers can also constrain
+double buffering, register subblocks can reduce occupancy, and uneven work can make the
+tail core critical.
 
 ## Code connection
 

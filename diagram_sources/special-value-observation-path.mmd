@@ -1,0 +1,8 @@
+flowchart LR
+    A["Stored tensor bits<br/>with an explicit format"] --> B["FPU or SFPU operands"]
+    B --> C["Lane arithmetic"]
+    C --> D["Result continues to<br/>Dst / Pack / L1"]
+    C --> E["Output special-value detectors"]
+    E --> F["OR across FPU or SFPU lanes"]
+    F --> G["Per-core sticky status register"]
+    G --> H["Math-thread API, local RISC,<br/>NoC peer, or host observation"]

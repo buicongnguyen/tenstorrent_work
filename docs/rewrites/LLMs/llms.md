@@ -11,36 +11,85 @@
 
 ### Why the design is shaped this way
 
-The design is shaped by the need to split the model plan into prefill and decode
-regimes, then identify which transformer modules are compute-bound,
-KV/weight-bandwidth-bound, launch-bound, or constrained by tensor-parallel communication
-for production shapes.
+Prefill and decode traverse the same transformer but present opposite machine shapes.
+Prefill has many sequence rows, enough matrix work to favor compute throughput; decode
+has one new token per user, repeatedly reads resident weights and an expanding KV cache,
+and is more exposed to DRAM, dispatch, and collective latency. The pinned report
+therefore uses mode-specific tensor shapes, sharding, RoPE preparation, attention
+kernels, and matmul program configurations rather than one static graph.
+
+The durable architectural choice is to keep state and transformations on device. Token
+IDs are smaller than embeddings, only the last prefill token needs to return, rotation
+matrices should be reused or generated device-side, and sampling can remain on device.
+Every host round trip can serialize the next decode step; every unnecessary tilize,
+untilize, or reshard consumes bandwidth without model arithmetic.
 
 ### How work and data move
 
-The complete path follows one token from embedding through normalization, Q/K/V and
-rotary application, KV-cache update/read, causal attention, projection/residual, MLP,
-final normalization/head, logits, and the next decode iteration.
+An input token is embedded, normalized, projected into Q/K/V, and reshaped into heads.
+`ttnn.experimental.rotary_embedding_llama` transforms Q and K. Prefill initializes
+cos/sin matrices once for its sequence; decode uses `RotarySetup` to select matrices for
+each user's changing position. Its sparse tile-sized transform is replicated per batch
+and sharded so each core receives one tile. K/V then enter persistent cache: prefill can
+use `ttnn.experimental.paged_fill_cache`, while decode updates `cur_pos` through
+`ttnn.experimental.paged_update_cache` using a list or device
+`update_idxs_tensor`.
+
+Prefill invokes `ttnn.transformer.scaled_dot_product_attention`; decode uses
+`scaled_dot_product_attention_decode` or
+`paged_scaled_dot_product_attention_decode` with a page-table tensor. The pinned prose
+names the extra argument `page_table_tensor`, while its code example passes
+`page_table=page_table`; verify the callable signature in the pinned implementation
+instead of copying either spelling without checking. In the report's recommended causal
+decode path, `cur_pos`/`cur_pos_tensor` bounds the valid cache and `is_causal=True`
+removes the explicit mask; non-causal cross-attention must provide one.
+`ttnn.experimental.nlp_concat_heads_decode` restores head layout before
+`ttnn.linear` output projection. Residual/normalization and the gated MLP follow, then
+final norm and LM head produce logits. A device-resident position tensor can be advanced
+with `ttnn.add`, allowing trace replay despite changing token position.
 
 ### What must never break
 
-The non-negotiable invariant is to preserve batch, sequence, head, hidden-dimension,
-causal position, and KV ownership semantics through every reshape/shard; token `t` must
-read only the permitted cache positions and update exactly its assigned slot.
+For each request, K and V for token `t` must be written once to the physical page named
+by its logical position and page table, then attention may read only permitted positions.
+Batch/user identity must survive sharding and head reshape; GQA Q heads must map to their
+own KV group. A traced decode graph requires static shapes and addresses, so changing
+values live in preallocated device tensors rather than Python lists. Distributed norm
+has a related invariant: `rms_norm_pre_all_gather` produces per-shard statistics,
+`ttnn.all_gather(dim=3)` replicates all device statistics, and
+`rms_norm_post_all_gather(...,stats=...)` normalizes the local hidden shard with global
+statistics. Skipping or misordering the gather yields locally normalized but globally
+wrong activations.
 
 ### Where the report makes it concrete
 
-The report makes the decision concrete by connecting modules to concrete operations such
-as `ttnn.experimental.rotary_embedding_llama`, `RotarySetup`, normalization `stats`
-tensors, attention/cache operations, mesh configs, and model-specific program factories
-named by the source.
+Matmul configuration converts model shape into core work. In
+`ttnn.MatmulMultiCoreReuseMultiCastProgramConfig`, `cores_y` partitions M and `cores_x`
+partitions N; `in0_block_w` divides K. `out_subblock_h*out_subblock_w` must fit DST—eight
+tiles on Wormhole for BF16 accumulation, four for FP32 in this source. Decode matmuls are
+often DRAM-bound and candidates for DRAM sharding; collectives can sometimes overlap
+with compute through `ttnn.experimental.all_gather_matmul`. Lower datatype/fidelity may
+increase throughput, but accuracy decides whether BFLOAT8_B/BFLOAT4_B and HiFi2/LoFi
+are acceptable.
+
+At the graph level, trace removes repeat dispatch; the pinned report says it typically
+reduces op-to-op gap below 6 microseconds. It also separates two causes: Python/host time
+and device dispatch. Fusing `LayerNorm` or `ScaledDotProductAttentionDecode`, reducing
+runtime arguments, and constructing shard/program configs once address different parts
+of that gap.
 
 ### How the decision is tested
 
-The controlled procedure is to measure prefill time-to-first-token and steady decode
-token latency separately while keeping weights/KV resident. **Expected observation:**
-regime-specific configurations improve their targeted metric without cache growth,
-reorder, or module-PCC errors.
+Validate modules first: embedding, RoPE at several positions, distributed norm, paged
+cache fill/update, attention, MLP, and LM head each against a host reference. For cache
+tests, use distinct values per request/page and verify both physical writes and returned
+attention. Then benchmark prefill time-to-first-token separately from steady decode
+latency with weights/KV resident. Compare list versus device-tensor `cur_pos`, traced
+versus untraced decode, and DRAM-interleaved versus DRAM-sharded matmuls. Profile one
+layer with `TT_METAL_DEVICE_PROFILER=1`, `process_ops_logs.py`, and `tt-perf-report`,
+using a Tracy signpost to delimit the interval. An optimization is accepted only if it
+improves the intended regime without extra collectives/reshards, cache misplacement, or
+module-level accuracy loss.
 
 ## Code connection
 

@@ -11,35 +11,74 @@
 
 ### Why the design is shaped this way
 
-The design is shaped by the need to define the persistent semantic
-contract—logical/padded shape, dtype, layout, payload, version, cache identity,
-multi-host path/ownership—and explicitly exclude transient device addresses/allocator
-state.
+The persistent boundary must carry enough information to reconstruct a TT-NN tensor
+without persisting process-local allocation state. At the pinned snapshot, the
+`.tensorbin` format therefore separates structured FlatBuffer metadata—whose schema is
+`ttnn/core/tensor/flatbuffer/tensor.fbs`—from raw tensor buffers. The metadata includes
+tensor specifications, mesh shape, and distributed shard information; the payload
+contains the stored elements. `ttnn.dump_tensor` and `ttnn.load_tensor` expose explicit
+persistence, while `ttnn.as_tensor(..., cache_file_name=...)` uses the same format as a
+materialization cache. This design lets a file survive process and device lifetimes and
+lets `load_tensor(..., device=mesh_device)` choose placement at load time rather than
+mistaking an old device address for durable identity.
 
 ### How work and data move
 
-The complete path is tensor materialization through metadata and payload encoding,
-atomic `.tensorbin` publication, cache lookup/validation, `ttnn.load_tensor`,
-current-run device placement, consumer use, and invalidation/cleanup.
+A writer emits an 8-byte `uint64_t header_size`, followed by `header_size` bytes of
+FlatBuffer metadata and then the data buffers. Both the metadata boundary and data
+region are aligned to 8 bytes; individual buffers observe their element alignment.
+That layout allows the loader to read the small size word, validate/interpret the
+FlatBuffer, and map the payload at a naturally aligned file offset. The report connects
+this directly to memory-mapped loading: host access can refer to mapped file pages
+instead of first copying the complete payload into another RAM buffer.
+
+For a distributed tensor, one `.tensorbin` describes the global tensor. Only one host
+writes the file; shard records retain their mesh coordinates. On load, those coordinates
+drive reconstruction and optional placement onto a `MeshDevice`. With
+`ttnn.as_tensor`, the control flow starts with the derived name
+`{cache_file_name}_dtype_{dtype}_layout_{layout}.tensorbin`: an existing compatible
+artifact supplies the tensor, while a miss converts the supplied PyTorch tensor and
+creates the cache. The source explicitly warns by example that the input value is
+ignored on a hit, so the file name is part of correctness ownership, not just storage
+organization.
 
 ### What must never break
 
-The non-negotiable invariant is that header metadata and byte count match payload,
-readers reject partial/stale/incompatible artifacts, and all hosts agree on cache-file
-identity and publication ownership before treating a file as a hit.
+The size word, FlatBuffer tensor specification, shard coordinates, buffer lengths, and
+payload bytes must describe one tensor. The data start must remain 8-byte aligned for
+the promised mapped access. In multi-host execution exactly one writer must publish the
+global artifact, and no reader may interpret a partial file as complete. Cache reuse
+also requires semantic identity: the generated name distinguishes dtype and layout,
+but the report lists shape mismatch and corrupted/incomplete files as misses too.
+Consequently callers must not deliberately reuse a base `cache_file_name` for different
+weights that happen to share shape, dtype, and layout; the cached input is authoritative
+once the hit occurs.
 
 ### Where the report makes it concrete
 
-The report makes the decision concrete by connecting the plan to `ttnn.as_tensor`,
-`ttnn.dump_tensor`, `ttnn.load_tensor`, `.tensorbin`, `cache_file_name`, and
-`ttnn/ttnn/operations/core.py` behavior named by the source.
+The public APIs live in `ttnn/ttnn/operations/core.py`. `ttnn.dump_tensor` requires the
+`.tensorbin` extension; `ttnn.load_tensor` can return a host tensor or place it directly
+on a supplied device; and `ttnn.as_tensor` combines conversion, placement parameters
+such as `memory_config=ttnn.L1_MEMORY_CONFIG`, and disk caching. The report's file tree
+separates immutable weights from regenerable activations and dataset-specific inputs.
+That organization is architectural metadata for humans: filenames include purpose,
+dtype, and, for random artifacts, a `seed_42`-style seed so two byte-valid caches are
+not confused semantically.
 
 ### How the decision is tested
 
-The controlled procedure is to round-trip across processes, alter dtype/layout/version
-and truncate a file. **Expected observation:** valid artifacts reproduce values while
-incompatible/partial files fail loudly or become cache misses rather than being
-misinterpreted.
+Round-trip representative row-major, tile-layout, and distributed tensors through
+`dump_tensor`/`load_tensor`; compare shape, dtype, layout, shard-to-mesh-coordinate
+mapping, and values after a fresh process loads them. Inspect the file offset computed
+from `8 + header_size` and verify the promised alignment. For caching, run
+`as_tensor` twice with the same semantic input and then vary shape, dtype, and layout
+one at a time; the first call should materialize, the identical call should reuse, and
+an incompatible request must not silently reinterpret bytes. Finally truncate the
+metadata and payload independently and simulate two concurrent host writers. A safe
+integration must reject incomplete/corrupt artifacts and enforce one publication
+owner; the pinned report describes the format and single-writer rule but does not claim
+an atomic-publication protocol, so that property must be verified in the consuming
+system rather than assumed.
 
 ## Code connection
 

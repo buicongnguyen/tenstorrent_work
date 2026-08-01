@@ -314,6 +314,11 @@ def check_required_sections(errors: list[str]) -> None:
         "a full visual rewrite remains queued",
         "## Improvement plan",
         "Still to review:",
+        "The design is shaped by the need to",
+        "The complete path is",
+        "The non-negotiable invariant is",
+        "The report makes the decision concrete by",
+        "The controlled procedure is to",
     )
     forbidden_code_text = (
         "During the full rewrite, each important symbol will be mapped",
@@ -363,11 +368,25 @@ def check_required_sections(errors: list[str]) -> None:
                         f"contain exactly one {heading!r}; found {count}"
                     )
             word_count = len(re.findall(r"\b[\w'-]+\b", architecture_section))
-            if word_count < 160:
+            if word_count < 350:
                 errors.append(
                     f"{rewrite.relative_to(ROOT)}: source-specific Architecture "
                     f"walkthrough is too shallow; found {word_count} words"
                 )
+
+            for index, heading in enumerate(architecture_headings):
+                if heading not in architecture_section:
+                    continue
+                body = architecture_section.split(heading, maxsplit=1)[1]
+                if index + 1 < len(architecture_headings):
+                    body = body.split(architecture_headings[index + 1], maxsplit=1)[0]
+                subsection_words = len(re.findall(r"\b[\w'-]+\b", body))
+                if subsection_words < 45:
+                    errors.append(
+                        f"{rewrite.relative_to(ROOT)}: Architecture walkthrough "
+                        f"subsection {heading!r} is too shallow; found "
+                        f"{subsection_words} words"
+                    )
 
             if "## Code connection" in content:
                 code_section = content.split("## Code connection", maxsplit=1)[1].split(

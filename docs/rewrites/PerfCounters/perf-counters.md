@@ -11,34 +11,100 @@
 
 ### Why the design is shaped this way
 
-The design is shaped by the need to choose counters only after stating a mechanism
-hypothesis—request/grant pressure, issue utilization, wait dependency, or another
-documented event—and define the exact core and interval the derived metric represents.
+The pinned counter system is built to observe a pipeline without turning every internal
+signal into a software-visible register. Each Tensix core groups events into five banks:
+FPU, `TDMA_UNPACK`, `TDMA_PACK`, `INSTRN_THREAD`, and L1. The reusable RTL block
+`tt_perf_cnt` records three compatible quantities for an event: cycles requested
+(`req_cnt`), cycles granted/ready (`grant_cnt`), and elapsed cycles (`ref_cnt`). That
+triplet supports two different questions. `req/ref` measures utilization or demand;
+`(req-grant)/req` measures denied demand. A derived percentage is meaningful only after
+choosing which question and signal semantics match the suspected bottleneck.
+
+Software capture is intentionally staged across RISC roles. TRISC1 brackets the compute
+interval because it owns the compute-kernel lifecycle. BRISC performs readout only after
+NCRISC/TRISC completion because BRISC has the NoC access needed to flush profiler data
+to DRAM; the report explicitly says TRISCs cannot perform that flush. This separation
+keeps measurement synchronized with compute while assigning transport to a processor
+that can actually export it.
 
 ### How work and data move
 
-The complete path is a hardware event increment through selected counter register,
-start/stop/reset lifecycle, RISC synchronization, readout, exported record, and formula
-such as request/reference or request/grant stall ratio.
+At kernel entry, TRISC1 calls `start_perf_counter()`. A rising start bit clears and
+starts all enabled counters, so events within a bank accumulate concurrently rather than
+being time-multiplexed during the measured interval. At exit, `stop_perf_counter()`
+latches them. BRISC executes `wait_ncrisc_trisc()`, then `read_perf_counters()` walks
+the selected counter groups and their `counter_sel` values. For every selector, software
+must read both request and grant forms: control register
+`RISCV_DEBUG_REG_PERF_CNT_<X>1` uses bits `[12:8]` for bank selection and bit `[16]` for
+req versus grant; `<X>2` bits 0 and 1 are edge-triggered start and stop. The low output
+register carries `ref_cnt`, while the high register carries the selected req/grant
+count. `read_single_group()` polls a readback between mux writes and samples, because a
+`volatile` access alone does not establish MMIO ordering on RISC-V.
+
+Each value is packed into a 64-bit profiler marker in BRISC's profiler buffer. Before
+groups after the first, `perf_counter_flush()` drains that buffer to DRAM so one group
+cannot overrun or contaminate another. Host decoding reconstructs counter type, value,
+and reference interval; `perf_counter_analysis.py` aggregates per-core operation data,
+and `process_ops_logs.py` computes CSV metrics.
+
+Capture scope is itself a hardware constraint. `TT_METAL_PROFILE_PERF_COUNTERS` is a
+bitfield: FPU=1, PACK=2, UNPACK=4, L1_0=8, L1_1=16, INSTRN=32, with Blackhole-only
+L1_2/3/4 at 64/128/256. All L1 groups share one `MUX_CTRL`, so only one L1 bank can be
+selected in a run; the CLI's multi-bank request works by making multiple profiler runs
+and merging them, not by observing all L1 mux positions simultaneously. The report's
+broad value 47 therefore selects FPU, PACK, UNPACK, L1_0, and INSTRN without violating
+that exclusion.
 
 ### What must never break
 
-The non-negotiable invariant is that counter selection, width, reset, sampling window,
-core coverage, and formula use compatible events; account for overflow, unsupported
-selectors, and any multiplexing or instrumentation effect.
+Every numerator and denominator in a metric must refer to the same core and compatible
+start/stop interval. Request and grant names are not interchangeable: on Blackhole an
+L1 unpacker grant may exceed its request because the signals have different semantics,
+so the implementation suppresses the resulting backpressure value. A zero can mean the
+workload did not exercise a live signal, not that the counter is dead; conversely,
+hardwired and aliased signals are omitted from the architecture-specific arrays rather
+than repaired after capture. Wormhole's four packer engines and Blackhole's
+`PACK_COUNT=1` require different interpretations. Never compare two L1 banks as if they
+were captured in one execution, or subtract counts from separately timed operations.
+
+The counter lifecycle must also remain single-owner: start exactly once before work,
+stop after the intended work, wait for participating RISCs, and do not overwrite or
+flush a group before every marker is exported. Losing the MMIO readback fence can attach
+a value to the previous selector while still producing plausible-looking numbers.
 
 ### Where the report makes it concrete
 
-The report makes the decision concrete by connecting the workflow to
-`start_perf_counter()`, `stop_perf_counter()`, `wait_ncrisc_trisc()`,
-`read_perf_counters()`, `counter_sel`, `tt_perf_cnt`, and the report's derived
-expressions.
+Use counter chains, not isolated percentages. If math is starved, high
+`WAITING_FOR_SRCA_VALID/ref_cnt` should coincide with low math activity and evidence on
+the unpack path. If math cannot release srcA, high overwrite-blocked rate
+`(SRCA_WRITE_AVAILABLE-SRCA_WRITE_NOT_BLOCKED_OVR)/SRCA_WRITE_AVAILABLE` should agree
+with source-register clear waits. If Pack is the consumer bottleneck,
+`AVAILABLE_MATH/PACKER_BUSY` can exceed 100%, while destination-read backpressure
+explains the blocked handoff. For L1, demand (`sum(req)/(8*ref)`) and contention
+(`req-grant`) answer different questions; high unpacker-port backpressure is actionable
+only when thread-0 stalls or low unpacker write efficiency show that it delays the
+operation.
+
+Architecture-specific filters prevent false precision. The report falls back from
+`PACKER_DEST_READ_AVAILABLE/PACKER_BUSY` when `PACKER_BUSY` is zero, omits the Blackhole
+math-destination stall metric when its supporting signal is zero for the entire op, and
+derives inaccessible Blackhole `stall_cnt` as req minus grant. Those rules are part of
+the measurement model, not cosmetic CSV cleanup.
 
 ### How the decision is tested
 
-The controlled procedure is to create a baseline plus one controlled source of reader or
-arbitration pressure. **Expected observation:** the predicted counter/ratio changes in
-the measured interval and aligns with a matching timeline stall.
+Begin with one causal hypothesis—compute saturation, source starvation, Pack
+backpressure, semaphore wait, or NoC/L1 contention—and capture only the necessary
+groups. Run a baseline and one controlled perturbation such as reducing input-buffer
+readiness, increasing math fidelity, or adding producer/consumer pressure. Confirm that
+raw req, grant, and ref counts change in the predicted direction before accepting a
+derived metric. Cross-check with operation latency and a timeline: a large stall ratio
+that does not lengthen or overlap the critical interval is correlation, not the cause.
+Repeat per architecture and per core, retaining distributions so one slow core is not
+hidden by aggregation. For multiple L1 mux positions, rerun an identical deterministic
+workload and label the result as cross-run evidence. Finally, verify selector readback
+and marker counts; malformed ordering or missing groups invalidates the analysis even
+when the formulas execute successfully.
 
 ## Code connection
 

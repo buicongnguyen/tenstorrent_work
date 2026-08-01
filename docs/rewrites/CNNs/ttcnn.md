@@ -11,35 +11,86 @@
 
 ### Why the design is shaped this way
 
-The design is shaped by the need to explain why convolution is lowered to blocked matrix
-multiplication on Tensix and why overlapping spatial windows make naive remote reads the
-dominant movement problem once activations no longer fit in one core's L1.
+Tensix has a tile matrix engine rather than a dedicated convolution instruction, so the
+pinned implementation converts convolution into matrix multiplication: each flattened
+`Kh x Kw x Ci` sliding window is a row, and each flattened filter is a column. The
+resulting activation block `[bHo, Kh*Kw*Ci]` multiplied by a weight block
+`[Kh*Kw*Ci, bWo]` produces one `[bHo,bWo]` output block. This choice reuses the matrix
+pipeline, but it moves the architectural problem into blocking and data placement.
+Grayskull has about 1 MB and Wormhole about 1.5 MB of L1 per Tensix in this source, and
+that L1 also holds five RISC-V binaries, input circular buffers, intermediates, and
+output. Blocks must satisfy the report's capacity inequality and `bHo mod 32 = 0`; an
+output block above eight tiles is further split because the compute unit can process at
+most eight output tiles at once.
+
+Sharding then turns L1 from a cache into ownership. Height sharding gives a core full
+input rows; width and block sharding split the channel/K dimension and require cores to
+exchange contributions. Haloing solves the spatial overlap separately by materializing
+each core's required neighboring sticks before the hot convolution loop, trading a
+planned transfer and some extra L1 for local, regular window reads during compute.
 
 ### How work and data move
 
-The complete path is one activation stick from its source shard through sliding-window
-dependency analysis, local/remote halo configuration, halo transfer, activation-reader
-flattening, matrix accumulation, pack, and the destination output shard.
+The host first permutes activations from `[N,C,H,W]` to `[N,H,W,C]`; a channel vector at
+one pixel is a *stick*. Weights become `[Kh,Kw,Ci,Co]`, then a tiled/padded
+`[Kh*Kw*Ci,Co]` matrix, while bias is zero-padded to `[32,Co]`. For a sharded
+activation, the sliding-window code derives five pieces of metadata: padding flags,
+the traced stick indices for every window, each output shard's input bounds, tensor
+ownership, and finally kernel configuration tensors. Those tensors are placed in the
+reserved `l1_small_size` region and consumed by the halo kernel.
+
+On device, each core allocates its halo-output shard, fills padding sticks, copies local
+sticks, and transfers remote sticks. In the default mode, the owner pushes its local
+stick to a remote destination; with `remote_read=true`, the consumer pulls from remote
+L1. The activation data-movement RISC then feeds activation blocks while the second
+data-movement RISC feeds weight/bias blocks and later drains output. Unpack loads source
+registers, Math performs matmul and bias, and Pack returns destination-register results
+to L1. Weight blocks are reused while the algorithm walks output blocks down a column,
+amortizing DRAM reads.
+
+For width/block sharding, each core first computes a partial output from its local
+channel slice. Width-sharded cores broadcast to all participants; block-sharded cores
+share only within a core-grid row. Each received slice contributes another partial sum
+until the K/channel dimension is complete.
 
 ### What must never break
 
-The non-negotiable invariant is for every output coordinate, prove that stride, padding,
-dilation, groups, channel order, and shard-boundary haloing select exactly the same
-logical input window and filter values as reference convolution.
+For output coordinate `(n,oh,ow,co)`, the union of local, padding, and remote halo sticks
+must equal exactly the reference window selected by stride, padding, and dilation—no
+missing, duplicated, or reordered channel contribution. A padding entry must never be
+interpreted as owned tensor data. In width/block sharding, every K slice contributes
+once before Pack publishes the final output; a partial sum cannot be mistaken for a
+complete value. Buffer capacity, the 32-row alignment, and eight-tile sub-block bound
+must also hold. Wrong shard boundaries produce seams at core borders; wrong NHWC or
+weight flattening often yields widespread but shape-correct error; early buffer reuse
+causes nondeterminism or hangs.
 
 ### Where the report makes it concrete
 
-The report makes the decision concrete by mapping the original `conv2d`
-input/weight/bias/output contracts and halo implementation sections to TT-NN convolution
-configuration, sliding-window analysis, reader CBs, compute blocks, and output
-post-processing rather than listing generic kernel roles.
+`Conv2dConfig` makes these costs visible. `act_block_h_override` trades L1 for larger,
+faster blocks; `reallocate_halo_output` can reduce fragmentation; activation and weight
+double buffering spend more L1 to overlap stages. `deallocate_activation` shortens input
+lifetime. `reshard_if_not_optimal` and `override_sharding_config` are mutually exclusive:
+one lets the operation choose, the other fixes `shard_layout` and `core_grid`.
+`output_layout`, `transpose_shards`, and the height/width/block choice determine the next
+consumer's contract, so an operator-only speedup can lose at the following conversion.
+The source also separates compute policy—`math_fidelity`, `math_approx_mode`,
+`fp32_dest_acc_en`, and `packer_l1_acc`—from movement policy. Its `maxpool2d` section is
+only `Coming soon.`; the concrete blocking, halo, and kernel discussion here is the
+report's convolution path and should not be presented as a documented max-pool
+implementation.
 
 ### How the decision is tested
 
-The controlled procedure is to use distinctive boundary values and compare
-direct/reference convolution with haloed sharding for image edges and inter-core
-boundaries. **Expected observation:** identical outputs with fewer remote reads during
-the hot convolution phase after halo construction.
+Construct a small image whose sticks encode row, column, and channel, then choose padding
+and a window that crosses every shard boundary. Compare height-, width-, and
+block-sharded `ttnn.conv2d` to the host reference and inspect border elements separately
+from interiors. Toggle `remote_read`; output must stay fixed even though transfer
+ownership reverses. Next sweep `act_block_h_override`, halo reallocation, and double
+buffers while recording L1 fit and full producer-to-consumer latency. Expected evidence
+is identical boundary values, no partial-output publication, and reduced remote access
+during convolution after halo construction. A configuration that improves kernel time
+but adds an expensive reshard before the next operator is not an architectural win.
 
 ## Code connection
 

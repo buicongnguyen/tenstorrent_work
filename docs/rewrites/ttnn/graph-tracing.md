@@ -11,35 +11,63 @@
 
 ### Why the design is shaped this way
 
-The design is shaped by the need to specify the structural questions requiring
-capture—unexpected operation, tensor fan-out, allocation lifetime, graph break, stack
-origin—and choose slow/full or fast capture fields accordingly; do not call it a device
-stall profiler.
+Graph tracing separates capture from analysis so SQLite and visualization work never
+runs in the model's execution path. C++ `GraphProcessor` records operations, tensors,
+buffers, lifetime events, wall-clock boundaries, and hierarchy in memory; Python
+decorators optionally add call arguments and tensor IDs; a later importer turns JSON
+into the visualizer database. This makes the trace a causal/ownership record rather
+than a device-cycle profiler. Capture is configurable because evidence has cost:
+Python stacks call `traceback.extract_stack`, detailed buffers snapshot pages, and slow
+dispatch nests a sub-capture around every operation.
+The two-phase design also lets new database queries reuse a recorded JSON report without
+rerunning the device workload, provided the report retained the required fields.
 
 ### How work and data move
 
-The complete path is operation entry through tracer wrapper, parameter/input tensor IDs,
-producer-consumer edge creation, output IDs, optional stack/buffer pages/timing, report
-serialization, database import, and visualizer query.
+Python `begin_graph_capture(RunMode.NORMAL)` enables Python I/O recording, while a
+C++-initiated capture such as `MemoryUsageTracker` leaves decorators transparent.
+`FastOperation` and `Operation` both emit `function_start/end`, arguments, input IDs,
+and fresh output IDs (`set_tensor_id(..., force=True)`), but only `Operation` captures
+per-op C++ subgraphs. `full_graph_capture(path)` defaults to `slow_dispatch=True`,
+temporarily setting `enable_fast_runtime_mode=False`, enabling Python stacks and buffer
+pages, then restoring settings. With `slow_dispatch=False`, the importer synthesizes
+subgraphs from flat `FastOperation` records. `end_graph_capture_to_file` publishes JSON;
+`python -m ttnn.graph_report report.json db/` performs offline import.
 
 ### What must never break
 
-The non-negotiable invariant is that every operation/tensor has stable identity, edges
-reflect actual producers/consumers, capture does not change semantics, and omitted or
-overhead-heavy fields are declared when interpreting the result.
+Every output receives a fresh ID even for in-place operations, and a consumer's
+`python_io.input_tensor_ids` must match the producer's output ID. Every
+`function_start` must pair with a `function_end`; the importer classifies an orphan as
+`incomplete_operation`. `Tensor::deallocate` records only when a device buffer is
+actually freed—host tensors and shared references may legitimately omit it. `NO_DISPATCH`
+does not provide real allocation addresses or execution evidence, while `NORMAL` does.
+Capture level and disabled fields must travel with any conclusion; a synthetic fast
+subgraph cannot prove the same nested calls as a slow captured subgraph.
 
 ### Where the report makes it concrete
 
-The report makes the decision concrete by connecting modes to `full_graph_capture`,
-`slow_dispatch=True`, `enable_fast_runtime_mode=False`, `Operation`, `FastOperation`,
-and examples such as `ttnn::add` and `ttnn::matmul`.
+Detailed page records include `device_id`, address, core/bank, page index/address/size,
+and `BufferType` values; versioned `buffer_pages_by_address` distinguishes address reuse.
+`extract_levelized_graph(max_level)` converts nesting into vertices with `in_edges`,
+`out_edges`, and `internals`. The report's broadcast-add example demonstrates why this
+matters: top-level `ttnn::add` contains `ttnn::repeat`, primitive/device operations,
+buffer allocations and later deallocations. A flat operation list would hide both the
+implicit broadcast and its temporary-buffer lifetime.
+Versioned address timelines matter for the same reason: an address reused after free is
+a new allocation lifetime, not a data edge to the prior tensor.
 
 ### How the decision is tested
 
-The controlled procedure is to capture one branching graph in fast and full modes, then
-join a chosen operation to profiler identity. **Expected observation:** identical
-graph semantics, declared detail/overhead differences, and no inference of device stalls
-from structure alone.
+Capture `ttnn::add` with broadcasting in `NORMAL` fast, `NORMAL` slow/full, and
+`NO_DISPATCH`. Check tensor-ID edges and top-level structure agree; require the slow
+trace to expose the real nested `repeat`/primitive graph, and label the fast version's
+equivalent nodes synthetic. Enable detailed buffer tracing and verify allocation,
+page placement, and actual deallocation against a known shared-reference case. Force a
+timeout with `TT_METAL_OPERATION_TIMEOUT_SECONDS` and confirm the unfinished start is
+reported as incomplete. Finally compare model outputs with capture disabled. Report
+capture overhead separately and join device timing only through profiler evidence—the
+graph's `duration_ns` is wall-clock and cannot alone locate a Tensix stall.
 
 ## Code connection
 

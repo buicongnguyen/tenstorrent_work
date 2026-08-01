@@ -11,34 +11,75 @@
 
 ### Why the design is shaped this way
 
-The design is shaped by the need to identify loops that traverse consecutive pages or
-shard pages and quantify address-generation cycles from repeated full mapping versus
-stateful iteration, including rank and shard-boundary frequency.
+At the pinned snapshot, `TensorAccessor` already hides whether a tensor is interleaved
+or sharded, but a kernel that repeatedly calls `TA.get_noc_addr(page_id)` pays the full
+logical-page-to-bank mapping cost on every iteration. The iterator API separates two
+use cases. `pages(start_page_id, end_page_id)` preserves a layout-independent page
+order, while `shard_pages(shard_id, start_page_offset, end_page_offset)` deliberately
+exposes one shard so an optimized kernel can process pages owned by its local bank.
+This is a locality decision, not merely C++ syntax: for sharded tensors the iterator
+retains mapping state across `operator++`, and a shard-local schedule can remove the
+remote read that a naively even division of logical page IDs creates. The report's
+reshard case records a **2x+** speedup for this local-read organization, depending on
+the input and output sharding; that number belongs only to the linked experiment.
 
 ### How work and data move
 
-The complete path is iterator construction from TensorAccessor/distribution state, first
-address, NoC read/write and CB ownership, incremented bank/shard/offset state, boundary
-transition, and `end_page_id` termination.
+In the generic reshard path, the host partitions the half-open logical range
+`[start_page, end_page)` across cores. A reader constructs
+`TensorAccessor(args_src, bank_base_address_src, page_size)`, reserves one slot with
+`cb_reserve_back`, issues `noc_async_read(page.noc_addr(), cb_addr, page_size)`, waits
+at `noc_async_read_barrier`, and publishes with `cb_push_back`. The writer owns the
+destination mapping: it waits with `cb_wait_front`, writes to the destination
+iterator's precomputed `page.noc_addr()`, waits at `noc_async_write_barrier`, and then
+`cb_pop_front`s. Thus the CB transfers ownership between two kernels; advancing either
+iterator before the corresponding CB action would pair the wrong source and destination
+page.
+
+The optimized sharded path changes work ownership. The host gives a core
+`first_shard_id`, `num_cores`, and `num_shards`; shard IDs advance as
+`first_shard_id + i * num_cores`, matching the report's round-robin bank mapping. The
+device iterates `tensor_accessor_src.shard_pages(shard_id)`, asserts
+`is_local_addr(page.noc_addr())`, and calls `noc_async_write_page(page.page_id(),
+tensor_accessor_dst, page.noc_addr())`. Because the source is local, one kernel can
+issue local-to-local or local-to-remote writes directly; the reader/writer CB pipeline
+needed to avoid a remote-to-remote transaction is no longer necessary.
 
 ### What must never break
 
-The non-negotiable invariant is that the iterator emits exactly the same address
-sequence and logical page order as `TA.get_noc_addr(...)` for first, last, bank-wrap,
-shard-wrap, padded, and empty ranges.
+`pages()` must emit each **logical** page in the requested range exactly once and must
+produce the same `(page_id, noc_addr)` mapping as direct `get_noc_addr`. For sharded
+tensors it silently skips padded pages; therefore two shards can yield different
+`shard_pages()` counts even when given identical offsets. Empty and out-of-range inputs
+are also contractual: if `start_page_id >= end_page_id`, or the start is beyond
+`dspec().tensor_volume()`, `begin() == end()`. Interleaved accessors cannot infer tensor
+volume, so both bounds are mandatory. Finally, a stepped iterator accepts only a
+positive stride. Violating any of these rules can produce an address-valid NoC transfer
+that is logically wrong, which barriers cannot detect.
 
 ### Where the report makes it concrete
 
-The report makes the decision concrete by connecting the plan to `start_page_id`,
-`end_page_id`, `tensor_volume()`, page and shard-page iterator APIs, and the baseline
-`TA.get_noc_addr(...)` path.
+The cost boundary is explicit: `page.noc_addr()` returns an address already held by the
+iterator, while the next address is calculated by `PagesAddressIterator::operator++`.
+For interleaved tensors, the report says this performs identically to looping over IDs
+and calling `get_noc_addr`; the retained-state benefit is specific to sharded mappings.
+The 2-by-2 width-sharded example explains why: logical pages `0,2` are on one bank and
+`1,3` on another, while an even logical split assigns `0,1` to one worker and `2,3` to
+the other. `shard_pages()` realigns execution with physical ownership, accepting that
+destination writes may still cross the NoC.
 
 ### How the decision is tested
 
-The controlled procedure is to benchmark sequential and randomized page access with
-direct lookup and iterators. **Expected observation:** iteration reduces cycles for
-regular traversal while random access shows little benefit and both produce identical
-addresses.
+First, for interleaved and each supported shard layout, record direct
+`get_noc_addr(page_id)` and iterator results over empty, partial, full, strided, padded,
+bank-wrap, and shard-wrap ranges; compare page IDs and addresses exactly. Second, run
+the generic CB reshard and the shard-local single-kernel form on identical input/output
+`TensorSpec`s, checking that every output page matches before timing. Instrument remote
+source reads as well as cycles: the expected architectural observation is not simply a
+faster loop, but that the shard-local form satisfies `is_local_addr` for every source
+and eliminates the generic path's cross-bank reads. Re-test several shard shapes—the
+pinned 2x+ result is evidence for the reported configurations, not a universal
+iterator-speed guarantee.
 
 ## Code connection
 

@@ -11,33 +11,70 @@
 
 ### Why the design is shaped this way
 
-The design is shaped by the need to separate mechanical ownership/API migration from
-actual distribution. First reproduce single-device behavior on a one-device
-`MeshDevice`; only then choose sharding, replication, and multi-device collectives.
+The migration is an ownership change, not just a class rename. In the pinned design,
+TT-NN stops managing one tensor and one dispatch thread per exposed device; TT-Metal
+owns a `MeshDevice`, lock-step `MeshBuffer` allocations, and `MeshWorkload` dispatch.
+A 1x1 unit mesh preserves explicit single-chip control while using the same abstraction
+as a full cluster. This removes the invalid hybrid state where user code interleaves a
+mesh handle with a raw `Device` already owned by that mesh. It also explains the key
+limitation: buffers on all member devices receive the same address, so arbitrary
+per-device addresses and tensors from different mesh owners cannot be aggregated.
 
 ### How work and data move
 
-The complete path is original `CreateDevice`/buffer/queue/operation/close alongside
-`open_mesh_device`, mesh tensor aggregation/distribution, mesh-aware operation,
-compose/readback, synchronization, and teardown.
+C++ device creation changes from `CreateDevice(device_id)` to
+`distributed::MeshDevice::create_unit_mesh(device_id)`; `ttnn::open_device` becomes
+`ttnn::open_mesh_device`, and `CreateDevices` becomes `create_unit_meshes`. The returned
+`shared_ptr` owns teardown through RAII, with `device->close()` only for early close.
+Submission moves from `device->command_queue()` to `mesh_command_queue()`: a manual
+`Program` is inserted with `workload.add_program(device->get_view().coord_range(),
+std::move(program))`, then passed to `distributed::EnqueueMeshWorkload`.
+
+Memory follows the same lowering. `allocate_tensor_on_device(tensor_spec,
+device.get())` is preferred; direct buffers combine a `ReplicatedBufferConfig` or
+other `MeshBufferConfig` with `DeviceLocalBufferConfig` in `MeshBuffer::create`.
+`WriteShard` and `ReadShard` select a mesh coordinate rather than pretending the
+distributed object is a single raw buffer. `get_device_tensors` now returns a
+single-device view backed by the same `MeshBuffer`; device tensors may be
+`aggregate_as_tensor` only when they share that backing buffer. Independent host
+shards must be aggregated first and then transferred with
+`aggregate_as_tensor(host_tensors).to(mesh_device)`.
 
 ### What must never break
 
-The non-negotiable invariant is that the one-device mesh preserves tensor contents,
-operation order, completion, and lifetime before adding another device; each
-distribution change must have an explicit inverse composition and parity test.
+No code may retain an `IDevice`/`Device` pointer or call `command_queue()` through a
+`MeshDevice`; the pinned implementation promises an exception for that queue access.
+All device shards of one logical tensor must reference the same lock-step allocation,
+and no raw device may be operated independently while managed by the mesh. RAII must
+outlive queued work. Event semantics also split deliberately: `ttnn::record_event` is a
+mesh-CQ-to-mesh-CQ event and avoids host propagation, whereas
+`record_event_to_host` creates the evidence required by `event_synchronize`. Replacing
+the old host-visible event mechanically with the local form can make host code observe
+unfinished work.
 
 ### Where the report makes it concrete
 
-The report makes the decision concrete by connecting migration steps to `CreateDevice`,
-`ttnn::open_device`, `ttnn::open_mesh_device`, `CreateDevices`, `get_device_tensors`,
-`aggregate_as_tensor`, and `aggregate_as_tensor(host_tensors).to(mesh_device)`.
+The old `CreateBuffer` configuration collapses into two scopes: the report's example
+sets page size and buffer type in `DeviceLocalBufferConfig`, then requests the same
+`dram_buffer_size` on every device through `ReplicatedBufferConfig`. Likewise the old
+`WriteToBuffer` becomes a coordinate-aware `WriteShard`, and `ReadFromBuffer` becomes
+`ReadShard`. This preserves the distinction between a distributed allocation and one
+selected shard. The source also flags a storage-type compatibility edge: tensors that
+previously appeared as `OwnedStorage` can surface as `MultiDeviceHostStorage` with one
+owned buffer, so exhaustive storage-type branches must be updated rather than cast.
 
 ### How the decision is tested
 
-The controlled procedure is to convert one representative program to a one-device mesh,
-then add a second device with one mapping change. **Expected observation:** parity at
-stage one and an attributable, reversible distribution delta at stage two.
+First convert to `create_unit_mesh` without changing tensor layout and compare buffer
+contents, queue ordering, event completion, and output bit-for-bit. Exercise both
+mesh-local and host-visible events to prove the host waits only on the latter. Then use
+two devices: verify addresses are equal, `get_device_tensors` yields correct views, and
+host-first aggregation composes distinct shards in the intended order. Negative tests
+should attempt `command_queue()`, aggregation across unrelated `MeshBuffer`s, and mixed
+raw-device/mesh use; each must fail explicitly. Finally profile host threads and
+metadata-return latency. The report claims simplification and significant performance
+benefit at its migration snapshot, but those benefits must be measured separately from
+correctness and not inferred merely because the API compiles.
 
 ## Code connection
 

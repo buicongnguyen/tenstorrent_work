@@ -11,34 +11,64 @@
 
 ### Why the design is shaped this way
 
-The design is shaped by the need to define which TT-NN operations have valid golden
-functions, what tensor conversions comparison requires, which metric/tolerance each
-format warrants, and how failures should preserve invocation context.
+Comparison mode is intentionally inserted at the operation boundary because a final
+model mismatch does not identify the first divergent operator. At the pinned snapshot,
+it compares each operation's output with the corresponding reference-operation output
+using Pearson correlation coefficient (PCC). This localizes failures; it does not prove
+bitwise correctness. PCC is insensitive to some affine changes, and its useful threshold
+depends on the numerical contract. The mode requires fast runtime to be disabled, so
+`enable_fast_runtime_mode` must be false. That trade exchanges production
+dispatch behavior and performance for per-operation observability. Because the
+comparison is attached at each boundary, developers can localize a long forward pass
+without first rewriting it as manually isolated subgraphs.
 
 ### How work and data move
 
-The complete path is an intercepted operation through input/config capture, golden
-execution, device operation, comparable output conversion, PCC/error calculation,
-report/exception, and continuation or stop policy.
+Configuration is established before TT-NN initialization through
+`TTNN_CONFIG_OVERRIDES`. With `enable_comparison_mode=true`, an operation executes and
+the runtime obtains the corresponding reference output, computes PCC between the two
+outputs, and checks `comparison_mode_pcc` (the source example uses `0.999`). The report
+does not say how device/reference representations are adapted before PCC, so that step
+must be checked in the implementation for padded or non-host layouts. If it fails,
+`comparison_mode_should_raise_exception=true` stops at that invocation; false reports
+the mismatch and lets the sequence continue. The former preserves the first failing
+boundary, while the latter can reveal a failure cascade but makes later mismatches
+dependent on already-corrupted inputs.
 
 ### What must never break
 
-The non-negotiable invariant is that golden and device paths see the same logical
-inputs, parameters, broadcast/padding, and order; tolerances must come from the
-numerical contract and comparison must not be used for performance timing.
+The reference and device paths must represent the same operation, parameters, logical
+shape, and input values. The comparison must exclude physical padding or normalize it
+consistently. An operation without a valid golden implementation cannot silently count
+as passed, and a multi-output operation must compare every semantically relevant
+output. Most importantly, comparison mode changes runtime configuration and adds
+reference execution and transfers; its wall time is not evidence about normal fast
+runtime performance. A PCC above threshold is only the configured acceptance result,
+not evidence that maximum error or downstream task accuracy is acceptable.
 
 ### Where the report makes it concrete
 
-The report makes the decision concrete by connecting configuration to
-`TTNN_CONFIG_OVERRIDES`, `enable_fast_runtime_mode`, `enable_comparison_mode`,
-`comparison_mode_should_raise_exception`, and the operation's registered golden
-function.
+The pinned report is only 24 lines and documents four controls: fast mode defaults true,
+comparison defaults false, raise-on-failure defaults false, and
+`comparison_mode_pcc` selects sensitivity. It does not specify reference conversion,
+unsupported-operation policy, NaN behavior, tuple handling, or the exact report schema.
+Those must therefore be verified in the pinned implementation before making stronger
+claims. This source limitation is itself architectural guidance: use the mode to find a
+candidate boundary, then reproduce that operator with an explicit unit-test oracle and
+metrics suited to its dtype and function.
+For reductions, softmax, or classifier outputs, that follow-up may need absolute or
+relative error, row-sum invariants, or task accuracy in addition to PCC.
 
 ### How the decision is tested
 
-The controlled procedure is to inject one known numerical error in a supported op and
-run raise/report modes. **Expected observation:** comparison identifies the first
-exact invocation and metric while normal execution returns after the configured policy.
+Build a three-operation chain with a supported golden path and perturb only the second
+device result. Run at thresholds just below and above the measured PCC, in both
+exception policies; verify the raised case names/stops at operation two and the report
+case distinguishes the primary mismatch from downstream effects. Add constant tensors,
+NaNs, multiple outputs, broadcast/padded shapes, and an operation lacking a golden path
+to characterize undefined cases rather than guess. Finally rerun without comparison and
+with fast mode restored to confirm identical unperturbed results. Performance data from
+the instrumented run must be discarded.
 
 ## Code connection
 

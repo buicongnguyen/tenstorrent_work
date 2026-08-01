@@ -11,34 +11,68 @@
 
 ### Why the design is shaped this way
 
-The design is shaped by the need to define which latency terms require observation—host
-construction, dispatch, device reader/compute/writer zones, NoC stalls, or
-synchronization—and which clock domains must be correlated to establish causality.
+Profiling crosses two ownership domains. Host code constructs and dispatches work;
+device kernels expose lower-level timing that must be correlated back to operations. A
+single printf-style log would serialize execution and lose nesting, thread identity,
+and duration. TT-Metal instead links Tracy instrumentation into `tt_metal.so`, adds a
+`profiler.o` layer under `tt_metal/impl/profiler`, captures structured events in a Tracy
+server, and post-processes Metal's device logs. The architecture preserves raw events
+for interactive causality while also producing CSV suitable for automated comparison.
+
+Instrumentation is compile-time policy. Generic Tracy requires `TRACY_ENABLE=ON` for
+the whole project; the pinned TT-Metal build enables its profiler by default and offers
+`./build_metal.sh --disable-profiler`. This avoids a mixed binary where some translation
+units emit zones that the linked client cannot consistently observe.
 
 ### How work and data move
 
-The complete path is instrumented events from host/device zone emission through per-RISC
-buffers, runtime transfer/correlation, Tracy capture or CSV generation, and the final
-critical-path interpretation.
+Application scopes emit macros such as `ZoneScoped`, `TracyMessageL`, and
+`FrameMarkNamed`. The linked Tracy client transports host events to either
+`tracy-capture` or the live `tracy-profiler` server. In TT-Metal, low-level profiler APIs
+in `profiler.o` add device-side records to the same analysis flow. The convenience entry
+point `python -m tracy {test_script}.py` orchestrates capture/export for Python programs;
+`tools/tracy/process_ops_logs.py` cleans Metal kernel records.
+
+For an offline run, start
+`build/tools/profiler/bin/tracy-capture -o test.tracy -f`, execute the instrumented
+application, then open `test.tracy` in `tracy-profiler` or pass it to
+`build/tools/profiler/bin/tracy-csvexport`. The `.tracy` file is the rich event source;
+CSV is a projection for tables and scripts. Live GUI and command-line capture are
+alternative servers, not two independent clocks to run indiscriminately. Remote GUI use
+also requires the documented network/port-forwarding path.
 
 ### What must never break
 
-The non-negotiable invariant is that every zone has paired start/end, stable
-core/RISC/program identity, a known clock relationship, and identical instrumentation in
-compared runs; profiling overhead must not be confused with workload cost.
+Compared builds must use the same profiler enablement and the same zone boundaries.
+Every duration must retain thread/core, operation, and nesting identity; otherwise
+overlap becomes accidental addition. Capture must begin before the application connects
+and end only after buffered events arrive. Raw `.tracy`, exported CSV, and processed
+device logs must belong to the same execution. Profiling changes runtime, so an
+optimization claim needs a control run and should not treat the instrumented wall clock
+as unperturbed production latency. A missing zone can mean disabled instrumentation or
+capture setup failure, not necessarily that code did not execute.
 
 ### Where the report makes it concrete
 
-The report makes the decision concrete by connecting setup to
-`tt_metal/third_party/tracy/`, `./build_metal.sh`,
-`build/tools/profiler/bin/tracy-capture`, the generated trace/output directories, and
-the report's device-profiler integration flow.
+At the pinned snapshot, TT-Metal uses a Tenstorrent Tracy fork based on v0.10, vendored
+at `tt_metal/third_party/tracy/`. `tt_metal.so` links Tracy conditionally through
+`ENABLE_TRACY` and is itself used by `ttnn.so`; this places instrumentation below both
+Metal and TT-NN entry points. `tools/tracy/__main__.py` hides capture/export mechanics,
+while `process_ops_logs.py` turns device dumps into operator-visible records. External
+applications can link the same Metal library, but must also add the Tracy client/include
+path and compile definition consistently. This layered design distinguishes a reusable
+instrumentation substrate from one model's performance-report script.
 
 ### How the decision is tested
 
-The controlled procedure is to profile a warm workload with one deliberate host sleep
-and one reader delay. **Expected observation:** the correlated timeline separates the
-host gap from device input starvation and attributes each to the inserted boundary.
+First instrument a tiny application with nested `ZoneScoped`, one named frame, and one
+message. Capture it, reopen the `.tracy`, export CSV, and verify that nesting, names, and
+durations agree. Then profile a warm TT-NN operation with one deliberate host delay and
+one device-side workload increase; the timeline should place the first between launches
+and the second inside the device interval. Repeat with the profiler disabled to measure
+observer overhead. Preserve the raw trace alongside processed CSV and the exact build
+configuration. Only after this end-to-end sanity test should profiler gaps be used to
+assign optimization work to host construction, dispatch, or device execution.
 
 ## Code connection
 
