@@ -743,6 +743,39 @@ def check_source_verification_guide(errors: list[str]) -> None:
             )
 
 
+def check_resource_investigation_guide(errors: list[str]) -> None:
+    """Require the resource landing page to teach investigations, not site process."""
+    page = (DOCS / "resources" / "index.md").read_text(encoding="utf-8")
+    required = (
+        "# Tenstorrent investigation routes: question to evidence",
+        "## Follow ownership downward and evidence upward",
+        "## Route 1 — model result to the first violated contract",
+        "## Route 2 — latency symptom to the limiting control or data path",
+        "## Route 3 — kernel stall to tile ownership and backpressure",
+        "## Route 4 — kernel API to TT-LLK and ISA",
+        "## Route 5 — use Corsix as hypothesis generation",
+        "## Worked investigation — a warm matmul is still slow",
+        "## Worked investigation — special values change through a kernel",
+        "## Resolve disagreements without choosing a favorite source",
+        "https://github.com/tenstorrent/tt-isa-documentation/blob/main/WormholeB0/TensixTile/TensixCoprocessor/Unpackers/README.md",
+    )
+    for marker in required:
+        if marker not in page:
+            errors.append(f"resource investigation guide is missing {marker!r}")
+
+    forbidden = (
+        "# External and ISA resource guide",
+        "## Comparison rule",
+        "Every Atlas rewrite links",
+        "When a chapter uses one of these supporting sources",
+    )
+    for marker in forbidden:
+        if marker in page:
+            errors.append(
+                f"resource investigation guide contains site-process text {marker!r}"
+            )
+
+
 def main() -> int:
     errors: list[str] = []
     check_navigation_and_structure(errors)
@@ -758,6 +791,7 @@ def main() -> int:
     check_catalog_statuses(errors)
     check_architecture_dependency_map(errors)
     check_source_verification_guide(errors)
+    check_resource_investigation_guide(errors)
 
     if errors:
         print("Documentation validation failed:")

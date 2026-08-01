@@ -165,7 +165,7 @@ nav:
       - Architecture dependency map: reference/rewrite-roadmap.md
       - Source trust and claim verification: reference/provenance.md
   - Research sources & ISA:
-      - Resource guide: resources/index.md
+      - Investigation routes: resources/index.md
       - "DeepWiki optimization research course":
           - Course overview: resources/deepwiki-research-guide.md
           - "Lesson 1 · Code map to evidence": resources/deepwiki/research-method.md
