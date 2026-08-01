@@ -710,6 +710,39 @@ def check_architecture_dependency_map(errors: list[str]) -> None:
             )
 
 
+def check_source_verification_guide(errors: list[str]) -> None:
+    """Keep the public provenance route focused on technical evidence literacy."""
+    page = (DOCS / "reference" / "provenance.md").read_text(encoding="utf-8")
+    required = (
+        "# Source trust and claim verification",
+        "## Evidence has two independent dimensions",
+        "## Classify the claim before looking for proof",
+        "## The verification chain",
+        "## Worked example — evaluate a Fast Dispatch claim",
+        "## Worked example — decide whether program cache reuse is correct",
+        "## Worked example — use Corsix for Wormhole low-level study",
+        "## How to read numbers without learning the wrong lesson",
+        "## A compact claim record",
+        EXPECTED_COMMIT,
+    )
+    for marker in required:
+        if marker not in page:
+            errors.append(f"source verification guide is missing {marker!r}")
+
+    forbidden = (
+        "# Provenance and update policy",
+        "## Update checklist",
+        "Replace the snapshot mechanically",
+        "Regenerate the manifest and catalog",
+        "Mark affected rewrites as",
+    )
+    for marker in forbidden:
+        if marker in page:
+            errors.append(
+                f"source verification guide contains editing-process text {marker!r}"
+            )
+
+
 def main() -> int:
     errors: list[str] = []
     check_navigation_and_structure(errors)
@@ -724,6 +757,7 @@ def main() -> int:
     check_deepwiki_optimization(errors)
     check_catalog_statuses(errors)
     check_architecture_dependency_map(errors)
+    check_source_verification_guide(errors)
 
     if errors:
         print("Documentation validation failed:")

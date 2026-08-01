@@ -163,8 +163,7 @@ nav:
           - Official ISA route: resources/isa-reference.md
   - Architecture reference:
       - Architecture dependency map: reference/rewrite-roadmap.md
-  - Project reference:
-      - Provenance and updates: reference/provenance.md
+      - Source trust and claim verification: reference/provenance.md
   - Research sources & ISA:
       - Resource guide: resources/index.md
       - "DeepWiki optimization research course":
