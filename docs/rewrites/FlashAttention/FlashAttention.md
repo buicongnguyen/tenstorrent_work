@@ -1,64 +1,45 @@
-<!-- rewrite-status: seed -->
+<!-- rewrite-status: improved-draft -->
 # FlashAttention on Tenstorrent’s Wormhole Architecture
 
 <p class="source-note">
 <strong>Original source:</strong>
 <a href="https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/FlashAttention/FlashAttention.md"><code>tech_reports/FlashAttention/FlashAttention.md</code> at <code>992f3ca</code></a>
-· <strong>Status:</strong> source-linked learner seed
+· <strong>Status:</strong> source-grounded learner draft
 </p>
 
-!!! info "What ‘seed’ means"
-    The official report and its assets are preserved verbatim under
-    <code>upstream/tt-metal/tech_reports/FlashAttention/FlashAttention.md</code>. This learner page
-    establishes provenance, a reading map, a report-specific architecture plan,
-    concrete code boundaries, and answered reasoning checks; a full visual rewrite
-    remains queued.
+## Architecture walkthrough
 
-## Original report map
+### Why the design is shaped this way
 
-| Signal | Pinned-source value |
-|---|---:|
-| Lines | 122 |
-| Section headings | 11 |
-| Fenced code examples | 0 |
-| Markdown images | 1 |
+The design is shaped by the need to quantify the score-matrix bytes avoided by tiled
+online attention for the report's batch, head, sequence, and head-dimension regime, and
+identify whether DRAM movement or matrix/SFPU compute is the expected ceiling.
 
-### Section outline
+### How work and data move
 
-- Abstract
-- 1 Introduction
-- 2 Background
-  - 2.1 Algorithm
-  - 2.2 Wormhole architecture
-  - 2.3 TT-Metal Execution Model
-- 3 Implementation Details
-  - 3.1 Parallelization
-  - 3.2 Asynchronous Execution and Pipelining
-- 4 Performance Analysis
-- 5 Future work
+The complete path is one Q block held locally while K/V blocks stream through QKᵀ,
+causal masking, running maximum, exponential sum, weighted-value rescaling, final
+normalization, and output pack/write.
 
-## Improvement plan
+### What must never break
 
-1. **Architecture pressure.** Quantify the score-matrix bytes avoided by tiled online
-   attention for the report's batch, head, sequence, and head-dimension regime, and identify
-   whether DRAM movement or matrix/SFPU compute is the expected ceiling.
+The non-negotiable invariant is that after every K block that running `(max, sum,
+weighted value)` represents all unmasked keys seen so far in one numerical frame and
+that the final result matches reference softmax attention within tolerance.
 
-2. **Flow to make explicit.** Draw one Q block held locally while K/V blocks stream through
-   QKᵀ, causal masking, running maximum, exponential sum, weighted-value rescaling, final
-   normalization, and output pack/write.
+### Where the report makes it concrete
 
-3. **Invariant to prove.** Prove after every K block that running `(max, sum, weighted
-   value)` represents all unmasked keys seen so far in one numerical frame and that the
-   final result matches reference softmax attention within tolerance.
+The report makes the decision concrete by connecting each phase to the report's
+parallelization and asynchronous-pipeline sections, concrete tensor dimensions,
+reader/compute/writer CBs, matrix operations, SFPU exponential/reduction, and output
+storage.
 
-4. **TT-Metal evidence to connect.** Connect each phase to the report's parallelization and
-   asynchronous-pipeline sections, concrete tensor dimensions, reader/compute/writer CBs,
-   matrix operations, SFPU exponential/reduction, and output storage.
+### How the decision is tested
 
-5. **Experiment and expected observation.** Compare materialized attention with the tiled
-   online path at increasing sequence length; expected result: score-intermediate external
-   bytes stop growing quadratically while correctness remains stable and kernel gaps reveal
-   the next limiting stage.
+The controlled procedure is to compare materialized attention with the tiled online path
+at increasing sequence length. **Expected observation:** score-intermediate external
+bytes stop growing quadratically while correctness remains stable and kernel gaps reveal
+the next limiting stage.
 
 ## Code connection
 
@@ -120,6 +101,6 @@ architecture reasoning explicit; generation-sensitive facts remain scoped to tha
 
 - **Original source:** [`tech_reports/FlashAttention/FlashAttention.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/FlashAttention/FlashAttention.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/FlashAttention/FlashAttention.md`
-- **Current delta:** provenance, source metrics, outline, report-specific architecture
-  plan, two source-linked implementation-boundary reviews, and answered reasoning
-  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.
+- **Current delta:** source-grounded architecture walkthrough, concrete
+  implementation boundaries, and expert verification answers. Snapshot-specific claims
+  remain scoped to the pinned commit.

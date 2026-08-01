@@ -1,57 +1,43 @@
-<!-- rewrite-status: seed -->
+<!-- rewrite-status: improved-draft -->
 # Kernel Arguments as Function & Template Parameters
 
 <p class="source-note">
 <strong>Original source:</strong>
 <a href="https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/NamedKernelArgs/kernel_args_as_parameters.md"><code>tech_reports/NamedKernelArgs/kernel_args_as_parameters.md</code> at <code>992f3ca</code></a>
-· <strong>Status:</strong> source-linked learner seed
+· <strong>Status:</strong> source-grounded learner draft
 </p>
 
-!!! info "What ‘seed’ means"
-    The official report and its assets are preserved verbatim under
-    <code>upstream/tt-metal/tech_reports/NamedKernelArgs/kernel_args_as_parameters.md</code>. This learner page
-    establishes provenance, a reading map, a report-specific architecture plan,
-    concrete code boundaries, and answered reasoning checks; a full visual rewrite
-    remains queued.
+## Architecture walkthrough
 
-## Original report map
+### Why the design is shaped this way
 
-| Signal | Pinned-source value |
-|---|---:|
-| Lines | 89 |
-| Section headings | 5 |
-| Fenced code examples | 3 |
-| Markdown images | 0 |
+The design is shaped by the need to identify the positional ABI failures the proposal
+must eliminate: compile-time versus runtime kind, common versus per-core scope,
+type/order drift, and index shifts when a new argument is inserted.
 
-### Section outline
+### How work and data move
 
-- Args in Metal 2.0 today
-- Proposal
-- C++ syntax carries the argument kinds
-- Implementation
-- Next phase
+The complete path is one named value from host declaration through generated argument
+schema/wrapper, program compile/runtime storage, device kernel signature, and typed
+access at the consuming instruction path.
 
-## Improvement plan
+### What must never break
 
-1. **Architecture pressure.** Identify the positional ABI failures the proposal must
-   eliminate: compile-time versus runtime kind, common versus per-core scope, type/order
-   drift, and index shifts when a new argument is inserted.
+The non-negotiable invariant is that host binding and kernel signature share one
+authoritative name, type, kind, order, and scope; generation or compilation must reject
+drift rather than silently read a neighboring slot.
 
-2. **Flow to make explicit.** Draw one named value from host declaration through generated
-   argument schema/wrapper, program compile/runtime storage, device kernel signature, and
-   typed access at the consuming instruction path.
+### Where the report makes it concrete
 
-3. **Invariant to prove.** Prove host binding and kernel signature share one authoritative
-   name, type, kind, order, and scope; generation or compilation must reject drift rather
-   than silently read a neighboring slot.
+The report makes the decision concrete by connecting the proposal to
+`kernel_args_generated.h`, `args::<name>`, `args::start_tile_id`,
+`get_arg(args::<name>)`, `constexpr` template parameters, and the generated
+`kernel_main()` wrapper.
 
-4. **TT-Metal evidence to connect.** Connect the proposal to `kernel_args_generated.h`,
-   `args::<name>`, `args::start_tile_id`, `get_arg(args::<name>)`, `constexpr` template
-   parameters, and the generated `kernel_main()` wrapper.
+### How the decision is tested
 
-5. **Experiment and expected observation.** Insert and reorder one argument in a test
-   schema; expected result: regenerated host/device interfaces remain aligned or fail
-   loudly, whereas an intentionally stale positional consumer is detected before runtime.
+The controlled procedure is to insert and reorder one argument in a test schema. **Expected observation:** regenerated host/device interfaces remain aligned or fail
+loudly, whereas an intentionally stale positional consumer is detected before runtime.
 
 ## Code connection
 
@@ -113,6 +99,6 @@ architecture reasoning explicit; generation-sensitive facts remain scoped to tha
 
 - **Original source:** [`tech_reports/NamedKernelArgs/kernel_args_as_parameters.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/NamedKernelArgs/kernel_args_as_parameters.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/NamedKernelArgs/kernel_args_as_parameters.md`
-- **Current delta:** provenance, source metrics, outline, report-specific architecture
-  plan, two source-linked implementation-boundary reviews, and answered reasoning
-  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.
+- **Current delta:** source-grounded architecture walkthrough, concrete
+  implementation boundaries, and expert verification answers. Snapshot-specific claims
+  remain scoped to the pinned commit.

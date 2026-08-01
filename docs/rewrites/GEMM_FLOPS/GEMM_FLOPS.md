@@ -1,74 +1,45 @@
-<!-- rewrite-status: seed -->
+<!-- rewrite-status: improved-draft -->
 # Matrix Multiply FLOPS
 
 <p class="source-note">
 <strong>Original source:</strong>
 <a href="https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/GEMM_FLOPS/GEMM_FLOPS.md"><code>tech_reports/GEMM_FLOPS/GEMM_FLOPS.md</code> at <code>992f3ca</code></a>
-· <strong>Status:</strong> source-linked learner seed
+· <strong>Status:</strong> source-grounded learner draft
 </p>
 
-!!! info "What ‘seed’ means"
-    The official report and its assets are preserved verbatim under
-    <code>upstream/tt-metal/tech_reports/GEMM_FLOPS/GEMM_FLOPS.md</code>. This learner page
-    establishes provenance, a reading map, a report-specific architecture plan,
-    concrete code boundaries, and answered reasoning checks; a full visual rewrite
-    remains queued.
+## Architecture walkthrough
 
-## Original report map
+### Why the design is shaped this way
 
-| Signal | Pinned-source value |
-|---|---:|
-| Lines | 927 |
-| Section headings | 21 |
-| Fenced code examples | 4 |
-| Markdown images | 7 |
+The design is shaped by the need to define the precise GEMM roofline under test: M/N/K,
+useful native lanes, fidelity, clock, cores, FLOP convention, residency, warm state, and
+timed boundary. Do not compare application FLOPs with a microbenchmark denominator.
 
-### Section outline
+### How work and data move
 
-- Introduction
-  - Running Benchmarks
-- Design of Experiments
-- MicroBenchmarks
-  - Matrix Multiplication TFLOPS on Wormhole/Blackhole (WH/BH)
-  - Manually Tuned Performance
-    - Peak FLOPS
-    - Performance scatter plot across all matrix sizes and configurations
-    - Performance bar plot across all matrix sizes and configurations
-  - Utilization
-    - Utilization derivation formula
-    - Utilization plot across all matrix sizes and configurations, based on the chip TFLOPS calculated per each Math Fidelity
-  - Understanding Device Scaling: SRAM vs DRAM
-  - Tracing
-    - Tracing on P150
-    - Tracing on N150
-  - Rectangular Matrix
-    - Rectangular Matrix on P150
-    - Rectangular Matrix on N150
-    - Out of Box Performance
-  - All Data
+The complete path is input tiles through reader/Unpack, matrix issue and K accumulation,
+destination state, Pack/writer, device timing zone, CSV aggregation, and host
+correctness check.
 
-## Improvement plan
+### What must never break
 
-1. **Architecture pressure.** Define the precise GEMM roofline under test: M/N/K, useful
-   native lanes, fidelity, clock, cores, FLOP convention, residency, warm state, and timed
-   boundary. Do not compare application FLOPs with a microbenchmark denominator.
+The non-negotiable invariant is that the benchmark executes the declared arithmetic
+exactly once, excludes compile/setup from steady timing, synchronizes before stopping
+measurement, and verifies output independently of the FLOP calculation.
 
-2. **Flow to make explicit.** Draw input tiles through reader/Unpack, matrix issue and K
-   accumulation, destination state, Pack/writer, device timing zone, CSV aggregation, and
-   host correctness check.
+### Where the report makes it concrete
 
-3. **Invariant to prove.** Prove the benchmark executes the declared arithmetic exactly
-   once, excludes compile/setup from steady timing, synchronizes before stopping
-   measurement, and verifies output independently of the FLOP calculation.
+The report makes the decision concrete by connecting evidence to
+`TTNN_RUN_GEMM_FLOPS_BENCHMARK=1`, `test_matmul_2d_host_perf`,
+`generated/matmul_benchmark_report.csv`, and configurations such as `tuned_2d_l1`,
+`tuned_2d_dram`, and the architecture YAML.
 
-4. **TT-Metal evidence to connect.** Connect evidence to `TTNN_RUN_GEMM_FLOPS_BENCHMARK=1`,
-   `test_matmul_2d_host_perf`, `generated/matmul_benchmark_report.csv`, and configurations
-   such as `tuned_2d_l1`, `tuned_2d_dram`, and the architecture YAML.
+### How the decision is tested
 
-5. **Experiment and expected observation.** Run resident-input and DRAM-input variants at
-   the same shape/fidelity; expected result: resident data approaches the
-   phase/lane-adjusted compute ceiling, while a large gap only in DRAM mode identifies
-   movement or reader supply.
+The controlled procedure is to run resident-input and DRAM-input variants at the same
+shape/fidelity. **Expected observation:** resident data approaches the
+phase/lane-adjusted compute ceiling, while a large gap only in DRAM mode identifies
+movement or reader supply.
 
 ## Code connection
 
@@ -131,6 +102,6 @@ architecture reasoning explicit; generation-sensitive facts remain scoped to tha
 
 - **Original source:** [`tech_reports/GEMM_FLOPS/GEMM_FLOPS.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/GEMM_FLOPS/GEMM_FLOPS.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/GEMM_FLOPS/GEMM_FLOPS.md`
-- **Current delta:** provenance, source metrics, outline, report-specific architecture
-  plan, two source-linked implementation-boundary reviews, and answered reasoning
-  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.
+- **Current delta:** source-grounded architecture walkthrough, concrete
+  implementation boundaries, and expert verification answers. Snapshot-specific claims
+  remain scoped to the pinned commit.

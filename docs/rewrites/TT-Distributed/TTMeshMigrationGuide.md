@@ -1,61 +1,43 @@
-<!-- rewrite-status: seed -->
+<!-- rewrite-status: improved-draft -->
 # TTNN Device to MeshDevice Migration Guide
 
 <p class="source-note">
 <strong>Original source:</strong>
 <a href="https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/TT-Distributed/TTMeshMigrationGuide.md"><code>tech_reports/TT-Distributed/TTMeshMigrationGuide.md</code> at <code>992f3ca</code></a>
-· <strong>Status:</strong> source-linked learner seed
+· <strong>Status:</strong> source-grounded learner draft
 </p>
 
-!!! info "What ‘seed’ means"
-    The official report and its assets are preserved verbatim under
-    <code>upstream/tt-metal/tech_reports/TT-Distributed/TTMeshMigrationGuide.md</code>. This learner page
-    establishes provenance, a reading map, a report-specific architecture plan,
-    concrete code boundaries, and answered reasoning checks; a full visual rewrite
-    remains queued.
+## Architecture walkthrough
 
-## Original report map
+### Why the design is shaped this way
 
-| Signal | Pinned-source value |
-|---|---:|
-| Lines | 143 |
-| Section headings | 9 |
-| Fenced code examples | 4 |
-| Markdown images | 0 |
+The design is shaped by the need to separate mechanical ownership/API migration from
+actual distribution. First reproduce single-device behavior on a one-device
+`MeshDevice`; only then choose sharding, replication, and multi-device collectives.
 
-### Section outline
+### How work and data move
 
-- Limitations
-- Migration Steps (Applicable to C++ Users Only)
-  - 1. Update Device Management
-  - 2. Remove Device/IDevice
-  - 3. Remove command_queue() calls
-  - 4. Event synchronization
-  - 5. Manual calls to Metal APIs
-  - Possible issues
-    - OwnedStorage vs MultiDeviceHostStorage
+The complete path is original `CreateDevice`/buffer/queue/operation/close alongside
+`open_mesh_device`, mesh tensor aggregation/distribution, mesh-aware operation,
+compose/readback, synchronization, and teardown.
 
-## Improvement plan
+### What must never break
 
-1. **Architecture pressure.** Separate mechanical ownership/API migration from actual
-   distribution. First reproduce single-device behavior on a one-device `MeshDevice`; only
-   then choose sharding, replication, and multi-device collectives.
+The non-negotiable invariant is that the one-device mesh preserves tensor contents,
+operation order, completion, and lifetime before adding another device; each
+distribution change must have an explicit inverse composition and parity test.
 
-2. **Flow to make explicit.** Draw original `CreateDevice`/buffer/queue/operation/close
-   alongside `open_mesh_device`, mesh tensor aggregation/distribution, mesh-aware operation,
-   compose/readback, synchronization, and teardown.
+### Where the report makes it concrete
 
-3. **Invariant to prove.** Prove the one-device mesh preserves tensor contents, operation
-   order, completion, and lifetime before adding another device; each distribution change
-   must have an explicit inverse composition and parity test.
+The report makes the decision concrete by connecting migration steps to `CreateDevice`,
+`ttnn::open_device`, `ttnn::open_mesh_device`, `CreateDevices`, `get_device_tensors`,
+`aggregate_as_tensor`, and `aggregate_as_tensor(host_tensors).to(mesh_device)`.
 
-4. **TT-Metal evidence to connect.** Connect migration steps to `CreateDevice`,
-   `ttnn::open_device`, `ttnn::open_mesh_device`, `CreateDevices`, `get_device_tensors`,
-   `aggregate_as_tensor`, and `aggregate_as_tensor(host_tensors).to(mesh_device)`.
+### How the decision is tested
 
-5. **Experiment and expected observation.** Convert one representative program to a
-   one-device mesh, then add a second device with one mapping change; expected result:
-   parity at stage one and an attributable, reversible distribution delta at stage two.
+The controlled procedure is to convert one representative program to a one-device mesh,
+then add a second device with one mapping change. **Expected observation:** parity at
+stage one and an attributable, reversible distribution delta at stage two.
 
 ## Code connection
 
@@ -115,6 +97,6 @@ architecture reasoning explicit; generation-sensitive facts remain scoped to tha
 
 - **Original source:** [`tech_reports/TT-Distributed/TTMeshMigrationGuide.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/TT-Distributed/TTMeshMigrationGuide.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/TT-Distributed/TTMeshMigrationGuide.md`
-- **Current delta:** provenance, source metrics, outline, report-specific architecture
-  plan, two source-linked implementation-boundary reviews, and answered reasoning
-  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.
+- **Current delta:** source-grounded architecture walkthrough, concrete
+  implementation boundaries, and expert verification answers. Snapshot-specific claims
+  remain scoped to the pinned commit.

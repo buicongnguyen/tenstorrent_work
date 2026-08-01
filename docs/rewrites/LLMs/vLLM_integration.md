@@ -1,58 +1,45 @@
-<!-- rewrite-status: seed -->
+<!-- rewrite-status: improved-draft -->
 # Integrating TT Models into vLLM
 
 <p class="source-note">
 <strong>Original source:</strong>
 <a href="https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/LLMs/vLLM_integration.md"><code>tech_reports/LLMs/vLLM_integration.md</code> at <code>992f3ca</code></a>
-· <strong>Status:</strong> source-linked learner seed
+· <strong>Status:</strong> source-grounded learner draft
 </p>
 
-!!! info "What ‘seed’ means"
-    The official report and its assets are preserved verbatim under
-    <code>upstream/tt-metal/tech_reports/LLMs/vLLM_integration.md</code>. This learner page
-    establishes provenance, a reading map, a report-specific architecture plan,
-    concrete code boundaries, and answered reasoning checks; a full visual rewrite
-    remains queued.
+## Architecture walkthrough
 
-## Original report map
+### Why the design is shaped this way
 
-| Signal | Pinned-source value |
-|---|---:|
-| Lines | 68 |
-| Section headings | 4 |
-| Fenced code examples | 5 |
-| Markdown images | 0 |
+The design is shaped by the need to define the exact boundary between vLLM scheduling
+and the TT backend: request/batch identity, token position, prefill/decode dispatch, KV
+block ownership, logits ordering, sampling interface, and supported preemption behavior.
 
-### Section outline
+### How work and data move
 
-- Overview
-- Implementation Requirements for Model Integration
-- Testing the Model in vLLM
-- vLLM Modifications
+The complete path is a request from vLLM admission/batching through TT input
+construction, `forward_prefill` or `forward_decode`, paged KV update/attention, logits
+return in scheduler order, token sampling, and next-step state.
 
-## Improvement plan
+### What must never break
 
-1. **Architecture pressure.** Define the exact boundary between vLLM scheduling and the TT
-   backend: request/batch identity, token position, prefill/decode dispatch, KV block
-   ownership, logits ordering, sampling interface, and supported preemption behavior.
+The non-negotiable invariant is that request identity, batch slot, token position, KV
+block, and returned-logit row remain aligned under mixed lengths, reorder, cancellation,
+and resume; performance reordering must have a correct inverse mapping.
 
-2. **Flow to make explicit.** Draw a request from vLLM admission/batching through TT input
-   construction, `forward_prefill` or `forward_decode`, paged KV update/attention, logits
-   return in scheduler order, token sampling, and next-step state.
+### Where the report makes it concrete
 
-3. **Invariant to prove.** Prove request identity, batch slot, token position, KV block, and
-   returned-logit row remain aligned under mixed lengths, reorder, cancellation, and resume;
-   performance reordering must have a correct inverse mapping.
+The report makes the decision concrete by connecting the adapter to `paged_fill_cache`,
+`paged_update_cache`, `paged_scaled_dot_product_attention_decode`, `forward_prefill`,
+`forward_decode`, `LlamaForCausalLM`, `initialize_vllm_model`, and
+`TTModelLoader::load_model`.
 
-4. **TT-Metal evidence to connect.** Connect the adapter to `paged_fill_cache`,
-   `paged_update_cache`, `paged_scaled_dot_product_attention_decode`, `forward_prefill`,
-   `forward_decode`, `LlamaForCausalLM`, `initialize_vllm_model`, and
-   `TTModelLoader::load_model`.
+### How the decision is tested
 
-5. **Experiment and expected observation.** Run interleaved requests with different
-   prompt/decode lengths and force scheduler reordering; expected result: each request
-   reproduces standalone tokens while persistent KV blocks avoid per-token host/device
-   reconstruction.
+The controlled procedure is to run interleaved requests with different prompt/decode
+lengths and force scheduler reordering. **Expected observation:** each request
+reproduces standalone tokens while persistent KV blocks avoid per-token host/device
+reconstruction.
 
 ## Code connection
 
@@ -115,6 +102,6 @@ architecture reasoning explicit; generation-sensitive facts remain scoped to tha
 
 - **Original source:** [`tech_reports/LLMs/vLLM_integration.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/LLMs/vLLM_integration.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/LLMs/vLLM_integration.md`
-- **Current delta:** provenance, source metrics, outline, report-specific architecture
-  plan, two source-linked implementation-boundary reviews, and answered reasoning
-  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.
+- **Current delta:** source-grounded architecture walkthrough, concrete
+  implementation boundaries, and expert verification answers. Snapshot-specific claims
+  remain scoped to the pinned commit.

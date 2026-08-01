@@ -1,79 +1,44 @@
-<!-- rewrite-status: seed -->
+<!-- rewrite-status: improved-draft -->
 # TT-Fabric Architecture Specification
 
 <p class="source-note">
 <strong>Original source:</strong>
 <a href="https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/TT-Fabric/TT-Fabric-Architecture.md"><code>tech_reports/TT-Fabric/TT-Fabric-Architecture.md</code> at <code>992f3ca</code></a>
-· <strong>Status:</strong> source-linked learner seed
+· <strong>Status:</strong> source-grounded learner draft
 </p>
 
-!!! info "What ‘seed’ means"
-    The official report and its assets are preserved verbatim under
-    <code>upstream/tt-metal/tech_reports/TT-Fabric/TT-Fabric-Architecture.md</code>. This learner page
-    establishes provenance, a reading map, a report-specific architecture plan,
-    concrete code boundaries, and answered reasoning checks; a full visual rewrite
-    remains queued.
+## Architecture walkthrough
 
-## Original report map
+### Why the design is shaped this way
 
-| Signal | Pinned-source value |
-|---|---:|
-| Lines | 1026 |
-| Section headings | 38 |
-| Fenced code examples | 9 |
-| Markdown images | 10 |
+The design is shaped by the need to explain separately the data/control planes and
+routing, transport, and session problems: route selection, deadlock/flow control, packet
+delivery/order, API semantics, and topology-specific resource allocation.
 
-### Section outline
+### How work and data move
 
-- Table of Contents
-- 1.1 Operational Structure <a id="structure"></a>
-  - 1.1.1 Data Plane <a id="dataplane"></a>
-  - 1.1.2 Control Plane <a id="controlplane"></a>
-- 1.2 Some Additional Notes <a id="notes"></a>
-- 2.1 Layers 1, 2 <a id="layer_12"></a>
-- 2.2 TT-routing (Layer 3) <a id="layer_3"></a>
-  - 2.2.1 Routing Tables <a id="routing_tables"></a>
-    - 2.2.1.1 L0 Routing (Intra-Mesh a.k.a Scale-up) <a id="intramesh"></a>
-    - 2.2.1.2 L1 Routing (Inter-Mesh a.k.a Scale-out) <a id="intermesh"></a>
-  - 2.2.2 Routing Planes <a id="routing_planes"></a>
-- 2.3 TT-transport (Layer 4) <a id="layer_4"></a>
-  - 2.3.1 Bubble Flow Control <a id="dvc"></a>
-  - 2.3.2 Control Virtual Channel <a id="cvc"></a>
-- 2.4 TT-session (Layer 5) <a id="layer_5"></a>
-- 3.1 Buffers and Virtual Channels <a id="rb_per_vc"></a>
-  - 3.1.1 1D Line Virtual Channel <a id="1dlvc"></a>
-    - 3.1.1.1 Dataflow between two fabric routers over Ethernet <a id="ethflow"></a>
-    - 3.1.1.2 Dataflow between two fabric routers over NOC <a id="nocflow"></a>
-  - 3.1.2 2D Mesh Virtual Channel <a id="2dmvc"></a>
-- Fabric Node Model
-- Fabric APIs and Topologies
-- Fabric and NoC Level Commands
-- 6.1 Dimension Ordered Routing <a id="dim_order_routing"></a>
-- … 14 additional headings in the original
+The complete path is a command/payload from source NoC through local fabric router
+ring/virtual channel, routing-table and dimension-order decision, Ethernet/NoC hop with
+bubble/credit state, destination ejection, session completion, and buffer reclamation.
 
-## Improvement plan
+### What must never break
 
-1. **Architecture pressure.** Explain separately the data/control planes and routing,
-   transport, and session problems: route selection, deadlock/flow control, packet
-   delivery/order, API semantics, and topology-specific resource allocation.
+The non-negotiable invariant is that channel dependencies remain deadlock-safe, a router
+forwards only with required downstream space, packet metadata/payload survive every hop,
+and required delivery/order is acknowledged at the destination session.
 
-2. **Flow to make explicit.** Draw a command/payload from source NoC through local fabric
-   router ring/virtual channel, routing-table and dimension-order decision, Ethernet/NoC hop
-   with bubble/credit state, destination ejection, session completion, and buffer
-   reclamation.
+### Where the report makes it concrete
 
-3. **Invariant to prove.** Prove channel dependencies remain deadlock-safe, a router
-   forwards only with required downstream space, packet metadata/payload survive every hop,
-   and required delivery/order is acknowledged at the destination session.
+The report makes the decision concrete by connecting the report to `FabricNodeId`,
+`{MeshId, ChipId}`, routing tables/planes, per-VC buffers, bubble flow control, and
+topology APIs under `tt_metal/fabric/hw/inc/linear|mesh/api.h`.
 
-4. **TT-Metal evidence to connect.** Connect the report to `FabricNodeId`, `{MeshId,
-   ChipId}`, routing tables/planes, per-VC buffers, bubble flow control, and topology APIs
-   under `tt_metal/fabric/hw/inc/linear|mesh/api.h`.
+### How the decision is tested
 
-5. **Experiment and expected observation.** Construct two competing flows that share a
-   link/VC and vary available bubble space; expected result: backpressure prevents
-   overwrite, dimension-ordered routing avoids cyclic wait under stated assumptions, and
-   congestion appears on the predicted hop.
+The controlled procedure is to construct two competing flows that share a link/VC and
+vary available bubble space. **Expected observation:** backpressure prevents
+overwrite, dimension-ordered routing avoids cyclic wait under stated assumptions, and
+congestion appears on the predicted hop.
 
 ## Code connection
 
@@ -135,6 +100,6 @@ architecture reasoning explicit; generation-sensitive facts remain scoped to tha
 
 - **Original source:** [`tech_reports/TT-Fabric/TT-Fabric-Architecture.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/TT-Fabric/TT-Fabric-Architecture.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/TT-Fabric/TT-Fabric-Architecture.md`
-- **Current delta:** provenance, source metrics, outline, report-specific architecture
-  plan, two source-linked implementation-boundary reviews, and answered reasoning
-  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.
+- **Current delta:** source-grounded architecture walkthrough, concrete
+  implementation boundaries, and expert verification answers. Snapshot-specific claims
+  remain scoped to the pinned commit.

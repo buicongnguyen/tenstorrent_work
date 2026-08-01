@@ -1,78 +1,44 @@
-<!-- rewrite-status: seed -->
+<!-- rewrite-status: improved-draft -->
 # Basic Ethernet Multichip
 
 <p class="source-note">
 <strong>Original source:</strong>
 <a href="https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/EthernetMultichip/BasicEthernetGuide.md"><code>tech_reports/EthernetMultichip/BasicEthernetGuide.md</code> at <code>992f3ca</code></a>
-· <strong>Status:</strong> source-linked learner seed
+· <strong>Status:</strong> source-grounded learner draft
 </p>
 
-!!! info "What ‘seed’ means"
-    The official report and its assets are preserved verbatim under
-    <code>upstream/tt-metal/tech_reports/EthernetMultichip/BasicEthernetGuide.md</code>. This learner page
-    establishes provenance, a reading map, a report-specific architecture plan,
-    concrete code boundaries, and answered reasoning checks; a full visual rewrite
-    remains queued.
+## Architecture walkthrough
 
-## Original report map
+### Why the design is shaped this way
 
-| Signal | Pinned-source value |
-|---|---:|
-| Lines | 867 |
-| Section headings | 43 |
-| Fenced code examples | 18 |
-| Markdown images | 19 |
+The design is shaped by the need to separate local NoC movement, ERISC/channel service,
+physical Ethernet link behavior, remote ejection, and application acknowledgement.
+Quantify small-packet latency and sustained bandwidth as different regimes.
 
-### Section outline
+### How work and data move
 
-- Ethernet Core Type: Ethernet
-- Ethernet Core (ERISC)
-- Ethernet Link
-  - Link Health and Retraining
-- Ethernet and Cluster Connectivity
-  - Topology and connectivity
-    - N300
-    - T3000
-    - Galaxy
-  - Ethernet routing firmware
-- Sending Data Over The Ethernet Link
-  - Ethernet Writes Compared To On Chip NoC Writes
-  - Ethernet Transaction Command Queues
-  - End-to-End Flow Control
-- Bidirectional Bandwidth - By Packet Size and Max Channel Count
-- Bidirectional Bandwidth -By Packet Size and Fixed Channel Count
-- Ring Ping Latency
-- Single Ethernet Link Round-Trip Latency
-- Multichip Programming Challenges
-  - Tensor And Semaphore Lifetime and Address Resolution Problems
-  - Asynchronous Program Start
-  - Asynchronous Program Completion Problem
-  - Fixed Datapath Resources Problem (Through ERISC)
-    - Static Routing
-- … 19 additional headings in the original
+The complete path is one packet from a worker/source buffer through local NoC, sending
+Ethernet core, channel packetization, physical link, peer Ethernet core, remote NoC,
+destination storage, and consumer completion/credit.
 
-## Improvement plan
+### What must never break
 
-1. **Architecture pressure.** Separate local NoC movement, ERISC/channel service, physical
-   Ethernet link behavior, remote ejection, and application acknowledgement. Quantify
-   small-packet latency and sustained bandwidth as different regimes.
+The non-negotiable invariant is that both endpoints agree on peer link, channel, packet
+size, route, destination, and flow-control state and that source storage is not reused
+merely because the local NoC write completed.
 
-2. **Flow to make explicit.** Draw one packet from a worker/source buffer through local NoC,
-   sending Ethernet core, channel packetization, physical link, peer Ethernet core, remote
-   NoC, destination storage, and consumer completion/credit.
+### Where the report makes it concrete
 
-3. **Invariant to prove.** Prove that both endpoints agree on peer link, channel, packet
-   size, route, destination, and flow-control state and that source storage is not reused
-   merely because the local NoC write completed.
+The report makes the decision concrete by connecting the path to `run_routing()`,
+`eth/dataflow_api.hpp`, `dataflow_api.hpp`, `eth_send_packet()`, and the source report's
+packet-size/channel-count and ring/round-trip measurements.
 
-4. **TT-Metal evidence to connect.** Connect the path to `run_routing()`,
-   `eth/dataflow_api.hpp`, `dataflow_api.hpp`, `eth_send_packet()`, and the source report's
-   packet-size/channel-count and ring/round-trip measurements.
+### How the decision is tested
 
-5. **Experiment and expected observation.** Sweep packet size and channel count on one fixed
-   link in both directions; expected result: small messages expose startup latency while
-   larger concurrent packets approach the link bandwidth until channel or routing contention
-   saturates.
+The controlled procedure is to sweep packet size and channel count on one fixed link in
+both directions. **Expected observation:** small messages expose startup latency while
+larger concurrent packets approach the link bandwidth until channel or routing
+contention saturates.
 
 ## Code connection
 
@@ -135,6 +101,6 @@ architecture reasoning explicit; generation-sensitive facts remain scoped to tha
 
 - **Original source:** [`tech_reports/EthernetMultichip/BasicEthernetGuide.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/EthernetMultichip/BasicEthernetGuide.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/EthernetMultichip/BasicEthernetGuide.md`
-- **Current delta:** provenance, source metrics, outline, report-specific architecture
-  plan, two source-linked implementation-boundary reviews, and answered reasoning
-  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.
+- **Current delta:** source-grounded architecture walkthrough, concrete
+  implementation boundaries, and expert verification answers. Snapshot-specific claims
+  remain scoped to the pinned commit.

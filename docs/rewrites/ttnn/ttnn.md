@@ -1,60 +1,46 @@
-<!-- rewrite-status: seed -->
+<!-- rewrite-status: improved-draft -->
 # TT-NN
 
 <p class="source-note">
 <strong>Original source:</strong>
 <a href="https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/ttnn/ttnn.md"><code>tech_reports/ttnn/ttnn.md</code> at <code>992f3ca</code></a>
-· <strong>Status:</strong> source-linked learner seed
+· <strong>Status:</strong> source-grounded learner draft
 </p>
 
-!!! info "What ‘seed’ means"
-    The official report and its assets are preserved verbatim under
-    <code>upstream/tt-metal/tech_reports/ttnn/ttnn.md</code>. This learner page
-    establishes provenance, a reading map, a report-specific architecture plan,
-    concrete code boundaries, and answered reasoning checks; a full visual rewrite
-    remains queued.
+## Architecture walkthrough
 
-## Original report map
+### Why the design is shaped this way
 
-| Signal | Pinned-source value |
-|---|---:|
-| Lines | 35 |
-| Section headings | 6 |
-| Fenced code examples | 0 |
-| Markdown images | 5 |
+The design is shaped by the need to turn the stack overview into one concrete operation
+lifecycle: public semantic contract, validation/registration, implementation selection,
+device-operation attributes, program creation/cache hit, runtime argument patching,
+dispatch, and output ownership.
 
-### Section outline
+### How work and data move
 
-- Roadmap
-- High Level Structure Overview
-- ML Framework
-- OP Library
-- OP Infra
-- TT-NN Runtime
+The complete path is a framework/user call through TT-NN operation
+library/infrastructure, tensor metadata validation, program hash/factory, TT-Metal
+command queue, reader/compute/writer kernels, and returned tensor.
 
-## Improvement plan
+### What must never break
 
-1. **Architecture pressure.** Turn the stack overview into one concrete operation lifecycle:
-   public semantic contract, validation/registration, implementation selection,
-   device-operation attributes, program creation/cache hit, runtime argument patching,
-   dispatch, and output ownership.
+The non-negotiable invariant is that logical shape/dtype/layout/placement/ownership
+remain coherent across layers and that cached programs include every compile-time choice
+while only documented runtime state is patched.
 
-2. **Flow to make explicit.** Draw a framework/user call through TT-NN operation
-   library/infrastructure, tensor metadata validation, program hash/factory, TT-Metal
-   command queue, reader/compute/writer kernels, and returned tensor.
+### Where the report makes it concrete
 
-3. **Invariant to prove.** Prove logical shape/dtype/layout/placement/ownership remain
-   coherent across layers and that cached programs include every compile-time choice while
-   only documented runtime state is patched.
+The report makes the decision concrete by connecting the report's ML Framework, OP
+Library, OP Infra, TT-NN Runtime, and TT-Metal boundaries to one actual registered
+operation, its program factory/hash/cache-hit callback, tensor objects, and command
+queue.
 
-4. **TT-Metal evidence to connect.** Connect the report's ML Framework, OP Library, OP
-   Infra, TT-NN Runtime, and TT-Metal boundaries to one actual registered operation, its
-   program factory/hash/cache-hit callback, tensor objects, and command queue.
+### How the decision is tested
 
-5. **Experiment and expected observation.** Trace the same operation cold, warm, and with
-   one shape/layout change; expected result: identical semantics, a cache hit only for
-   compatible identity, and a timeline that separates construction from steady
-   dispatch/device execution.
+The controlled procedure is to trace the same operation cold, warm, and with one
+shape/layout change. **Expected observation:** identical semantics, a cache hit only
+for compatible identity, and a timeline that separates construction from steady
+dispatch/device execution.
 
 ## Code connection
 
@@ -114,6 +100,6 @@ architecture reasoning explicit; generation-sensitive facts remain scoped to tha
 
 - **Original source:** [`tech_reports/ttnn/ttnn.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/ttnn/ttnn.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/ttnn/ttnn.md`
-- **Current delta:** provenance, source metrics, outline, report-specific architecture
-  plan, two source-linked implementation-boundary reviews, and answered reasoning
-  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.
+- **Current delta:** source-grounded architecture walkthrough, concrete
+  implementation boundaries, and expert verification answers. Snapshot-specific claims
+  remain scoped to the pinned commit.

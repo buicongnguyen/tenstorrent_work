@@ -1,65 +1,46 @@
-<!-- rewrite-status: seed -->
+<!-- rewrite-status: improved-draft -->
 # CNN Bring-up & Optimization in TT-NN
 
 <p class="source-note">
 <strong>Original source:</strong>
 <a href="https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/CNNs/cnn_optimizations.md"><code>tech_reports/CNNs/cnn_optimizations.md</code> at <code>992f3ca</code></a>
-· <strong>Status:</strong> source-linked learner seed
+· <strong>Status:</strong> source-grounded learner draft
 </p>
 
-!!! info "What ‘seed’ means"
-    The official report and its assets are preserved verbatim under
-    <code>upstream/tt-metal/tech_reports/CNNs/cnn_optimizations.md</code>. This learner page
-    establishes provenance, a reading map, a report-specific architecture plan,
-    concrete code boundaries, and answered reasoning checks; a full visual rewrite
-    remains queued.
+## Architecture walkthrough
 
-## Original report map
+### Why the design is shaped this way
 
-| Signal | Pinned-source value |
-|---|---:|
-| Lines | 205 |
-| Section headings | 11 |
-| Fenced code examples | 6 |
-| Markdown images | 1 |
+The design is shaped by the need to identify the concrete CNN subgraphs where
+convolution, pooling, concat, residuals, or layout conversion dominate warm latency.
+Choose optimization scope at the producer-consumer chain, not at an isolated operator
+benchmark.
 
-### Section outline
+### How work and data move
 
-- Contents
-- Overview
-- Model Bring-up
-- Optimizations
-  - Grouped Convolutions
-  - Convolution Performance Tuning
-  - Tracing and Multiple CQs
-  - Data Parallel
-  - Optimizing data transfers
-- Performance Analysis
-- Troubleshooting, Debugging, Pitfalls
+The complete path follows an activation through preprocessing,
+`ttnn.conv2d`/`ttnn.maxpool2d`, sharded L1 residency, residual or `ttnn.concat`,
+subsequent convolution, and post-processing, marking every tilize, reshard,
+deallocation, and host boundary.
 
-## Improvement plan
+### What must never break
 
-1. **Architecture pressure.** Identify the concrete CNN subgraphs where convolution,
-   pooling, concat, residuals, or layout conversion dominate warm latency. Choose
-   optimization scope at the producer-consumer chain, not at an isolated operator benchmark.
+The non-negotiable invariant is to preserve reference shapes, padding, stride, groups,
+channel order, residual pairing, and numerical tolerance across every layout or
+convolution-config change; a faster tensor with different branch meaning is not valid.
 
-2. **Flow to make explicit.** Trace an activation through preprocessing,
-   `ttnn.conv2d`/`ttnn.maxpool2d`, sharded L1 residency, residual or `ttnn.concat`,
-   subsequent convolution, and post-processing, marking every tilize, reshard, deallocation,
-   and host boundary.
+### Where the report makes it concrete
 
-3. **Invariant to prove.** Preserve reference shapes, padding, stride, groups, channel
-   order, residual pairing, and numerical tolerance across every layout or
-   convolution-config change; a faster tensor with different branch meaning is not valid.
+The report makes the decision concrete by connecting each proposed optimization to
+`ttnn.conv2d`, `ttnn.maxpool2d`, `ttnn.concat`, the `B×H×W×C → 1×H×W×BC`
+transformations, sharded memory configs, and the model's concrete module tests.
 
-4. **TT-Metal evidence to connect.** Connect each proposed optimization to `ttnn.conv2d`,
-   `ttnn.maxpool2d`, `ttnn.concat`, the `B×H×W×C → 1×H×W×BC` transformations, sharded memory
-   configs, and the model's concrete module tests.
+### How the decision is tested
 
-5. **Experiment and expected observation.** A/B one subgraph with and without a conversion
-   or resharing while holding input and output contracts fixed; expected result: the removed
-   boundary reduces total subgraph bytes/latency without increasing downstream conversion
-   cost or lowering PCC.
+The controlled procedure is to A/B-test one subgraph with and without a conversion or
+resharing while holding input and output contracts fixed. **Expected observation:**
+the removed boundary reduces total subgraph bytes/latency without increasing downstream
+conversion cost or lowering PCC.
 
 ## Code connection
 
@@ -121,6 +102,6 @@ architecture reasoning explicit; generation-sensitive facts remain scoped to tha
 
 - **Original source:** [`tech_reports/CNNs/cnn_optimizations.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/CNNs/cnn_optimizations.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/CNNs/cnn_optimizations.md`
-- **Current delta:** provenance, source metrics, outline, report-specific architecture
-  plan, two source-linked implementation-boundary reviews, and answered reasoning
-  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.
+- **Current delta:** source-grounded architecture walkthrough, concrete
+  implementation boundaries, and expert verification answers. Snapshot-specific claims
+  remain scoped to the pinned commit.

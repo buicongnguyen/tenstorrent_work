@@ -1,77 +1,44 @@
-<!-- rewrite-status: seed -->
+<!-- rewrite-status: improved-draft -->
 # Metal Profiler
 
 <p class="source-note">
 <strong>Original source:</strong>
 <a href="https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/MetalProfiler/metal-profiler.md"><code>tech_reports/MetalProfiler/metal-profiler.md</code> at <code>992f3ca</code></a>
-· <strong>Status:</strong> source-linked learner seed
+· <strong>Status:</strong> source-grounded learner draft
 </p>
 
-!!! info "What ‘seed’ means"
-    The official report and its assets are preserved verbatim under
-    <code>upstream/tt-metal/tech_reports/MetalProfiler/metal-profiler.md</code>. This learner page
-    establishes provenance, a reading map, a report-specific architecture plan,
-    concrete code boundaries, and answered reasoning checks; a full visual rewrite
-    remains queued.
+## Architecture walkthrough
 
-## Original report map
+### Why the design is shaped this way
 
-| Signal | Pinned-source value |
-|---|---:|
-| Lines | 350 |
-| Section headings | 41 |
-| Fenced code examples | 33 |
-| Markdown images | 0 |
+The design is shaped by the need to define which latency terms require observation—host
+construction, dispatch, device reader/compute/writer zones, NoC stalls, or
+synchronization—and which clock domains must be correlated to establish causality.
 
-### Section outline
+### How work and data move
 
-- Quick Links
-- Introduction
-- Things built from Tracy that are needed in tt-metal
-  - tracy-client
-  - tracy-capture
-  - tracy-profiler
-  - tracy-csvexport
-- Basic Tracy Application
-  - 1. Add Tracy
-  - 2. Build tracy-client
-  - 3. Add Tracy includes
-  - 4. Define compile options
-  - 5. Insert macros
-  - 6. Build tracy-capture
-  - 7. Build tracy-csvexport
-  - 8. Build tracy-profiler
-- Developer Flow for using Tracy
-  - 1. Start tracy-capture
-  - 2. (Optional) Start tracy-profiler
-  - 3. Start application
-  - 4. (Only if did 1.) Feed .tracy into tracy-profiler
-  - 5. (Only if did 1.) View .tracy contents
-- Tracy Example
-  - 1. Setup project directory structure
-- … 17 additional headings in the original
+The complete path is instrumented events from host/device zone emission through per-RISC
+buffers, runtime transfer/correlation, Tracy capture or CSV generation, and the final
+critical-path interpretation.
 
-## Improvement plan
+### What must never break
 
-1. **Architecture pressure.** Define which latency terms require observation—host
-   construction, dispatch, device reader/compute/writer zones, NoC stalls, or
-   synchronization—and which clock domains must be correlated to establish causality.
+The non-negotiable invariant is that every zone has paired start/end, stable
+core/RISC/program identity, a known clock relationship, and identical instrumentation in
+compared runs; profiling overhead must not be confused with workload cost.
 
-2. **Flow to make explicit.** Draw instrumented events from host/device zone emission
-   through per-RISC buffers, runtime transfer/correlation, Tracy capture or CSV generation,
-   and the final critical-path interpretation.
+### Where the report makes it concrete
 
-3. **Invariant to prove.** Prove every zone has paired start/end, stable core/RISC/program
-   identity, a known clock relationship, and identical instrumentation in compared runs;
-   profiling overhead must not be confused with workload cost.
+The report makes the decision concrete by connecting setup to
+`tt_metal/third_party/tracy/`, `./build_metal.sh`,
+`build/tools/profiler/bin/tracy-capture`, the generated trace/output directories, and
+the report's device-profiler integration flow.
 
-4. **TT-Metal evidence to connect.** Connect setup to `tt_metal/third_party/tracy/`,
-   `./build_metal.sh`, `build/tools/profiler/bin/tracy-capture`, the generated trace/output
-   directories, and the report's device-profiler integration flow.
+### How the decision is tested
 
-5. **Experiment and expected observation.** Profile a warm workload with one deliberate host
-   sleep and one reader delay; expected result: the correlated timeline separates the host
-   gap from device input starvation and attributes each to the inserted boundary.
+The controlled procedure is to profile a warm workload with one deliberate host sleep
+and one reader delay. **Expected observation:** the correlated timeline separates the
+host gap from device input starvation and attributes each to the inserted boundary.
 
 ## Code connection
 
@@ -132,6 +99,6 @@ architecture reasoning explicit; generation-sensitive facts remain scoped to tha
 
 - **Original source:** [`tech_reports/MetalProfiler/metal-profiler.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/MetalProfiler/metal-profiler.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/MetalProfiler/metal-profiler.md`
-- **Current delta:** provenance, source metrics, outline, report-specific architecture
-  plan, two source-linked implementation-boundary reviews, and answered reasoning
-  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.
+- **Current delta:** source-grounded architecture walkthrough, concrete
+  implementation boundaries, and expert verification answers. Snapshot-specific claims
+  remain scoped to the pinned commit.

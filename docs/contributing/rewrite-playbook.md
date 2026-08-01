@@ -32,6 +32,15 @@ crosses several reports.
 8. **Verification** — questions or an experiment with an expected result.
 9. **Delta** — what this edition added, clarified, or intentionally omitted.
 
+## Do not publish scaffolding as explanation
+
+Source line counts, heading counts, fenced-block counts, image counts, and automatic
+section-outline dumps are useful to an author during inventory, but they do not explain
+an architecture decision. Keep them out of learner pages. A published walkthrough must
+state why the design exists, follow the real data/control path, name the invariant,
+connect concrete implementation evidence, and give a test that could disprove the
+reasoning. Generated `seed` markers intentionally fail CI until that work is present.
+
 The source note must contain a clickable URL in this form:
 
 ```text
@@ -75,8 +84,8 @@ Before marking a rewrite complete:
 | Status | Meaning |
 |---|---|
 | `source-only` | Upstream copy exists; no learner page yet |
-| `seed` | Source-linked reading map, report-specific plan, and answered reasoning checks exist; full visual rewrite is queued |
-| `improved-draft` | Substantive rewrite exists but review is incomplete |
+| `seed` | Unpublished authoring stub; CI rejects its placeholders from the public site |
+| `improved-draft` | Source-grounded walkthrough, implementation evidence, and answered checks exist, but practitioner review is incomplete |
 | `improved` | Rewrite passed the checklist against the pinned revision |
 | `review-needed` | Upstream changed after the last completed review |
 

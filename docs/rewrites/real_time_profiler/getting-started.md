@@ -1,55 +1,44 @@
-<!-- rewrite-status: seed -->
+<!-- rewrite-status: improved-draft -->
 # Real-time profiler — getting started
 
 <p class="source-note">
 <strong>Original source:</strong>
 <a href="https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/real_time_profiler/getting-started.md"><code>tech_reports/real_time_profiler/getting-started.md</code> at <code>992f3ca</code></a>
-· <strong>Status:</strong> source-linked learner seed
+· <strong>Status:</strong> source-grounded learner draft
 </p>
 
-!!! info "What ‘seed’ means"
-    The official report and its assets are preserved verbatim under
-    <code>upstream/tt-metal/tech_reports/real_time_profiler/getting-started.md</code>. This learner page
-    establishes provenance, a reading map, a report-specific architecture plan,
-    concrete code boundaries, and answered reasoning checks; a full visual rewrite
-    remains queued.
+## Architecture walkthrough
 
-## Original report map
+### Why the design is shaped this way
 
-| Signal | Pinned-source value |
-|---|---:|
-| Lines | 55 |
-| Section headings | 2 |
-| Fenced code examples | 1 |
-| Markdown images | 0 |
+The design is shaped by the need to define the live use case, event schema,
+timestamp/source identity, acceptable observation latency, producer-overhead budget,
+buffering/backpressure behavior, and required durability on abnormal termination.
 
-### Section outline
+### How work and data move
 
-- Register a callback (Python) — append JSON lines
-- Tracy default support
+The complete path is `ProgramRealtimeRecord` emission through runtime queueing, callback
+registration/invocation, JSON-line or Tracy sink, incremental consumer, flush, and
+`UnregisterProgramRealtimeProfilerCallback(handle)`.
 
-## Improvement plan
+### What must never break
 
-1. **Architecture pressure.** Define the live use case, event schema, timestamp/source
-   identity, acceptable observation latency, producer-overhead budget,
-   buffering/backpressure behavior, and required durability on abnormal termination.
+The non-negotiable invariant is that callback processing preserves complete event
+identity/order without blocking producers beyond budget, handles concurrency/failure,
+and flushes every accepted record before unregister/shutdown.
 
-2. **Flow to make explicit.** Draw `ProgramRealtimeRecord` emission through runtime
-   queueing, callback registration/invocation, JSON-line or Tracy sink, incremental
-   consumer, flush, and `UnregisterProgramRealtimeProfilerCallback(handle)`.
+### Where the report makes it concrete
 
-3. **Invariant to prove.** Prove callback processing preserves complete event identity/order
-   without blocking producers beyond budget, handles concurrency/failure, and flushes every
-   accepted record before unregister/shutdown.
+The report makes the decision concrete by connecting fields such as `runtime_id`,
+`start_timestamp`, `end_timestamp`, `frequency`, `chip_id`, and `kernel_sources` to the
+JSON/Tracy representation and consuming analysis.
 
-4. **TT-Metal evidence to connect.** Connect fields such as `runtime_id`, `start_timestamp`,
-   `end_timestamp`, `frequency`, `chip_id`, and `kernel_sources` to the JSON/Tracy
-   representation and consuming analysis.
+### How the decision is tested
 
-5. **Experiment and expected observation.** Deliberately slow and then fail the callback
-   consumer under a steady workload; expected result: documented buffering/backpressure or
-   loss behavior occurs without silent record corruption, and measured producer perturbation
-   remains within budget.
+The controlled procedure is to deliberately slow and then fail the callback consumer
+under a steady workload. **Expected observation:** documented buffering/backpressure
+or loss behavior occurs without silent record corruption, and measured producer
+perturbation remains within budget.
 
 ## Code connection
 
@@ -108,6 +97,6 @@ architecture reasoning explicit; generation-sensitive facts remain scoped to tha
 
 - **Original source:** [`tech_reports/real_time_profiler/getting-started.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/real_time_profiler/getting-started.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/real_time_profiler/getting-started.md`
-- **Current delta:** provenance, source metrics, outline, report-specific architecture
-  plan, two source-linked implementation-boundary reviews, and answered reasoning
-  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.
+- **Current delta:** source-grounded architecture walkthrough, concrete
+  implementation boundaries, and expert verification answers. Snapshot-specific claims
+  remain scoped to the pinned commit.

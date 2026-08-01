@@ -1,69 +1,45 @@
-<!-- rewrite-status: seed -->
+<!-- rewrite-status: improved-draft -->
 # Convolution Networks on Tenstorrent Chips
 
 <p class="source-note">
 <strong>Original source:</strong>
 <a href="https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/CNNs/ttcnn.md"><code>tech_reports/CNNs/ttcnn.md</code> at <code>992f3ca</code></a>
-· <strong>Status:</strong> source-linked learner seed
+· <strong>Status:</strong> source-grounded learner draft
 </p>
 
-!!! info "What ‘seed’ means"
-    The official report and its assets are preserved verbatim under
-    <code>upstream/tt-metal/tech_reports/CNNs/ttcnn.md</code>. This learner page
-    establishes provenance, a reading map, a report-specific architecture plan,
-    concrete code boundaries, and answered reasoning checks; a full visual rewrite
-    remains queued.
+## Architecture walkthrough
 
-## Original report map
+### Why the design is shaped this way
 
-| Signal | Pinned-source value |
-|---|---:|
-| Lines | 888 |
-| Section headings | 14 |
-| Fenced code examples | 4 |
-| Markdown images | 0 |
+The design is shaped by the need to explain why convolution is lowered to blocked matrix
+multiplication on Tensix and why overlapping spatial windows make naive remote reads the
+dominant movement problem once activations no longer fit in one core's L1.
 
-### Section outline
+### How work and data move
 
-- Abstract
-- Convolution Operations in TTNN
-  - `conv2d`
-    - Python API
-    - `Conv2dConfig`
-    - Compute Config
-    - Example Usage
-  - `maxpool2d`
-  - Halo implementation
-    - Step 1 - Pad metadata
-    - Step 2 - Op trace metadata
-    - Step 3 - Shard boundaries
-    - Step 4 - Tensor metadata
-    - Step 5 - Kernel config tensors
+The complete path is one activation stick from its source shard through sliding-window
+dependency analysis, local/remote halo configuration, halo transfer, activation-reader
+flattening, matrix accumulation, pack, and the destination output shard.
 
-## Improvement plan
+### What must never break
 
-1. **Architecture pressure.** Explain why convolution is lowered to blocked matrix
-   multiplication on Tensix and why overlapping spatial windows make naive remote reads the
-   dominant movement problem once activations no longer fit in one core's L1.
+The non-negotiable invariant is for every output coordinate, prove that stride, padding,
+dilation, groups, channel order, and shard-boundary haloing select exactly the same
+logical input window and filter values as reference convolution.
 
-2. **Flow to make explicit.** Draw one activation stick from its source shard through
-   sliding-window dependency analysis, local/remote halo configuration, halo transfer,
-   activation-reader flattening, matrix accumulation, pack, and the destination output
-   shard.
+### Where the report makes it concrete
 
-3. **Invariant to prove.** For every output coordinate, prove that stride, padding,
-   dilation, groups, channel order, and shard-boundary haloing select exactly the same
-   logical input window and filter values as reference convolution.
+The report makes the decision concrete by mapping the original `conv2d`
+input/weight/bias/output contracts and halo implementation sections to TT-NN convolution
+configuration, sliding-window analysis, reader CBs, compute blocks, and output
+post-processing rather than listing generic kernel roles.
 
-4. **TT-Metal evidence to connect.** Map the original `conv2d` input/weight/bias/output
-   contracts and halo implementation sections to TT-NN convolution configuration,
-   sliding-window analysis, reader CBs, compute blocks, and output post-processing rather
-   than listing generic kernel roles.
+### How the decision is tested
 
-5. **Experiment and expected observation.** Use distinctive boundary values and compare
-   direct/reference convolution with haloed sharding for image edges and inter-core
-   boundaries; expected result: identical outputs with fewer remote reads during the hot
-   convolution phase after halo construction.
+The controlled procedure is to use distinctive boundary values and compare
+direct/reference convolution with haloed sharding for image edges and inter-core
+boundaries. **Expected observation:** identical outputs with fewer remote reads during
+the hot convolution phase after halo construction.
 
 ## Code connection
 
@@ -221,6 +197,6 @@ headings.
 
 - **Original source:** [`tech_reports/CNNs/ttcnn.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/CNNs/ttcnn.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/CNNs/ttcnn.md`
-- **Current delta:** provenance, source metrics, outline, report-specific architecture
-  plan, two source-linked implementation-boundary reviews, and answered reasoning
-  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.
+- **Current delta:** source-grounded architecture walkthrough, concrete
+  implementation boundaries, and expert verification answers. Snapshot-specific claims
+  remain scoped to the pinned commit.

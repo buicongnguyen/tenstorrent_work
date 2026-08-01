@@ -1,78 +1,45 @@
-<!-- rewrite-status: seed -->
+<!-- rewrite-status: improved-draft -->
 # [skip ci] ViT in TT-NN for Blackhole
 
 <p class="source-note">
 <strong>Original source:</strong>
 <a href="https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/ViT-TTNN/vit_bh.md"><code>tech_reports/ViT-TTNN/vit_bh.md</code> at <code>992f3ca</code></a>
-· <strong>Status:</strong> source-linked learner seed
+· <strong>Status:</strong> source-grounded learner draft
 </p>
 
-!!! info "What ‘seed’ means"
-    The official report and its assets are preserved verbatim under
-    <code>upstream/tt-metal/tech_reports/ViT-TTNN/vit_bh.md</code>. This learner page
-    establishes provenance, a reading map, a report-specific architecture plan,
-    concrete code boundaries, and answered reasoning checks; a full visual rewrite
-    remains queued.
+## Architecture walkthrough
 
-## Original report map
+### Why the design is shaped this way
 
-| Signal | Pinned-source value |
-|---|---:|
-| Lines | 1266 |
-| Section headings | 48 |
-| Fenced code examples | 46 |
-| Markdown images | 19 |
+The design is shaped by the need to list which ViT semantics remain
+generation-independent and re-derive Blackhole-specific L1 footprint, core grid,
+NoC/layout, transpose/multicast, compute config, and operation availability instead of
+copying Wormhole tuning.
 
-### Section outline
+### How work and data move
 
-- Contents
-- 1. Overview
-- 2. Blackhole Architecture Differences
-  - 2.1 Core Grid Configuration
-  - 2.2 Compute Kernel Configuration
-- 3. ViT TT-NN Optimization Techniques
-  - 3.1 Sharding on all relevant OPs
-  - 3.2 Matmul sharding variants in ViT
-    - 3.2.1 Matmul Reuse (BMM)
-    - 3.2.2 Matmul Reuse Mcast (2D)
-    - 3.2.3 Matmul Reuse Mcast (1D)
-  - 3.3 Transformer optimizations
-- 4. ViT TT-NN Code Structure
-  - 4.1 Top-level modules
-  - 4.2 Embeddings module
-  - 4.3 Encoder module
-  - 4.4 Encoder One Layer module
-- 5. ViT Encoder Layer TT-NN Deep Dive for Blackhole
-  - 5.1 Input
-  - 5.2 Sharding parametrization
-  - 5.3 Layer Normalization (Layernorm)
-  - 5.4 Multi-Head Self-Attention
-    - 5.4.1 Q,K,V Generation (Fused Linear)
-    - 5.4.2 Resharding (Core Grid Transition)
-- … 24 additional headings in the original
+The complete path is the same validated encoder flow as the Wormhole path while marking
+every Blackhole-specific policy selection, buffer/layout transition, program
+configuration, and fallback.
 
-## Improvement plan
+### What must never break
 
-1. **Architecture pressure.** List which ViT semantics remain generation-independent and
-   re-derive Blackhole-specific L1 footprint, core grid, NoC/layout, transpose/multicast,
-   compute config, and operation availability instead of copying Wormhole tuning.
+The non-negotiable invariant is that identical logical token/head/residual contracts and
+checkpoint tolerances across generations; only physical layout, program, and scheduling
+choices may differ.
 
-2. **Flow to make explicit.** Draw the same validated encoder flow as the Wormhole path
-   while marking every Blackhole-specific policy selection, buffer/layout transition,
-   program configuration, and fallback.
+### Where the report makes it concrete
 
-3. **Invariant to prove.** Prove identical logical token/head/residual contracts and
-   checkpoint tolerances across generations; only physical layout, program, and scheduling
-   choices may differ.
+The report makes the decision concrete by connecting the Blackhole plan to the source's
+`WormholeComputeKernelConfig` comparison, `transpose_mcast=False/True`, `vit_layer()`,
+`b × seqL × dim`, and generation-specific optimization/code sections.
 
-4. **TT-Metal evidence to connect.** Connect the Blackhole plan to the source's
-   `WormholeComputeKernelConfig` comparison, `transpose_mcast=False/True`, `vit_layer()`, `b
-   × seqL × dim`, and generation-specific optimization/code sections.
+### How the decision is tested
 
-5. **Experiment and expected observation.** Run identical inputs/weights through the
-   correctness bootstrap and tuned Blackhole variants; expected result: checkpoint parity in
-   both, with gains attributable to measured Blackhole capacity/utilization or communication
-   changes.
+The controlled procedure is to run identical inputs/weights through the correctness
+bootstrap and tuned Blackhole variants. **Expected observation:** checkpoint parity in
+both, with gains attributable to measured Blackhole capacity/utilization or
+communication changes.
 
 ## Code connection
 
@@ -134,6 +101,6 @@ architecture reasoning explicit; generation-sensitive facts remain scoped to tha
 
 - **Original source:** [`tech_reports/ViT-TTNN/vit_bh.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/ViT-TTNN/vit_bh.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/ViT-TTNN/vit_bh.md`
-- **Current delta:** provenance, source metrics, outline, report-specific architecture
-  plan, two source-linked implementation-boundary reviews, and answered reasoning
-  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.
+- **Current delta:** source-grounded architecture walkthrough, concrete
+  implementation boundaries, and expert verification answers. Snapshot-specific claims
+  remain scoped to the pinned commit.

@@ -1,66 +1,45 @@
-<!-- rewrite-status: seed -->
+<!-- rewrite-status: improved-draft -->
 # Deprecating `DPRINT` in favor of `DEVICE_PRINT`
 
 <p class="source-note">
 <strong>Original source:</strong>
 <a href="https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/Debugging/DEVICE_PRINT_replaces_DPRINT.md"><code>tech_reports/Debugging/DEVICE_PRINT_replaces_DPRINT.md</code> at <code>992f3ca</code></a>
-· <strong>Status:</strong> source-linked learner seed
+· <strong>Status:</strong> source-grounded learner draft
 </p>
 
-!!! info "What ‘seed’ means"
-    The official report and its assets are preserved verbatim under
-    <code>upstream/tt-metal/tech_reports/Debugging/DEVICE_PRINT_replaces_DPRINT.md</code>. This learner page
-    establishes provenance, a reading map, a report-specific architecture plan,
-    concrete code boundaries, and answered reasoning checks; a full visual rewrite
-    remains queued.
+## Architecture walkthrough
 
-## Original report map
+### Why the design is shaped this way
 
-| Signal | Pinned-source value |
-|---|---:|
-| Lines | 250 |
-| Section headings | 12 |
-| Fenced code examples | 13 |
-| Markdown images | 0 |
+The design is shaped by the need to document the concrete migration and behavioral
+differences between deprecated `DPRINT` and supported `DEVICE_PRINT`, including
+enablement, formatting, core/RISC selection, buffering, drain, and teardown—not merely a
+macro rename.
 
-### Section outline
+### How work and data move
 
-- 1. Why we changed it
-- 2. Deprecation plan
-  - Phase 1 – Opt‑in (completed)
-  - Phase 2 – Deprecation window (completed)
-  - Phase 3 – Alias and cleanup (completed)
-- 3. Usage examples – `DPRINT` vs `DEVICE_PRINT`
-  - 3.1 Basic value printing
-  - 3.2 Number formatting
-  - 3.3 Enum printing
-  - 3.4 Tile / `TileSlice` printing
-  - 3.5 Core-specific prints
-  - 3.6 Enabling `DEVICE_PRINT` (historical — transition only)
+The complete path is `selected device thread → DEVICE_PRINT record encoding → device
+debug buffer/transport → runtime drain → host console/log`, including when records
+become observable and which component owns flushing.
 
-## Improvement plan
+### What must never break
 
-1. **Architecture pressure.** Document the concrete migration and behavioral differences
-   between deprecated `DPRINT` and supported `DEVICE_PRINT`, including enablement,
-   formatting, core/RISC selection, buffering, drain, and teardown—not merely a macro
-   rename.
+The non-negotiable invariant is that diagnostic output comes from the intended
+core/RISC, remains within supported buffer/format limits, is drained before teardown,
+and is never used as a substitute for a NoC barrier or CB/event dependency.
 
-2. **Flow to make explicit.** Draw `selected device thread → DEVICE_PRINT record encoding →
-   device debug buffer/transport → runtime drain → host console/log`, including when records
-   become observable and which component owns flushing.
+### Where the report makes it concrete
 
-3. **Invariant to prove.** Prove that diagnostic output comes from the intended core/RISC,
-   remains within supported buffer/format limits, is drained before teardown, and is never
-   used as a substitute for a NoC barrier or CB/event dependency.
+The report makes the decision concrete by connecting old/new examples to `DPRINT`,
+`DEVICE_PRINT`, `TT_METAL_DEVICE_PRINT=1`, the former stream syntax `DPRINT << ... <<
+ENDL()`, and the current debug include/runtime path.
 
-4. **TT-Metal evidence to connect.** Connect old/new examples to `DPRINT`, `DEVICE_PRINT`,
-   `TT_METAL_DEVICE_PRINT=1`, the former stream syntax `DPRINT << ... << ENDL()`, and the
-   current debug include/runtime path.
+### How the decision is tested
 
-5. **Experiment and expected observation.** Run the same minimal kernel with printing
-   disabled, enabled on one core, and enabled broadly; expected result: functional output is
-   unchanged, scoped output identifies the producer, and measured perturbation grows with
-   print volume.
+The controlled procedure is to run the same minimal kernel with printing disabled,
+enabled on one core, and enabled broadly. **Expected observation:** functional output
+is unchanged, scoped output identifies the producer, and measured perturbation grows
+with print volume.
 
 ## Code connection
 
@@ -122,6 +101,6 @@ architecture reasoning explicit; generation-sensitive facts remain scoped to tha
 
 - **Original source:** [`tech_reports/Debugging/DEVICE_PRINT_replaces_DPRINT.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/Debugging/DEVICE_PRINT_replaces_DPRINT.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/Debugging/DEVICE_PRINT_replaces_DPRINT.md`
-- **Current delta:** provenance, source metrics, outline, report-specific architecture
-  plan, two source-linked implementation-boundary reviews, and answered reasoning
-  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.
+- **Current delta:** source-grounded architecture walkthrough, concrete
+  implementation boundaries, and expert verification answers. Snapshot-specific claims
+  remain scoped to the pinned commit.

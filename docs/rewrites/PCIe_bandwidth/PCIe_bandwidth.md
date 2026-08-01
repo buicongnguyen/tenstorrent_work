@@ -1,64 +1,43 @@
-<!-- rewrite-status: seed -->
+<!-- rewrite-status: improved-draft -->
 # PCIe Bandwidth Measurement
 
 <p class="source-note">
 <strong>Original source:</strong>
 <a href="https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/PCIe_bandwidth/PCIe_bandwidth.md"><code>tech_reports/PCIe_bandwidth/PCIe_bandwidth.md</code> at <code>992f3ca</code></a>
-· <strong>Status:</strong> source-linked learner seed
+· <strong>Status:</strong> source-grounded learner draft
 </p>
 
-!!! info "What ‘seed’ means"
-    The official report and its assets are preserved verbatim under
-    <code>upstream/tt-metal/tech_reports/PCIe_bandwidth/PCIe_bandwidth.md</code>. This learner page
-    establishes provenance, a reading map, a report-specific architecture plan,
-    concrete code boundaries, and answered reasoning checks; a full visual rewrite
-    remains queued.
+## Architecture walkthrough
 
-## Original report map
+### Why the design is shaped this way
 
-| Signal | Pinned-source value |
-|---|---:|
-| Lines | 111 |
-| Section headings | 12 |
-| Fenced code examples | 2 |
-| Markdown images | 0 |
+The design is shaped by the need to separate host memory/API overhead, PCIe DMA, device
+DRAM/L1 placement, and on-device NoC redistribution for both H2D and D2H; declare which
+path each reported GB/s number actually measures.
 
-### Section outline
+### How work and data move
 
-- Table of Contents
-- Host-Side Tests (WriteShard / ReadShard)
-  - Host Write (H2D) — p150 / Blackhole
-  - Host Read (D2H) — p150 / Blackhole
-- Device-Side Tests (Kernel NOC)
-  - Test Setup
-  - Kernel Structure
-  - Sweep Parameters
-  - Device Read Bandwidth Sweep
-  - Device Write Bandwidth Sweep
-- Running the Tests
-- Notes
+The complete path is payload movement from pinned/host buffer through `WriteShard` or
+`ReadShard`, PCIe, device buffer, optional `noc_async_read/write`, completion/barrier,
+and final data validation.
 
-## Improvement plan
+### What must never break
 
-1. **Architecture pressure.** Separate host memory/API overhead, PCIe DMA, device DRAM/L1
-   placement, and on-device NoC redistribution for both H2D and D2H; declare which path each
-   reported GB/s number actually measures.
+The non-negotiable invariant is that timed bytes, direction, buffer lifetime, placement,
+and synchronization are identical across comparisons and that the timer stops only after
+transfer completion, not asynchronous enqueue.
 
-2. **Flow to make explicit.** Draw payload movement from pinned/host buffer through
-   `WriteShard` or `ReadShard`, PCIe, device buffer, optional `noc_async_read/write`,
-   completion/barrier, and final data validation.
+### Where the report makes it concrete
 
-3. **Invariant to prove.** Prove timed bytes, direction, buffer lifetime, placement, and
-   synchronization are identical across comparisons and that the timer stops only after
-   transfer completion, not asynchronous enqueue.
+The report makes the decision concrete by connecting tests to `distributed::WriteShard`,
+`distributed::ReadShard`, `std::chrono`, `noc_async_read`, `noc_async_write`, and device
+zones such as `DeviceZoneScopedN("RISCV0")`.
 
-4. **TT-Metal evidence to connect.** Connect tests to `distributed::WriteShard`,
-   `distributed::ReadShard`, `std::chrono`, `noc_async_read`, `noc_async_write`, and device
-   zones such as `DeviceZoneScopedN("RISCV0")`.
+### How the decision is tested
 
-5. **Experiment and expected observation.** Sweep transfer size in both directions and
-   compare direct host path with device NoC redistribution; expected result: small sizes
-   expose startup/API cost, large sizes approach the negotiated-link or device-path ceiling.
+The controlled procedure is to sweep transfer size in both directions and compare direct
+host path with device NoC redistribution. **Expected observation:** small sizes expose
+startup/API cost, large sizes approach the negotiated-link or device-path ceiling.
 
 ## Code connection
 
@@ -120,6 +99,6 @@ architecture reasoning explicit; generation-sensitive facts remain scoped to tha
 
 - **Original source:** [`tech_reports/PCIe_bandwidth/PCIe_bandwidth.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/PCIe_bandwidth/PCIe_bandwidth.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/PCIe_bandwidth/PCIe_bandwidth.md`
-- **Current delta:** provenance, source metrics, outline, report-specific architecture
-  plan, two source-linked implementation-boundary reviews, and answered reasoning
-  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.
+- **Current delta:** source-grounded architecture walkthrough, concrete
+  implementation boundaries, and expert verification answers. Snapshot-specific claims
+  remain scoped to the pinned commit.

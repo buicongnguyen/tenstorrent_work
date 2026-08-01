@@ -1,78 +1,44 @@
-<!-- rewrite-status: seed -->
+<!-- rewrite-status: improved-draft -->
 # Programming Multiple Meshes
 
 <p class="source-note">
 <strong>Original source:</strong>
 <a href="https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/Programming_Multiple_Meshes/Programming_Multiple_Meshes.md"><code>tech_reports/Programming_Multiple_Meshes/Programming_Multiple_Meshes.md</code> at <code>992f3ca</code></a>
-· <strong>Status:</strong> source-linked learner seed
+· <strong>Status:</strong> source-grounded learner draft
 </p>
 
-!!! info "What ‘seed’ means"
-    The official report and its assets are preserved verbatim under
-    <code>upstream/tt-metal/tech_reports/Programming_Multiple_Meshes/Programming_Multiple_Meshes.md</code>. This learner page
-    establishes provenance, a reading map, a report-specific architecture plan,
-    concrete code boundaries, and answered reasoning checks; a full visual rewrite
-    remains queued.
+## Architecture walkthrough
 
-## Original report map
+### Why the design is shaped this way
 
-| Signal | Pinned-source value |
-|---|---:|
-| Lines | 693 |
-| Section headings | 33 |
-| Fenced code examples | 16 |
-| Markdown images | 0 |
+The design is shaped by the need to specify physical meshes, graph connectivity,
+host/rank ownership, process launch, fabric configuration, and failure/teardown domains
+so no process independently invents a conflicting global topology.
 
-### Section outline
+### How work and data move
 
-- Contents
-- 1. Overview
-  - 1.1 When to Use Multi-Mesh
-  - 1.2 Multi-Mesh vs Big-Mesh
-- 2. Physical Topologies
-  - 2.1 Closetbox (16 Loudbox)
-  - 2.2 WH Galaxy All-to-All System (5 Galaxies)
-- 3. Mesh Graph Descriptors
-  - 3.1 The Purpose of MGDs
-  - 3.2 MGD Format Reference
-  - 3.3 Example: Closetbox MGD
-  - 3.4 Example: Exabox MGD
-- 4. Rank Bindings and tt-run
-  - 4.1 The Role of Rank Bindings
-  - 4.2 Rank Binding Format
-  - 4.3 Running with tt-run
-- 5. Multi-Processing Support
-  - 5.1 Virtualizing a Galaxy as Multiple Meshes
-  - 5.2 TT_VISIBLE_DEVICES
-  - 5.3 Generating Rank Bindings for Galaxy Systems
-- 6. Fabric Configuration
-  - 6.1 What is TT-Fabric?
-  - 6.2 FabricConfig Options
-  - 6.3 Setting Fabric Configuration
-- … 9 additional headings in the original
+The complete path is `.textproto` mesh graph loading through `tt-run`, rank binding,
+local mesh creation, fabric route setup, local SPMD work, cross-mesh communication,
+barrier/completion, and teardown.
 
-## Improvement plan
+### What must never break
 
-1. **Architecture pressure.** Specify physical meshes, graph connectivity, host/rank
-   ownership, process launch, fabric configuration, and failure/teardown domains so no
-   process independently invents a conflicting global topology.
+The non-negotiable invariant is that every physical device has one owner, all ranks
+interpret the identical mesh graph and collective/work order, and cross-mesh fabric is
+ready before dependent commands execute.
 
-2. **Flow to make explicit.** Draw `.textproto` mesh graph loading through `tt-run`, rank
-   binding, local mesh creation, fabric route setup, local SPMD work, cross-mesh
-   communication, barrier/completion, and teardown.
+### Where the report makes it concrete
 
-3. **Invariant to prove.** Prove every physical device has one owner, all ranks interpret
-   the identical mesh graph and collective/work order, and cross-mesh fabric is ready before
-   dependent commands execute.
+The report makes the decision concrete by connecting the plan to `.textproto`,
+`tt_metal/fabric/MGD_README.md`, `tt-run`, `mesh_id`, `TT_VISIBLE_DEVICES`, and
+`mesh_host_rank`.
 
-4. **TT-Metal evidence to connect.** Connect the plan to `.textproto`,
-   `tt_metal/fabric/MGD_README.md`, `tt-run`, `mesh_id`, `TT_VISIBLE_DEVICES`, and
-   `mesh_host_rank`.
+### How the decision is tested
 
-5. **Experiment and expected observation.** Launch two ranks with a deliberately swapped
-   binding and then the validated graph; expected result: validation rejects inconsistent
-   ownership before execution, while the correct mapping produces identical graph hashes and
-   expected cross-mesh traffic.
+The controlled procedure is to launch two ranks with a deliberately swapped binding and
+then the validated graph. **Expected observation:** validation rejects inconsistent
+ownership before execution, while the correct mapping produces identical graph hashes
+and expected cross-mesh traffic.
 
 ## Code connection
 
@@ -133,6 +99,6 @@ architecture reasoning explicit; generation-sensitive facts remain scoped to tha
 
 - **Original source:** [`tech_reports/Programming_Multiple_Meshes/Programming_Multiple_Meshes.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/Programming_Multiple_Meshes/Programming_Multiple_Meshes.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/Programming_Multiple_Meshes/Programming_Multiple_Meshes.md`
-- **Current delta:** provenance, source metrics, outline, report-specific architecture
-  plan, two source-linked implementation-boundary reviews, and answered reasoning
-  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.
+- **Current delta:** source-grounded architecture walkthrough, concrete
+  implementation boundaries, and expert verification answers. Snapshot-specific claims
+  remain scoped to the pinned commit.

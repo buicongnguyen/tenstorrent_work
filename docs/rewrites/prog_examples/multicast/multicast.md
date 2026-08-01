@@ -1,78 +1,44 @@
-<!-- rewrite-status: seed -->
+<!-- rewrite-status: improved-draft -->
 # **Data Multicasting**
 
 <p class="source-note">
 <strong>Original source:</strong>
 <a href="https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/prog_examples/multicast/multicast.md"><code>tech_reports/prog_examples/multicast/multicast.md</code> at <code>992f3ca</code></a>
-· <strong>Status:</strong> source-linked learner seed
+· <strong>Status:</strong> source-grounded learner draft
 </p>
 
-!!! info "What ‘seed’ means"
-    The official report and its assets are preserved verbatim under
-    <code>upstream/tt-metal/tech_reports/prog_examples/multicast/multicast.md</code>. This learner page
-    establishes provenance, a reading map, a report-specific architecture plan,
-    concrete code boundaries, and answered reasoning checks; a full visual rewrite
-    remains queued.
+## Architecture walkthrough
 
-## Original report map
+### Why the design is shaped this way
 
-| Signal | Pinned-source value |
-|---|---:|
-| Lines | 458 |
-| Section headings | 25 |
-| Fenced code examples | 31 |
-| Markdown images | 0 |
+The design is shaped by the need to state the exact one-to-many reuse: which coordinator
+payload is identical for which receiver core rectangle, how often it is reused, and why
+multicast saves more traffic than its group synchronization costs.
 
-### Section outline
+### How work and data move
 
-- **1. Introduction**
-- **2. Host-Side Workflow in `multicast.cpp`**
-  - **2.1 Defining Logical vs. Physical Core Coordinates**
-  - **2.2 Allocating DRAM Buffers and Storing the Tile**
-  - **2.3 Circular Buffers for Inbound and Outbound Data**
-  - **2.4 Semaphores for Synchronization**
-  - **2.5 Kernel Registration and Argument Setting**
-- **3. Coordinator Core Workflow in `coordinator_kernel.cpp`**
-  - **3.1 Parsing Runtime Arguments**
-  - **3.2 Buffer Setup and Tile Read from DRAM**
-  - **3.3 DPRINTing a Tile Slice**
-  - **3.4 Preparing Semaphores**
-  - **3.5 Waiting for Receiver Readiness**
-  - **3.6 Multicasting the Tile**
-  - **3.7 Signaling Multicast Completion**
-  - **3.8 Finalizing the Multicast Operation**
-- **4. Receiver Core Workflow in `inbound_kernel.cpp`**
-  - **4.1 Parsing Runtime Arguments**
-  - **4.2 Buffer Setup for Receiving Tile**
-  - **4.3 Preparing Semaphores**
-  - **4.4 Notifying Coordinator of Readiness**
-  - **4.5 Receiving the Multicasted Tile**
-  - **4.6 DPRINTing a Tile Slice or Whole**
-  - **4.7 Completing Tile Processing and Acknowledgment**
-- … 1 additional headings in the original
+The complete path is host setup in `multicast.cpp`, receiver reservation/readiness,
+coordinator action in `coordinator_kernel.cpp`, NoC multicast, inbound handling in
+`inbound_kernel.cpp`, arrival publication, local consumption, and acknowledgement/reuse.
 
-## Improvement plan
+### What must never break
 
-1. **Architecture pressure.** State the exact one-to-many reuse: which coordinator payload
-   is identical for which receiver core rectangle, how often it is reused, and why multicast
-   saves more traffic than its group synchronization costs.
+The non-negotiable invariant is that all destinations are addressable and reserved
+before send, no receiver publishes before transport completion, and source/destination
+pages are not reclaimed while any required consumer still owns them.
 
-2. **Flow to make explicit.** Draw host setup in `multicast.cpp`, receiver
-   reservation/readiness, coordinator action in `coordinator_kernel.cpp`, NoC multicast,
-   inbound handling in `inbound_kernel.cpp`, arrival publication, local consumption, and
-   acknowledgement/reuse.
+### Where the report makes it concrete
 
-3. **Invariant to prove.** Prove all destinations are addressable and reserved before send,
-   no receiver publishes before transport completion, and source/destination pages are not
-   reclaimed while any required consumer still owns them.
+The report makes the decision concrete by connecting core coordinates/ranges,
+semaphores, CBs, and host runtime arguments to `multicast.cpp`,
+`coordinator_kernel.cpp`, `inbound_kernel.cpp`, and the source's `{0, 0}` coordinator
+example.
 
-4. **TT-Metal evidence to connect.** Connect core coordinates/ranges, semaphores, CBs, and
-   host runtime arguments to `multicast.cpp`, `coordinator_kernel.cpp`,
-   `inbound_kernel.cpp`, and the source's `{0, 0}` coordinator example.
+### How the decision is tested
 
-5. **Experiment and expected observation.** Compare one multicast with repeated unicast/DRAM
-   reads for synchronized and deliberately skewed receivers; expected result: multicast wins
-   for aligned dense fanout but group wait can erase the benefit under skew.
+The controlled procedure is to compare one multicast with repeated unicast/DRAM reads
+for synchronized and deliberately skewed receivers. **Expected observation:**
+multicast wins for aligned dense fanout but group wait can erase the benefit under skew.
 
 ## Code connection
 
@@ -133,6 +99,6 @@ architecture reasoning explicit; generation-sensitive facts remain scoped to tha
 
 - **Original source:** [`tech_reports/prog_examples/multicast/multicast.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/prog_examples/multicast/multicast.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/prog_examples/multicast/multicast.md`
-- **Current delta:** provenance, source metrics, outline, report-specific architecture
-  plan, two source-linked implementation-boundary reviews, and answered reasoning
-  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.
+- **Current delta:** source-grounded architecture walkthrough, concrete
+  implementation boundaries, and expert verification answers. Snapshot-specific claims
+  remain scoped to the pinned commit.

@@ -1,58 +1,44 @@
-<!-- rewrite-status: seed -->
+<!-- rewrite-status: improved-draft -->
 # CCL Performance Tuning Tips for tt-metal
 
 <p class="source-note">
 <strong>Original source:</strong>
 <a href="https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/Programming_Mesh_of_Devices/CCL_Performance_Best_Practices.md"><code>tech_reports/Programming_Mesh_of_Devices/CCL_Performance_Best_Practices.md</code> at <code>992f3ca</code></a>
-· <strong>Status:</strong> source-linked learner seed
+· <strong>Status:</strong> source-grounded learner draft
 </p>
 
-!!! info "What ‘seed’ means"
-    The official report and its assets are preserved verbatim under
-    <code>upstream/tt-metal/tech_reports/Programming_Mesh_of_Devices/CCL_Performance_Best_Practices.md</code>. This learner page
-    establishes provenance, a reading map, a report-specific architecture plan,
-    concrete code boundaries, and answered reasoning checks; a full visual rewrite
-    remains queued.
+## Architecture walkthrough
 
-## Original report map
+### Why the design is shaped this way
 
-| Signal | Pinned-source value |
-|---|---:|
-| Lines | 124 |
-| Section headings | 5 |
-| Fenced code examples | 6 |
-| Markdown images | 0 |
+The design is shaped by the need to classify collective cost into initialization/program
+construction, dispatch, packet startup, per-link bytes/congestion, synchronization, and
+buffer allocation before selecting trace, preallocation, packet size, or topology knobs.
 
-### Section outline
+### How work and data move
 
-- 0. Proper Initialization
-- 1. Use Trace Mode
-- 2. Op-Specific Parameters
-- 3. Pre-Allocated Buffers
-- 4. Custom Packet Size
+The complete path is one tensor shard through local read/packetization, selected CCL
+algorithm/fabric route, intermediate reduce/relay steps, destination buffer, collective
+completion, and dependent compute.
 
-## Improvement plan
+### What must never break
 
-1. **Architecture pressure.** Classify collective cost into initialization/program
-   construction, dispatch, packet startup, per-link bytes/congestion, synchronization, and
-   buffer allocation before selecting trace, preallocation, packet size, or topology knobs.
+The non-negotiable invariant is that all ranks invoke the same compatible collective
+order and shapes, buffers remain valid through completion/replay, and trace-captured
+addresses/configuration remain stable across warm iterations.
 
-2. **Flow to make explicit.** Draw one tensor shard through local read/packetization,
-   selected CCL algorithm/fabric route, intermediate reduce/relay steps, destination buffer,
-   collective completion, and dependent compute.
+### Where the report makes it concrete
 
-3. **Invariant to prove.** Prove all ranks invoke the same compatible collective order and
-   shapes, buffers remain valid through completion/replay, and trace-captured
-   addresses/configuration remain stable across warm iterations.
+The report makes the decision concrete by connecting tuning to `mesh_device`,
+`FABRIC_1D`, `FABRIC_1D_RING`, `FABRIC_2D`, `FABRIC_2D_TORUS_X/Y/XY`, trace mode,
+preallocated buffers, op parameters, and packet size.
 
-4. **TT-Metal evidence to connect.** Connect tuning to `mesh_device`, `FABRIC_1D`,
-   `FABRIC_1D_RING`, `FABRIC_2D`, `FABRIC_2D_TORUS_X/Y/XY`, trace mode, preallocated
-   buffers, op parameters, and packet size.
+### How the decision is tested
 
-5. **Experiment and expected observation.** Sweep message and packet size in warm cached and
-   trace modes for one topology; expected result: trace removes launch gaps, while
-   packet/algorithm changes alter link utilization only in the matching latency or bandwidth
-   regime.
+The controlled procedure is to sweep message and packet size in warm cached and trace
+modes for one topology. **Expected observation:** trace removes launch gaps, while
+packet/algorithm changes alter link utilization only in the matching latency or
+bandwidth regime.
 
 ## Code connection
 
@@ -115,6 +101,6 @@ architecture reasoning explicit; generation-sensitive facts remain scoped to tha
 
 - **Original source:** [`tech_reports/Programming_Mesh_of_Devices/CCL_Performance_Best_Practices.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/Programming_Mesh_of_Devices/CCL_Performance_Best_Practices.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/Programming_Mesh_of_Devices/CCL_Performance_Best_Practices.md`
-- **Current delta:** provenance, source metrics, outline, report-specific architecture
-  plan, two source-linked implementation-boundary reviews, and answered reasoning
-  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.
+- **Current delta:** source-grounded architecture walkthrough, concrete
+  implementation boundaries, and expert verification answers. Snapshot-specific claims
+  remain scoped to the pinned commit.

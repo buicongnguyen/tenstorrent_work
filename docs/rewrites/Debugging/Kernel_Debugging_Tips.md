@@ -1,58 +1,44 @@
-<!-- rewrite-status: seed -->
+<!-- rewrite-status: improved-draft -->
 # Kernel Debugging Tips
 
 <p class="source-note">
 <strong>Original source:</strong>
 <a href="https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/Debugging/Kernel_Debugging_Tips.md"><code>tech_reports/Debugging/Kernel_Debugging_Tips.md</code> at <code>992f3ca</code></a>
-· <strong>Status:</strong> source-linked learner seed
+· <strong>Status:</strong> source-grounded learner draft
 </p>
 
-!!! info "What ‘seed’ means"
-    The official report and its assets are preserved verbatim under
-    <code>upstream/tt-metal/tech_reports/Debugging/Kernel_Debugging_Tips.md</code>. This learner page
-    establishes provenance, a reading map, a report-specific architecture plan,
-    concrete code boundaries, and answered reasoning checks; a full visual rewrite
-    remains queued.
+## Architecture walkthrough
 
-## Original report map
+### Why the design is shaped this way
 
-| Signal | Pinned-source value |
-|---|---:|
-| Lines | 53 |
-| Section headings | 5 |
-| Fenced code examples | 1 |
-| Markdown images | 0 |
+The design is shaped by the need to classify the target failure as host/JIT,
+firmware/watchdog, address/bounds, CB ownership/count, NoC completion, or numerical
+compute before adding instrumentation; each class requires different evidence.
 
-### Section outline
+### How work and data move
 
-- TT-TRIAGE
-- DPRINT
-  - Printing data from CBs
-- Watcher
-- General tips
+The complete path is the failing program from host launch/runtime arguments through
+reader, transport, compute, writer, and host validation, placing TT-TRIAGE, Watcher, and
+device-print observations at the first boundary they can verify.
 
-## Improvement plan
+### What must never break
 
-1. **Architecture pressure.** Classify the target failure as host/JIT, firmware/watchdog,
-   address/bounds, CB ownership/count, NoC completion, or numerical compute before adding
-   instrumentation; each class requires different evidence.
+The non-negotiable invariant is for the suspected channel, prove matching
+producer/consumer loop counts, valid addresses, reserved storage before movement,
+movement completion before publication, and reclamation only after the final consumer.
 
-2. **Flow to make explicit.** Draw the failing program from host launch/runtime arguments
-   through reader, transport, compute, writer, and host validation, placing TT-TRIAGE,
-   Watcher, and device-print observations at the first boundary they can verify.
+### Where the report makes it concrete
 
-3. **Invariant to prove.** For the suspected channel, prove matching producer/consumer loop
-   counts, valid addresses, reserved storage before movement, movement completion before
-   publication, and reclamation only after the final consumer.
+The report makes the decision concrete by connecting the workflow to
+`./tools/tt-triage.py --verbosity=4 --dev=0`, `api/debug/dprint.h`,
+`TT_METAL_DPRINT_CORES`, `TT_METAL_WATCHER=1`, and `generated/watcher/watcher.log`.
 
-4. **TT-Metal evidence to connect.** Connect the workflow to `./tools/tt-triage.py
-   --verbosity=4 --dev=0`, `api/debug/dprint.h`, `TT_METAL_DPRINT_CORES`,
-   `TT_METAL_WATCHER=1`, and `generated/watcher/watcher.log`.
+### How the decision is tested
 
-5. **Experiment and expected observation.** Create a minimal reproduction and intentionally
-   break one count or address check; expected result: the selected tool reports the first
-   violated boundary consistently, while random delays change timing but do not repair the
-   protocol.
+The controlled procedure is to create a minimal reproduction and intentionally break one
+count or address check. **Expected observation:** the selected tool reports the first
+violated boundary consistently, while random delays change timing but do not repair the
+protocol.
 
 ## Code connection
 
@@ -113,6 +99,6 @@ architecture reasoning explicit; generation-sensitive facts remain scoped to tha
 
 - **Original source:** [`tech_reports/Debugging/Kernel_Debugging_Tips.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/Debugging/Kernel_Debugging_Tips.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/Debugging/Kernel_Debugging_Tips.md`
-- **Current delta:** provenance, source metrics, outline, report-specific architecture
-  plan, two source-linked implementation-boundary reviews, and answered reasoning
-  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.
+- **Current delta:** source-grounded architecture walkthrough, concrete
+  implementation boundaries, and expert verification answers. Snapshot-specific claims
+  remain scoped to the pinned commit.

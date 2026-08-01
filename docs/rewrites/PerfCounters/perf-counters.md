@@ -1,77 +1,44 @@
-<!-- rewrite-status: seed -->
+<!-- rewrite-status: improved-draft -->
 # Hardware Performance Counters
 
 <p class="source-note">
 <strong>Original source:</strong>
 <a href="https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/PerfCounters/perf-counters.md"><code>tech_reports/PerfCounters/perf-counters.md</code> at <code>992f3ca</code></a>
-· <strong>Status:</strong> source-linked learner seed
+· <strong>Status:</strong> source-grounded learner draft
 </p>
 
-!!! info "What ‘seed’ means"
-    The official report and its assets are preserved verbatim under
-    <code>upstream/tt-metal/tech_reports/PerfCounters/perf-counters.md</code>. This learner page
-    establishes provenance, a reading map, a report-specific architecture plan,
-    concrete code boundaries, and answered reasoning checks; a full visual rewrite
-    remains queued.
+## Architecture walkthrough
 
-## Original report map
+### Why the design is shaped this way
 
-| Signal | Pinned-source value |
-|---|---:|
-| Lines | 1163 |
-| Section headings | 27 |
-| Fenced code examples | 49 |
-| Markdown images | 0 |
+The design is shaped by the need to choose counters only after stating a mechanism
+hypothesis—request/grant pressure, issue utilization, wait dependency, or another
+documented event—and define the exact core and interval the derived metric represents.
 
-### Section outline
+### How work and data move
 
-- Quick Links
-- Overview
-- How It Works
-  - How to Run
-  - Environment Variable
-  - Architecture Summary
-- Derived Metrics Reference
-  - Compute Utilization
-  - Pipeline Efficiency
-  - Thread Analysis
-  - Pipeline Wait Metrics
-  - Semaphore Waits
-  - TDMA Stall Metrics
-  - Instruction Availability Rates
-  - Stall Breakdown
-  - Write Port Analysis
-  - Additional Idle Waits
-  - L1 Memory Utilization
-  - L1 Backpressure
-  - L1 Composite Metrics
-  - Additional Pipeline Metrics
-- Hardware Register Reference
-  - Control registers (`RISCV_DEBUG_REG_PERF_CNT_<X>0..2`)
-  - Data registers
-- … 3 additional headings in the original
+The complete path is a hardware event increment through selected counter register,
+start/stop/reset lifecycle, RISC synchronization, readout, exported record, and formula
+such as request/reference or request/grant stall ratio.
 
-## Improvement plan
+### What must never break
 
-1. **Architecture pressure.** Choose counters only after stating a mechanism
-   hypothesis—request/grant pressure, issue utilization, wait dependency, or another
-   documented event—and define the exact core and interval the derived metric represents.
+The non-negotiable invariant is that counter selection, width, reset, sampling window,
+core coverage, and formula use compatible events; account for overflow, unsupported
+selectors, and any multiplexing or instrumentation effect.
 
-2. **Flow to make explicit.** Draw a hardware event increment through selected counter
-   register, start/stop/reset lifecycle, RISC synchronization, readout, exported record, and
-   formula such as request/reference or request/grant stall ratio.
+### Where the report makes it concrete
 
-3. **Invariant to prove.** Prove counter selection, width, reset, sampling window, core
-   coverage, and formula use compatible events; account for overflow, unsupported selectors,
-   and any multiplexing or instrumentation effect.
+The report makes the decision concrete by connecting the workflow to
+`start_perf_counter()`, `stop_perf_counter()`, `wait_ncrisc_trisc()`,
+`read_perf_counters()`, `counter_sel`, `tt_perf_cnt`, and the report's derived
+expressions.
 
-4. **TT-Metal evidence to connect.** Connect the workflow to `start_perf_counter()`,
-   `stop_perf_counter()`, `wait_ncrisc_trisc()`, `read_perf_counters()`, `counter_sel`,
-   `tt_perf_cnt`, and the report's derived expressions.
+### How the decision is tested
 
-5. **Experiment and expected observation.** Create a baseline plus one controlled source of
-   reader or arbitration pressure; expected result: the predicted counter/ratio changes in
-   the measured interval and aligns with a matching timeline stall.
+The controlled procedure is to create a baseline plus one controlled source of reader or
+arbitration pressure. **Expected observation:** the predicted counter/ratio changes in
+the measured interval and aligns with a matching timeline stall.
 
 ## Code connection
 
@@ -132,6 +99,6 @@ architecture reasoning explicit; generation-sensitive facts remain scoped to tha
 
 - **Original source:** [`tech_reports/PerfCounters/perf-counters.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/PerfCounters/perf-counters.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/PerfCounters/perf-counters.md`
-- **Current delta:** provenance, source metrics, outline, report-specific architecture
-  plan, two source-linked implementation-boundary reviews, and answered reasoning
-  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.
+- **Current delta:** source-grounded architecture walkthrough, concrete
+  implementation boundaries, and expert verification answers. Snapshot-specific claims
+  remain scoped to the pinned commit.

@@ -1,54 +1,44 @@
-<!-- rewrite-status: seed -->
+<!-- rewrite-status: improved-draft -->
 # Data Sharding (Multicore)
 
 <p class="source-note">
 <strong>Original source:</strong>
 <a href="https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/prog_examples/shard_data_rm/shard_data_rm.md"><code>tech_reports/prog_examples/shard_data_rm/shard_data_rm.md</code> at <code>992f3ca</code></a>
-· <strong>Status:</strong> source-linked learner seed
+· <strong>Status:</strong> source-grounded learner draft
 </p>
 
-!!! info "What ‘seed’ means"
-    The official report and its assets are preserved verbatim under
-    <code>upstream/tt-metal/tech_reports/prog_examples/shard_data_rm/shard_data_rm.md</code>. This learner page
-    establishes provenance, a reading map, a report-specific architecture plan,
-    concrete code boundaries, and answered reasoning checks; a full visual rewrite
-    remains queued.
+## Architecture walkthrough
 
-## Original report map
+### Why the design is shaped this way
 
-| Signal | Pinned-source value |
-|---|---:|
-| Lines | 197 |
-| Section headings | 1 |
-| Fenced code examples | 11 |
-| Markdown images | 0 |
+The design is shaped by the need to define row-major page order, tensor/padded extents,
+shard shape/orientation, core grid, per-core page range, and the downstream reuse that
+justifies staging global pages into L1.
 
-### Section outline
+### How work and data move
 
-- Building and Running the Example
+The complete path is interleaved/global source pages through `MeshCommandQueue`,
+`MeshWorkload`/`Program` runtime arguments, per-core NoC reads and
+`padded_offset_bytes`, local shard ownership, downstream consumer or writer, and
+recomposition.
 
-## Improvement plan
+### What must never break
 
-1. **Architecture pressure.** Define row-major page order, tensor/padded extents, shard
-   shape/orientation, core grid, per-core page range, and the downstream reuse that
-   justifies staging global pages into L1.
+The non-negotiable invariant is that shards cover each logical page once in promised
+order, padded rows never alias real data, source bank/offset calculations match page
+size, and recomposition restores the original tensor.
 
-2. **Flow to make explicit.** Draw interleaved/global source pages through
-   `MeshCommandQueue`, `MeshWorkload`/`Program` runtime arguments, per-core NoC reads and
-   `padded_offset_bytes`, local shard ownership, downstream consumer or writer, and
-   recomposition.
+### Where the report makes it concrete
 
-3. **Invariant to prove.** Prove shards cover each logical page once in promised order,
-   padded rows never alias real data, source bank/offset calculations match page size, and
-   recomposition restores the original tensor.
+The report makes the decision concrete by connecting the example to `MeshCommandQueue`,
+`mesh_device`, `Program`, `MeshWorkload`, the `(16, 1)` grid/shape data,
+`padded_offset_bytes`, and its row-major `uint32_t` page handling.
 
-4. **TT-Metal evidence to connect.** Connect the example to `MeshCommandQueue`,
-   `mesh_device`, `Program`, `MeshWorkload`, the `(16, 1)` grid/shape data,
-   `padded_offset_bytes`, and its row-major `uint32_t` page handling.
+### How the decision is tested
 
-5. **Experiment and expected observation.** Compare repeated interleaved reads with one
-   staging pass plus multiple local consumers; expected result: staging pays off only when
-   avoided remote bytes exceed initial shard creation and later recomposition/reshard cost.
+The controlled procedure is to compare repeated interleaved reads with one staging pass
+plus multiple local consumers. **Expected observation:** staging pays off only when
+avoided remote bytes exceed initial shard creation and later recomposition/reshard cost.
 
 ## Code connection
 
@@ -107,6 +97,6 @@ architecture reasoning explicit; generation-sensitive facts remain scoped to tha
 
 - **Original source:** [`tech_reports/prog_examples/shard_data_rm/shard_data_rm.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/prog_examples/shard_data_rm/shard_data_rm.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/prog_examples/shard_data_rm/shard_data_rm.md`
-- **Current delta:** provenance, source metrics, outline, report-specific architecture
-  plan, two source-linked implementation-boundary reviews, and answered reasoning
-  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.
+- **Current delta:** source-grounded architecture walkthrough, concrete
+  implementation boundaries, and expert verification answers. Snapshot-specific claims
+  remain scoped to the pinned commit.

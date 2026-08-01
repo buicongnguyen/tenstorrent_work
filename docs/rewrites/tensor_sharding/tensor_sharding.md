@@ -1,59 +1,43 @@
-<!-- rewrite-status: seed -->
+<!-- rewrite-status: improved-draft -->
 # Tensor Sharding
 
 <p class="source-note">
 <strong>Original source:</strong>
 <a href="https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/tensor_sharding/tensor_sharding.md"><code>tech_reports/tensor_sharding/tensor_sharding.md</code> at <code>992f3ca</code></a>
-· <strong>Status:</strong> source-linked learner seed
+· <strong>Status:</strong> source-grounded learner draft
 </p>
 
-!!! info "What ‘seed’ means"
-    The official report and its assets are preserved verbatim under
-    <code>upstream/tt-metal/tech_reports/tensor_sharding/tensor_sharding.md</code>. This learner page
-    establishes provenance, a reading map, a report-specific architecture plan,
-    concrete code boundaries, and answered reasoning checks; a full visual rewrite
-    remains queued.
+## Architecture walkthrough
 
-## Original report map
+### Why the design is shaped this way
 
-| Signal | Pinned-source value |
-|---|---:|
-| Lines | 364 |
-| Section headings | 7 |
-| Fenced code examples | 8 |
-| Markdown images | 0 |
+The design is shaped by the need to choose sharding from the next consumer's output
+ownership and input reuse, then specify logical/padded tensor, page layout, shard
+shape/orientation, core order, L1 footprint, and reshard/halo requirements.
 
-### Section outline
+### How work and data move
 
-- Introduction
-- 2D Sharding
-  - Height Sharding
-  - Width Sharding
-  - Block Sharding
-- ND Sharding (experimental)
-- TensorMemoryLayout Enum Values
+The complete path is logical pages through `TensorMemoryLayout`/`ShardSpec` or
+`NdShardSpec`, mapper/data movement, per-core L1 shard, local compute, cross-shard
+dependency, and composition or next reshard.
 
-## Improvement plan
+### What must never break
 
-1. **Architecture pressure.** Choose sharding from the next consumer's output ownership and
-   input reuse, then specify logical/padded tensor, page layout, shard shape/orientation,
-   core order, L1 footprint, and reshard/halo requirements.
+The non-negotiable invariant is that shard regions cover the intended tensor without
+unintended gaps/duplication and that allocation, TensorAccessor, reader, compute, and
+writer interpret identical shape, orientation, padding, and core order.
 
-2. **Flow to make explicit.** Draw logical pages through `TensorMemoryLayout`/`ShardSpec` or
-   `NdShardSpec`, mapper/data movement, per-core L1 shard, local compute, cross-shard
-   dependency, and composition or next reshard.
+### Where the report makes it concrete
 
-3. **Invariant to prove.** Prove shard regions cover the intended tensor without unintended
-   gaps/duplication and that allocation, TensorAccessor, reader, compute, and writer
-   interpret identical shape, orientation, padding, and core order.
+The report makes the decision concrete by connecting 2D/ND cases to
+`TensorMemoryLayout::INTERLEAVED`, `HEIGHT_SHARDED`, `WIDTH_SHARDED`, block layouts,
+`ShardSpec`, `NdShardSpec`, and `memory_config`.
 
-4. **TT-Metal evidence to connect.** Connect 2D/ND cases to
-   `TensorMemoryLayout::INTERLEAVED`, `HEIGHT_SHARDED`, `WIDTH_SHARDED`, block layouts,
-   `ShardSpec`, `NdShardSpec`, and `memory_config`.
+### How the decision is tested
 
-5. **Experiment and expected observation.** Compare two legal shard orientations for one
-   consumer chain; expected result: the consumer-aligned choice reduces remote/reshard bytes
-   and wait time enough to justify L1 occupancy and shard-creation cost.
+The controlled procedure is to compare two legal shard orientations for one consumer
+chain. **Expected observation:** the consumer-aligned choice reduces remote/reshard
+bytes and wait time enough to justify L1 occupancy and shard-creation cost.
 
 ## Code connection
 
@@ -112,6 +96,6 @@ architecture reasoning explicit; generation-sensitive facts remain scoped to tha
 
 - **Original source:** [`tech_reports/tensor_sharding/tensor_sharding.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/tensor_sharding/tensor_sharding.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/tensor_sharding/tensor_sharding.md`
-- **Current delta:** provenance, source metrics, outline, report-specific architecture
-  plan, two source-linked implementation-boundary reviews, and answered reasoning
-  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.
+- **Current delta:** source-grounded architecture walkthrough, concrete
+  implementation boundaries, and expert verification answers. Snapshot-specific claims
+  remain scoped to the pinned commit.

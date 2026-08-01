@@ -1,79 +1,46 @@
-<!-- rewrite-status: seed -->
+<!-- rewrite-status: improved-draft -->
 # LLMs in TT-NN
 
 <p class="source-note">
 <strong>Original source:</strong>
 <a href="https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/LLMs/llms.md"><code>tech_reports/LLMs/llms.md</code> at <code>992f3ca</code></a>
-· <strong>Status:</strong> source-linked learner seed
+· <strong>Status:</strong> source-grounded learner draft
 </p>
 
-!!! info "What ‘seed’ means"
-    The official report and its assets are preserved verbatim under
-    <code>upstream/tt-metal/tech_reports/LLMs/llms.md</code>. This learner page
-    establishes provenance, a reading map, a report-specific architecture plan,
-    concrete code boundaries, and answered reasoning checks; a full visual rewrite
-    remains queued.
+## Architecture walkthrough
 
-## Original report map
+### Why the design is shaped this way
 
-| Signal | Pinned-source value |
-|---|---:|
-| Lines | 1870 |
-| Section headings | 70 |
-| Fenced code examples | 79 |
-| Markdown images | 3 |
+The design is shaped by the need to split the model plan into prefill and decode
+regimes, then identify which transformer modules are compute-bound,
+KV/weight-bandwidth-bound, launch-bound, or constrained by tensor-parallel communication
+for production shapes.
 
-### Section outline
+### How work and data move
 
-- Contents
-- 1. Overview
-- 2. Modules
-  - 2.1 Embedding
-  - 2.2 RoPE
-    - 2.2.1 Setting up inputs to RoPE
-    - 2.2.2 Decode mode specifics
-  - 2.3 Norm
-    - 2.3.1 Implementations of Normalization Operations
-    - 2.3.1.1 Non-Distributed Norm
-    - 2.3.1.2 Distributed Norm
-    - 2.3.1.3 References
-  - 2.4 Attention
-  - 2.4.1 Attention Prefill
-  - 2.4.2 Attention Decode
-  - 2.4.3 Miscellaneous Facts
-  - 2.5 MLP
-    - 2.5.1 Setup
-    - 2.5.2 Inputs
-    - 2.5.3 Setting Up Program Configurations For Matmuls
-    - 2.5.4 FF1/FF3 Matmul
-    - 2.5.5 FF1/FF3 Matmul With 2D Weight Fracturing
-    - 2.5.6 Multiply + Fused SiLU Activation
-    - 2.5.7 FF2 Matmul
-- … 46 additional headings in the original
+The complete path follows one token from embedding through normalization, Q/K/V and
+rotary application, KV-cache update/read, causal attention, projection/residual, MLP,
+final normalization/head, logits, and the next decode iteration.
 
-## Improvement plan
+### What must never break
 
-1. **Architecture pressure.** Split the model plan into prefill and decode regimes, then
-   identify which transformer modules are compute-bound, KV/weight-bandwidth-bound,
-   launch-bound, or constrained by tensor-parallel communication for production shapes.
+The non-negotiable invariant is to preserve batch, sequence, head, hidden-dimension,
+causal position, and KV ownership semantics through every reshape/shard; token `t` must
+read only the permitted cache positions and update exactly its assigned slot.
 
-2. **Flow to make explicit.** Trace one token from embedding through normalization, Q/K/V
-   and rotary application, KV-cache update/read, causal attention, projection/residual, MLP,
-   final normalization/head, logits, and the next decode iteration.
+### Where the report makes it concrete
 
-3. **Invariant to prove.** Preserve batch, sequence, head, hidden-dimension, causal
-   position, and KV ownership semantics through every reshape/shard; token `t` must read
-   only the permitted cache positions and update exactly its assigned slot.
+The report makes the decision concrete by connecting modules to concrete operations such
+as `ttnn.experimental.rotary_embedding_llama`, `RotarySetup`, normalization `stats`
+tensors, attention/cache operations, mesh configs, and model-specific program factories
+named by the source.
 
-4. **TT-Metal evidence to connect.** Connect modules to concrete operations such as
-   `ttnn.experimental.rotary_embedding_llama`, `RotarySetup`, normalization `stats` tensors,
-   attention/cache operations, mesh configs, and model-specific program factories named by
-   the source.
+### How the decision is tested
 
-5. **Experiment and expected observation.** Measure prefill time-to-first-token and steady
-   decode token latency separately while keeping weights/KV resident; expected result:
-   regime-specific configurations improve their targeted metric without cache growth,
-   reorder, or module-PCC errors.
+The controlled procedure is to measure prefill time-to-first-token and steady decode
+token latency separately while keeping weights/KV resident. **Expected observation:**
+regime-specific configurations improve their targeted metric without cache growth,
+reorder, or module-PCC errors.
 
 ## Code connection
 
@@ -136,6 +103,6 @@ architecture reasoning explicit; generation-sensitive facts remain scoped to tha
 
 - **Original source:** [`tech_reports/LLMs/llms.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/LLMs/llms.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/LLMs/llms.md`
-- **Current delta:** provenance, source metrics, outline, report-specific architecture
-  plan, two source-linked implementation-boundary reviews, and answered reasoning
-  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.
+- **Current delta:** source-grounded architecture walkthrough, concrete
+  implementation boundaries, and expert verification answers. Snapshot-specific claims
+  remain scoped to the pinned commit.

@@ -1,57 +1,43 @@
-<!-- rewrite-status: seed -->
+<!-- rewrite-status: improved-draft -->
 # Tensor Padding (Multicore)
 
 <p class="source-note">
 <strong>Original source:</strong>
 <a href="https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/prog_examples/pad_multi_core/pad_multi_core.md"><code>tech_reports/prog_examples/pad_multi_core/pad_multi_core.md</code> at <code>992f3ca</code></a>
-· <strong>Status:</strong> source-linked learner seed
+· <strong>Status:</strong> source-grounded learner draft
 </p>
 
-!!! info "What ‘seed’ means"
-    The official report and its assets are preserved verbatim under
-    <code>upstream/tt-metal/tech_reports/prog_examples/pad_multi_core/pad_multi_core.md</code>. This learner page
-    establishes provenance, a reading map, a report-specific architecture plan,
-    concrete code boundaries, and answered reasoning checks; a full visual rewrite
-    remains queued.
+## Architecture walkthrough
 
-## Original report map
+### Why the design is shaped this way
 
-| Signal | Pinned-source value |
-|---|---:|
-| Lines | 354 |
-| Section headings | 5 |
-| Fenced code examples | 17 |
-| Markdown images | 0 |
+The design is shaped by the need to define logical padding, physical tile/page padding,
+output layout, pad value, and a disjoint output ownership partition so every produced
+coordinate has exactly one responsible core.
 
-### Section outline
+### How work and data move
 
-- Building and Running the Example
-- Device setup
-- Initialize data
-- Designate cores for utilization
-- Configure and create DRAM buffers
+The complete path is host `Device`/`CommandQueue`/`Program` setup, input/output buffer
+creation, output-range runtime arguments, per-core coordinate classification, input read
+or pad synthesis, writer commit, and host validation.
 
-## Improvement plan
+### What must never break
 
-1. **Architecture pressure.** Define logical padding, physical tile/page padding, output
-   layout, pad value, and a disjoint output ownership partition so every produced coordinate
-   has exactly one responsible core.
+The non-negotiable invariant is that each output coordinate is written once; in-range
+coordinates map to the correct input element and out-of-range coordinates receive the
+declared pad value, including partial rows/pages and every corner.
 
-2. **Flow to make explicit.** Draw host `Device`/`CommandQueue`/`Program` setup,
-   input/output buffer creation, output-range runtime arguments, per-core coordinate
-   classification, input read or pad synthesis, writer commit, and host validation.
+### Where the report makes it concrete
 
-3. **Invariant to prove.** Prove each output coordinate is written once; in-range
-   coordinates map to the correct input element and out-of-range coordinates receive the
-   declared pad value, including partial rows/pages and every corner.
+The report makes the decision concrete by connecting the plan to the example's `Device`,
+`CommandQueue`, `Program`, `bfloat16` buffers, designated core ranges, DRAM/L1 configs,
+reader/writer kernels, and runtime arguments.
 
-4. **TT-Metal evidence to connect.** Connect the plan to the example's `Device`,
-   `CommandQueue`, `Program`, `bfloat16` buffers, designated core ranges, DRAM/L1 configs,
-   reader/writer kernels, and runtime arguments.
+### How the decision is tested
 
-5. **Experiment and expected observation.** Use distinctive interior/edge values and uneven
-   padding that crosses page boundaries; expected result: exact output ownership/values with
-   no overlap, and per-core timings reveal any padding-heavy imbalance.
+The controlled procedure is to use distinctive interior/edge values and uneven padding
+that crosses page boundaries. **Expected observation:** exact output ownership/values
+with no overlap, and per-core timings reveal any padding-heavy imbalance.
 
 ## Code connection
 
@@ -113,6 +99,6 @@ architecture reasoning explicit; generation-sensitive facts remain scoped to tha
 
 - **Original source:** [`tech_reports/prog_examples/pad_multi_core/pad_multi_core.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/prog_examples/pad_multi_core/pad_multi_core.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/prog_examples/pad_multi_core/pad_multi_core.md`
-- **Current delta:** provenance, source metrics, outline, report-specific architecture
-  plan, two source-linked implementation-boundary reviews, and answered reasoning
-  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.
+- **Current delta:** source-grounded architecture walkthrough, concrete
+  implementation boundaries, and expert verification answers. Snapshot-specific claims
+  remain scoped to the pinned commit.

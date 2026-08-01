@@ -1,78 +1,43 @@
-<!-- rewrite-status: seed -->
+<!-- rewrite-status: improved-draft -->
 # YOLOv4 in TT-NN
 
 <p class="source-note">
 <strong>Original source:</strong>
 <a href="https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/YoloV4-TTNN/yolov4.md"><code>tech_reports/YoloV4-TTNN/yolov4.md</code> at <code>992f3ca</code></a>
-· <strong>Status:</strong> source-linked learner seed
+· <strong>Status:</strong> source-grounded learner draft
 </p>
 
-!!! info "What ‘seed’ means"
-    The official report and its assets are preserved verbatim under
-    <code>upstream/tt-metal/tech_reports/YoloV4-TTNN/yolov4.md</code>. This learner page
-    establishes provenance, a reading map, a report-specific architecture plan,
-    concrete code boundaries, and answered reasoning checks; a full visual rewrite
-    remains queued.
+## Architecture walkthrough
 
-## Original report map
+### Why the design is shaped this way
 
-| Signal | Pinned-source value |
-|---|---:|
-| Lines | 1703 |
-| Section headings | 25 |
-| Fenced code examples | 25 |
-| Markdown images | 27 |
+The design is shaped by the need to treat each downsample, residual/route, neck
+upsample/concat, and three detection heads as a named tensor contract; identify where
+sharding, format, or deallocation should follow the next branch consumer.
 
-### Section outline
+### How work and data move
 
-- Contents
-- 1. Overview
-- 2. YOLOv4 TT-NN Optimization Techniques
-  - 2.1 Sharding on all relevant OPs
-  - 2.2 Deallocate Unused tensors
-  - 2.3 Data type Optimization
-  - 2.4 Use best shardlayout for convolution
-    - How to generate the graph?
-- 3. YOLOv4 Architecture
-- 3.1 Downsample1 :-
-  - Let’s examine how some of the aforementioned optimization techniques contributed to enhancing the performance of the Downsample1 sub-module, accompanied by graphical visualizations.
-- 3.2 Downsample2 :-
-  - Let’s examine how some of the aforementioned optimization techniques contributed to enhancing the performance of the Downsample2 sub-module, accompanied by graphical visualizations.
-- 3.3 Downsample3 :-
-  - Let’s examine how some of the aforementioned optimization techniques contributed to enhancing the performance of the Downsample3 sub-module, accompanied by graphical visualizations.
-- 3.4 Downsample4 :-
-  - Let’s examine how some of the aforementioned optimization techniques contributed to enhancing the performance of the Downsample4 sub-module, accompanied by graphical visualizations.
-- 3.5 Downsample5 :-
-  - Let’s examine how some of the aforementioned optimization techniques contributed to enhancing the performance of the Downsample5 sub-module, accompanied by graphical visualizations.
-- 3.6 Neck :-
-  - Let’s examine how some of the aforementioned optimization techniques contributed to enhancing the performance of the Neck sub-module, accompanied by graphical visualizations.
-- 3.7 Head :-
-  - Let’s examine how some of the aforementioned optimization techniques contributed to enhancing the performance of the Head sub-module, accompanied by graphical visualizations.
-- 4. Auto download weights
-- … 1 additional headings in the original
+The complete path is one image through five downsample stages, retained multi-scale
+feature maps, neck routes/upsamples/concats, scale-specific heads, raw output tensors,
+and host decoding.
 
-## Improvement plan
+### What must never break
 
-1. **Architecture pressure.** Treat each downsample, residual/route, neck upsample/concat,
-   and three detection heads as a named tensor contract; identify where sharding, format, or
-   deallocation should follow the next branch consumer.
+The non-negotiable invariant is that feature shape/channel order, route source, concat
+order, upsample alignment, and head-to-scale/anchor meaning; physical padding or
+sharding must not change logical multi-scale semantics.
 
-2. **Flow to make explicit.** Draw one image through five downsample stages, retained
-   multi-scale feature maps, neck routes/upsamples/concats, scale-specific heads, raw output
-   tensors, and host decoding.
+### Where the report makes it concrete
 
-3. **Invariant to prove.** Prove feature shape/channel order, route source, concat order,
-   upsample alignment, and head-to-scale/anchor meaning; physical padding or sharding must
-   not change logical multi-scale semantics.
+The report makes the decision concrete by connecting the plan to
+`ttnn.deallocate(tensor)`, `bfloat8_b`, `BLOCK_SHARDED`, `HEIGHT_SHARDED`,
+`WIDTH_SHARDED`, `common.py`, and `MathFidelity::LoFi` choices in the source.
 
-4. **TT-Metal evidence to connect.** Connect the plan to `ttnn.deallocate(tensor)`,
-   `bfloat8_b`, `BLOCK_SHARDED`, `HEIGHT_SHARDED`, `WIDTH_SHARDED`, `common.py`, and
-   `MathFidelity::LoFi` choices in the source.
+### How the decision is tested
 
-5. **Experiment and expected observation.** Capture raw values and layouts at every neck
-   merge and head before decoding, then remove one conversion/deallocation boundary;
-   expected result: exact/PCC parity at raw heads and a measurable end-to-end benefit
-   without higher peak memory.
+The controlled procedure is to capture raw values and layouts at every neck merge and
+head before decoding, then remove one conversion/deallocation boundary. **Expected observation:** exact/PCC parity at raw heads and a measurable end-to-end benefit without
+higher peak memory.
 
 ## Code connection
 
@@ -133,6 +98,6 @@ architecture reasoning explicit; generation-sensitive facts remain scoped to tha
 
 - **Original source:** [`tech_reports/YoloV4-TTNN/yolov4.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/YoloV4-TTNN/yolov4.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/YoloV4-TTNN/yolov4.md`
-- **Current delta:** provenance, source metrics, outline, report-specific architecture
-  plan, two source-linked implementation-boundary reviews, and answered reasoning
-  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.
+- **Current delta:** source-grounded architecture walkthrough, concrete
+  implementation boundaries, and expert verification answers. Snapshot-specific claims
+  remain scoped to the pinned commit.

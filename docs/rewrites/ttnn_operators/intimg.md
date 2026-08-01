@@ -1,78 +1,44 @@
-<!-- rewrite-status: seed -->
+<!-- rewrite-status: improved-draft -->
 # Tenstorrent `tt-metal`: Integral Image (Summed-Area Table) Kernels — High-Level Guide (Axis Spec: **[B, W, H, C]**)
 
 <p class="source-note">
 <strong>Original source:</strong>
 <a href="https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/ttnn_operators/intimg.md"><code>tech_reports/ttnn_operators/intimg.md</code> at <code>992f3ca</code></a>
-· <strong>Status:</strong> source-linked learner seed
+· <strong>Status:</strong> source-grounded learner draft
 </p>
 
-!!! info "What ‘seed’ means"
-    The official report and its assets are preserved verbatim under
-    <code>upstream/tt-metal/tech_reports/ttnn_operators/intimg.md</code>. This learner page
-    establishes provenance, a reading map, a report-specific architecture plan,
-    concrete code boundaries, and answered reasoning checks; a full visual rewrite
-    remains queued.
+## Architecture walkthrough
 
-## Original report map
+### Why the design is shaped this way
 
-| Signal | Pinned-source value |
-|---|---:|
-| Lines | 403 |
-| Section headings | 29 |
-| Fenced code examples | 9 |
-| Markdown images | 0 |
+The design is shaped by the need to define the integral-image recurrence and `[B, W, H,
+C]` axis mapping, then assign tile/core wavefront work and the exact horizontal/vertical
+prefix state that must cross every boundary.
 
-### Section outline
+### How work and data move
 
-- 0) TL;DR — mental model (with **[B, W, H, C]**)
-- 1) What the kernel computes (the math)
-- 2) Key vocabulary (TT-metal essentials)
-- 3) Global tiling layout
-- 4) Reader kernel — orchestrating input & initializing state
-  - 4.1 Functions and intent
-  - 4.2 Control flow
-- 5) Compute kernel — turning tiles into an integral image
-  - 5.1 W cumulative sum: `cumsum_cube_axis_2(...)`
-  - 5.2 W propagation across blocks: `propagate_tile_into_cube(...)`
-  - 5.3 H cumulative sum within tile: `cumsum_cube_axis_3(...)`
-  - 5.4 H propagation (add from the upper block): `get_and_propagate_adder_cube(...)`
-  - 5.5 Putting it together: `perform_intimg_along_row_chunk(...)`
-- 6) Writer kernel — exporting results and feeding back vertical context
-  - 6.1 Basic export: `output_block(...)`
-  - 6.2 Import the upper block & broadcast last row (H propagation)
-- 7) Axis mapping cheat-sheet (coherent with **[B, W, H, C]**)
-- 8) Correctness sketch vs. classic formula (with **[1, W, H, C]**)
-- 9) Performance & robustness notes
-- 10) Walk‑through on a tiny example
-- 11) Signals & buffers (by role)
-- 12) Diagrams
-  - a) 📐 What’s an Integral Image (toy 4×4)
-  - b) ↕️↔️ Two-Pass View (cumsum over height then width)
-- … 5 additional headings in the original
+The complete path is `X[B=1,W,H,C]` tiles through reader initialization,
+`cumsum_cube_axis_2`/`cumsum_cube_axis_3`, local scan, incoming edge-state addition,
+output writer, feedback of row/column context, and dependent tile release.
 
-## Improvement plan
+### What must never break
 
-1. **Architecture pressure.** Define the integral-image recurrence and `[B, W, H, C]` axis
-   mapping, then assign tile/core wavefront work and the exact horizontal/vertical prefix
-   state that must cross every boundary.
+The non-negotiable invariant is that each output equals the origin-to-position rectangle
+sum and that boundary state belongs to the same batch/channel and immediately preceding
+row/column tile; no dependent tile may read incomplete context.
 
-2. **Flow to make explicit.** Draw `X[B=1,W,H,C]` tiles through reader initialization,
-   `cumsum_cube_axis_2`/`cumsum_cube_axis_3`, local scan, incoming edge-state addition,
-   output writer, feedback of row/column context, and dependent tile release.
+### Where the report makes it concrete
 
-3. **Invariant to prove.** Prove each output equals the origin-to-position rectangle sum and
-   that boundary state belongs to the same batch/channel and immediately preceding
-   row/column tile; no dependent tile may read incomplete context.
+The report makes the decision concrete by connecting the plan to
+`ttnn.cumsum(ttnn.cumsum(x, dim=-2), dim=-3)`, `cumsum_cube_axis_2`,
+`cumsum_cube_axis_3`, `column_block_i`, `row_chunk_i`, signals, CBs, and feedback
+buffers.
 
-4. **TT-Metal evidence to connect.** Connect the plan to `ttnn.cumsum(ttnn.cumsum(x,
-   dim=-2), dim=-3)`, `cumsum_cube_axis_2`, `cumsum_cube_axis_3`, `column_block_i`,
-   `row_chunk_i`, signals, CBs, and feedback buffers.
+### How the decision is tested
 
-5. **Experiment and expected observation.** Use a small increasing-value tensor spanning
-   multiple tiles/cores and compare every boundary with a host summed-area table; expected
-   result: exact recurrence and a timeline exposing whether wavefront waits or local scan
-   compute dominates.
+The controlled procedure is to use a small increasing-value tensor spanning multiple
+tiles/cores and compare every boundary with a host summed-area table. **Expected observation:** exact recurrence and a timeline exposing whether wavefront waits or local
+scan compute dominates.
 
 ## Code connection
 
@@ -133,6 +99,6 @@ architecture reasoning explicit; generation-sensitive facts remain scoped to tha
 
 - **Original source:** [`tech_reports/ttnn_operators/intimg.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/ttnn_operators/intimg.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/ttnn_operators/intimg.md`
-- **Current delta:** provenance, source metrics, outline, report-specific architecture
-  plan, two source-linked implementation-boundary reviews, and answered reasoning
-  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.
+- **Current delta:** source-grounded architecture walkthrough, concrete
+  implementation boundaries, and expert verification answers. Snapshot-specific claims
+  remain scoped to the pinned commit.

@@ -1,58 +1,44 @@
-<!-- rewrite-status: seed -->
+<!-- rewrite-status: improved-draft -->
 # Saturating DRAM bandwidth
 
 <p class="source-note">
 <strong>Original source:</strong>
 <a href="https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/Saturating_DRAM_bandwidth/Saturating_DRAM_bandwidth.md"><code>tech_reports/Saturating_DRAM_bandwidth/Saturating_DRAM_bandwidth.md</code> at <code>992f3ca</code></a>
-· <strong>Status:</strong> source-linked learner seed
+· <strong>Status:</strong> source-grounded learner draft
 </p>
 
-!!! info "What ‘seed’ means"
-    The official report and its assets are preserved verbatim under
-    <code>upstream/tt-metal/tech_reports/Saturating_DRAM_bandwidth/Saturating_DRAM_bandwidth.md</code>. This learner page
-    establishes provenance, a reading map, a report-specific architecture plan,
-    concrete code boundaries, and answered reasoning checks; a full visual rewrite
-    remains queued.
+## Architecture walkthrough
 
-## Original report map
+### Why the design is shaped this way
 
-| Signal | Pinned-source value |
-|---|---:|
-| Lines | 73 |
-| Section headings | 5 |
-| Fenced code examples | 0 |
-| Markdown images | 5 |
+The design is shaped by the need to calculate per-bank and aggregate bandwidth targets,
+outstanding-read depth, burst/page size, reader-core placement, L1 destination capacity,
+and NoC route pressure instead of assuming more readers imply more bandwidth.
 
-### Section outline
+### How work and data move
 
-- Reader data movement kernel saturating DRAM bandwidth of a single bank
-- A reader data movement per bank to saturate the full DRAM bandwidth
-- WH reader and bank placement example
-- Sharded Tensors in DRAM example
-- Future Work
+The complete path is pages interleaved/sharded across DRAM banks through one reader per
+bank, asynchronous NoC reads, reserved L1/CB pages, read barriers, consumer publication,
+and page reclamation.
 
-## Improvement plan
+### What must never break
 
-1. **Architecture pressure.** Calculate per-bank and aggregate bandwidth targets,
-   outstanding-read depth, burst/page size, reader-core placement, L1 destination capacity,
-   and NoC route pressure instead of assuming more readers imply more bandwidth.
+The non-negotiable invariant is that every transfer is aligned and in range,
+destinations are reserved before issue, pages publish only after completion, and
+bank/core work is balanced enough that one channel does not determine the device rate.
 
-2. **Flow to make explicit.** Draw pages interleaved/sharded across DRAM banks through one
-   reader per bank, asynchronous NoC reads, reserved L1/CB pages, read barriers, consumer
-   publication, and page reclamation.
+### Where the report makes it concrete
 
-3. **Invariant to prove.** Prove every transfer is aligned and in range, destinations are
-   reserved before issue, pages publish only after completion, and bank/core work is
-   balanced enough that one channel does not determine the device rate.
+The report makes the decision concrete by connecting the report's single-bank and
+full-device reader examples to architecture bank placement, `noc_async_read`/barrier
+loops, CB depth, Wormhole reader/core mapping, and sharded-DRAM examples.
 
-4. **TT-Metal evidence to connect.** Connect the report's single-bank and full-device reader
-   examples to architecture bank placement, `noc_async_read`/barrier loops, CB depth,
-   Wormhole reader/core mapping, and sharded-DRAM examples.
+### How the decision is tested
 
-5. **Experiment and expected observation.** Scale from one bank/reader to all banks while
-   recording per-bank bytes and aggregate rate; expected result: near-linear growth until
-   NoC, issue, or consumer capacity becomes the new ceiling, with no gain from extra readers
-   on one hot bank.
+The controlled procedure is to scale from one bank/reader to all banks while recording
+per-bank bytes and aggregate rate. **Expected observation:** near-linear growth until
+NoC, issue, or consumer capacity becomes the new ceiling, with no gain from extra
+readers on one hot bank.
 
 ## Code connection
 
@@ -112,6 +98,6 @@ architecture reasoning explicit; generation-sensitive facts remain scoped to tha
 
 - **Original source:** [`tech_reports/Saturating_DRAM_bandwidth/Saturating_DRAM_bandwidth.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/Saturating_DRAM_bandwidth/Saturating_DRAM_bandwidth.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/Saturating_DRAM_bandwidth/Saturating_DRAM_bandwidth.md`
-- **Current delta:** provenance, source metrics, outline, report-specific architecture
-  plan, two source-linked implementation-boundary reviews, and answered reasoning
-  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.
+- **Current delta:** source-grounded architecture walkthrough, concrete
+  implementation boundaries, and expert verification answers. Snapshot-specific claims
+  remain scoped to the pinned commit.

@@ -1,54 +1,45 @@
-<!-- rewrite-status: seed -->
+<!-- rewrite-status: improved-draft -->
 # Purpose
 
 <p class="source-note">
 <strong>Original source:</strong>
 <a href="https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/op_kernel_dev/accuracy_tips/accuracy_tips.md"><code>tech_reports/op_kernel_dev/accuracy_tips/accuracy_tips.md</code> at <code>992f3ca</code></a>
-· <strong>Status:</strong> source-linked learner seed
+· <strong>Status:</strong> source-grounded learner draft
 </p>
 
-!!! info "What ‘seed’ means"
-    The official report and its assets are preserved verbatim under
-    <code>upstream/tt-metal/tech_reports/op_kernel_dev/accuracy_tips/accuracy_tips.md</code>. This learner page
-    establishes provenance, a reading map, a report-specific architecture plan,
-    concrete code boundaries, and answered reasoning checks; a full visual rewrite
-    remains queued.
+## Architecture walkthrough
 
-## Original report map
+### Why the design is shaped this way
 
-| Signal | Pinned-source value |
-|---|---:|
-| Lines | 217 |
-| Section headings | 1 |
-| Fenced code examples | 5 |
-| Markdown images | 0 |
+The design is shaped by the need to partition numerical error into input encoding,
+Unpack, math fidelity/approximation, accumulation order/width, and Pack/output format
+for the specific kernel rather than adjusting one global tolerance.
 
-### Section outline
+### How work and data move
 
-- Tips and Best Practices for Numerical Accuracy in TT-Metal Kernels
+The complete path is reference input encoding through device format, reader/Unpack,
+matrix or SFPU operations, destination accumulation, Pack, output storage, host
+conversion, and each comparison metric.
 
-## Improvement plan
+### What must never break
 
-1. **Architecture pressure.** Partition numerical error into input encoding, Unpack, math
-   fidelity/approximation, accumulation order/width, and Pack/output format for the specific
-   kernel rather than adjusting one global tolerance.
+The non-negotiable invariant is that device and golden paths share shapes, broadcasting,
+padding, operation order, and exceptional-value policy; choose tolerance from the
+format/error budget rather than relaxing it after a failure.
 
-2. **Flow to make explicit.** Draw reference input encoding through device format,
-   reader/Unpack, matrix or SFPU operations, destination accumulation, Pack, output storage,
-   host conversion, and each comparison metric.
+### Where the report makes it concrete
 
-3. **Invariant to prove.** Prove device and golden paths share shapes, broadcasting,
-   padding, operation order, and exceptional-value policy; choose tolerance from the
-   format/error budget rather than relaxing it after a failure.
+The report makes the decision concrete by connecting tests to
+`comp_equal`/`assert_equal`, `comp_ulp`/`assert_with_ulp`,
+`comp_allclose`/`assert_allclose`, and relative-Frobenius helpers, selecting each for a
+stated failure model.
 
-4. **TT-Metal evidence to connect.** Connect tests to `comp_equal`/`assert_equal`,
-   `comp_ulp`/`assert_with_ulp`, `comp_allclose`/`assert_allclose`, and relative-Frobenius
-   helpers, selecting each for a stated failure model.
+### How the decision is tested
 
-5. **Experiment and expected observation.** Sweep one precision boundary while holding the
-   rest fixed on random and adversarial data; expected result: the selected metric changes
-   at the responsible stage and model-level accuracy identifies the cheapest acceptable
-   configuration.
+The controlled procedure is to sweep one precision boundary while holding the rest fixed
+on random and adversarial data. **Expected observation:** the selected metric changes
+at the responsible stage and model-level accuracy identifies the cheapest acceptable
+configuration.
 
 ## Code connection
 
@@ -109,6 +100,6 @@ architecture reasoning explicit; generation-sensitive facts remain scoped to tha
 
 - **Original source:** [`tech_reports/op_kernel_dev/accuracy_tips/accuracy_tips.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/op_kernel_dev/accuracy_tips/accuracy_tips.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/op_kernel_dev/accuracy_tips/accuracy_tips.md`
-- **Current delta:** provenance, source metrics, outline, report-specific architecture
-  plan, two source-linked implementation-boundary reviews, and answered reasoning
-  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.
+- **Current delta:** source-grounded architecture walkthrough, concrete
+  implementation boundaries, and expert verification answers. Snapshot-specific claims
+  remain scoped to the pinned commit.

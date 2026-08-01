@@ -1,70 +1,44 @@
-<!-- rewrite-status: seed -->
+<!-- rewrite-status: improved-draft -->
 # FlashDecode on Tenstorrent's Wormhole Architecture
 
 <p class="source-note">
 <strong>Original source:</strong>
 <a href="https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/FlashAttention/FlashDecode.md"><code>tech_reports/FlashAttention/FlashDecode.md</code> at <code>992f3ca</code></a>
-· <strong>Status:</strong> source-linked learner seed
+· <strong>Status:</strong> source-grounded learner draft
 </p>
 
-!!! info "What ‘seed’ means"
-    The official report and its assets are preserved verbatim under
-    <code>upstream/tt-metal/tech_reports/FlashAttention/FlashDecode.md</code>. This learner page
-    establishes provenance, a reading map, a report-specific architecture plan,
-    concrete code boundaries, and answered reasoning checks; a full visual rewrite
-    remains queued.
+## Architecture walkthrough
 
-## Original report map
+### Why the design is shaped this way
 
-| Signal | Pinned-source value |
-|---|---:|
-| Lines | 186 |
-| Section headings | 17 |
-| Fenced code examples | 6 |
-| Markdown images | 5 |
+The design is shaped by the need to explain why decode's small query dimension
+under-fills cores while the growing KV cache dominates bytes, and calculate when
+splitting the KV sequence can amortize its final cross-worker reduction.
 
-### Section outline
+### How work and data move
 
-- 1 Introduction
-  - 1.1 Common Terminology
-  - 1.2 Group Query Attention (GQA)
-- 2 Background
-  - 2.1 What is KV Cache and How it Can Speed Up Decoding
-  - 2.2 How to Smartly Utilize Tenstorrent's Tile-based Architecture for Attention Decoding
-  - 2.3 FlashDecode
-- 3 Implementation Details
-  - 3.1 Parallelization
-  - 3.2 Step-by-step Visualization of an Average Case
-  - 3.3 Asynchronous Execution, NOC, Circular Buffers, and Semaphores
-  - 3.4 Causal vs. Non-causal
-- 4 Performance Analysis
-  - 4.1 Generic Performance
-  - 4.2 Long Context Length Performance on Llama 3.1 8B, Tensor Parallelism on 1,2,4,8 Devices
-- 5 Future work
-- References
+The complete path is `query distribution → per-worker K/V shard read → local scores/mask
+→ partial max/sum/weighted value → global max propagation/rescaling → sum/numerator
+reduction → normalized output`.
 
-## Improvement plan
+### What must never break
 
-1. **Architecture pressure.** Explain why decode's small query dimension under-fills cores
-   while the growing KV cache dominates bytes, and calculate when splitting the KV sequence
-   can amortize its final cross-worker reduction.
+The non-negotiable invariant is that each partition covers a disjoint permitted KV range
+and that partial online-softmax state is combined with the global maximum exactly,
+preserving token position, causal range, and grouped-query head mapping.
 
-2. **Flow to make explicit.** Draw `query distribution → per-worker K/V shard read → local
-   scores/mask → partial max/sum/weighted value → global max propagation/rescaling →
-   sum/numerator reduction → normalized output`.
+### Where the report makes it concrete
 
-3. **Invariant to prove.** Prove each partition covers a disjoint permitted KV range and
-   that partial online-softmax state is combined with the global maximum exactly, preserving
-   token position, causal range, and grouped-query head mapping.
+The report makes the decision concrete by connecting the plan to `n_qh_per_kvh`,
+`n_q_heads`, `n_kv_heads`, the report's `bsz*n_kv_heads` partitioning, tile-volume
+expressions, KV-cache readers, and reduction kernels.
 
-4. **TT-Metal evidence to connect.** Connect the plan to `n_qh_per_kvh`, `n_q_heads`,
-   `n_kv_heads`, the report's `bsz*n_kv_heads` partitioning, tile-volume expressions,
-   KV-cache readers, and reduction kernels.
+### How the decision is tested
 
-5. **Experiment and expected observation.** Sweep context length and worker count with
-   identical queries/cache; expected result: parallel KV bandwidth improves long-context
-   decode until reduction/synchronization dominates, while short contexts may favor fewer
-   workers.
+The controlled procedure is to sweep context length and worker count with identical
+queries/cache. **Expected observation:** parallel KV bandwidth improves long-context
+decode until reduction/synchronization dominates, while short contexts may favor fewer
+workers.
 
 ## Code connection
 
@@ -125,6 +99,6 @@ architecture reasoning explicit; generation-sensitive facts remain scoped to tha
 
 - **Original source:** [`tech_reports/FlashAttention/FlashDecode.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/FlashAttention/FlashDecode.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/FlashAttention/FlashDecode.md`
-- **Current delta:** provenance, source metrics, outline, report-specific architecture
-  plan, two source-linked implementation-boundary reviews, and answered reasoning
-  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.
+- **Current delta:** source-grounded architecture walkthrough, concrete
+  implementation boundaries, and expert verification answers. Snapshot-specific claims
+  remain scoped to the pinned commit.

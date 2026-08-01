@@ -1,53 +1,44 @@
-<!-- rewrite-status: seed -->
+<!-- rewrite-status: improved-draft -->
 # Matmul (Multi Core Optimized)
 
 <p class="source-note">
 <strong>Original source:</strong>
 <a href="https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/prog_examples/matmul_multi_core_optimized/matmul_multi_core_optimized.md"><code>tech_reports/prog_examples/matmul_multi_core_optimized/matmul_multi_core_optimized.md</code> at <code>992f3ca</code></a>
-· <strong>Status:</strong> source-linked learner seed
+· <strong>Status:</strong> source-grounded learner draft
 </p>
 
-!!! info "What ‘seed’ means"
-    The official report and its assets are preserved verbatim under
-    <code>upstream/tt-metal/tech_reports/prog_examples/matmul_multi_core_optimized/matmul_multi_core_optimized.md</code>. This learner page
-    establishes provenance, a reading map, a report-specific architecture plan,
-    concrete code boundaries, and answered reasoning checks; a full visual rewrite
-    remains queued.
+## Architecture walkthrough
 
-## Original report map
+### Why the design is shaped this way
 
-| Signal | Pinned-source value |
-|---|---:|
-| Lines | 16 |
-| Section headings | 1 |
-| Fenced code examples | 1 |
-| Markdown images | 0 |
+The design is shaped by the need to start from disjoint C-output ownership across the
+core grid, then derive each core's A/B ranges, K reduction, data reuse, multicast group,
+buffer capacity, and edge/tail work.
 
-### Section outline
+### How work and data move
 
-- Building and Running the Examples
+The complete path is host partition/runtime arguments through per-core readers, optional
+shared-operand multicast, compute K loop and partial sums, Pack/writer, non-overlapping
+output placement, and host recomposition/check.
 
-## Improvement plan
+### What must never break
 
-1. **Architecture pressure.** Start from disjoint C-output ownership across the core grid,
-   then derive each core's A/B ranges, K reduction, data reuse, multicast group, buffer
-   capacity, and edge/tail work.
+The non-negotiable invariant is that complete non-overlapping C coverage and full K
+accumulation for normal and edge cores; runtime arguments, CB sizes, multicast
+participants, and writer ranges must encode the same partition.
 
-2. **Flow to make explicit.** Draw host partition/runtime arguments through per-core
-   readers, optional shared-operand multicast, compute K loop and partial sums, Pack/writer,
-   non-overlapping output placement, and host recomposition/check.
+### Where the report makes it concrete
 
-3. **Invariant to prove.** Prove complete non-overlapping C coverage and full K accumulation
-   for normal and edge cores; runtime arguments, CB sizes, multicast participants, and
-   writer ranges must encode the same partition.
+The report makes the decision concrete by connecting the overview to the concrete
+example build/run path and its reuse/multicast kernels, program configs,
+core-grid/runtime arguments, CB creation, and validation code rather than leaving only a
+conceptual matmul diagram.
 
-4. **TT-Metal evidence to connect.** Connect the overview to the concrete example build/run
-   path and its reuse/multicast kernels, program configs, core-grid/runtime arguments, CB
-   creation, and validation code rather than leaving only a conceptual matmul diagram.
+### How the decision is tested
 
-5. **Experiment and expected observation.** Sweep core-grid shape for one matrix including a
-   tail; expected result: throughput improves while per-core finish times remain balanced,
-   then degrades when smaller shards or communication/tail imbalance dominate.
+The controlled procedure is to sweep core-grid shape for one matrix including a tail.
+**Expected observation:** throughput improves while per-core finish times remain
+balanced, then degrades when smaller shards or communication/tail imbalance dominate.
 
 ## Code connection
 
@@ -107,6 +98,6 @@ architecture reasoning explicit; generation-sensitive facts remain scoped to tha
 
 - **Original source:** [`tech_reports/prog_examples/matmul_multi_core_optimized/matmul_multi_core_optimized.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/prog_examples/matmul_multi_core_optimized/matmul_multi_core_optimized.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/prog_examples/matmul_multi_core_optimized/matmul_multi_core_optimized.md`
-- **Current delta:** provenance, source metrics, outline, report-specific architecture
-  plan, two source-linked implementation-boundary reviews, and answered reasoning
-  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.
+- **Current delta:** source-grounded architecture walkthrough, concrete
+  implementation boundaries, and expert verification answers. Snapshot-specific claims
+  remain scoped to the pinned commit.

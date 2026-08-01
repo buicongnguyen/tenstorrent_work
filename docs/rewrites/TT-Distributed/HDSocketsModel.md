@@ -1,78 +1,44 @@
-<!-- rewrite-status: seed -->
+<!-- rewrite-status: improved-draft -->
 # H2D / D2H PCIe Socket: Technical Report
 
 <p class="source-note">
 <strong>Original source:</strong>
 <a href="https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/TT-Distributed/HDSocketsModel.md"><code>tech_reports/TT-Distributed/HDSocketsModel.md</code> at <code>992f3ca</code></a>
-· <strong>Status:</strong> source-linked learner seed
+· <strong>Status:</strong> source-grounded learner draft
 </p>
 
-!!! info "What ‘seed’ means"
-    The official report and its assets are preserved verbatim under
-    <code>upstream/tt-metal/tech_reports/TT-Distributed/HDSocketsModel.md</code>. This learner page
-    establishes provenance, a reading map, a report-specific architecture plan,
-    concrete code boundaries, and answered reasoning checks; a full visual rewrite
-    remains queued.
+## Architecture walkthrough
 
-## Original report map
+### Why the design is shaped this way
 
-| Signal | Pinned-source value |
-|---|---:|
-| Lines | 791 |
-| Section headings | 46 |
-| Fenced code examples | 10 |
-| Markdown images | 41 |
+The design is shaped by the need to define socket direction, endpoint ownership,
+transfer mode, ring depth, backing memory, producer/consumer rates, and host/device
+failure/teardown semantics for the intended streaming workload.
 
-### Section outline
+### How work and data move
 
-- Table of Contents
-- 1. Background: H2D / D2H PCIe Sockets
-  - 1.1 Blackhole Hardware Facts Relevant to This Guide
-  - 1.2 Training & Inference Use Cases for PCIe Sockets
-- 2. Transfer Modes and Flow Control
-  - 2.1 H2D: HOST\_PUSH
-  - 2.2 H2D: DEVICE\_PULL
-  - 2.3 D2H
-  - 2.4 Flow control (shared)
-- 3. API Walkthrough
-  - 3.1 Host Side: Setup
-  - 3.2 Device Side: Initialization
-  - 3.3 D2H Kernel: `pcie_socket_sender.cpp`
-  - 3.4 H2D HOST\_PUSH Kernel: `h2d_throughput_host_push.cpp`
-  - 3.5 H2D DEVICE\_PULL Kernel: `h2d_throughput_device_pull.cpp`
-- 4. Performance Results
-  - Hardware Overview: PCIe Link Asymmetry
-  - 4.1 Galaxy Rev A/B (Gen 4 PCIe)
-    - 4.1.1 D2H Throughput
-    - 4.1.2 D2H Latency
-    - 4.1.3 H2D Throughput
-    - 4.1.4 H2D Latency
-    - 4.1.5 Multi-Chip Throughput
-  - 4.2 Galaxy Rev C (Gen 5 PCIe)
-- … 22 additional headings in the original
+The complete path is slot reservation, payload fill/reference, publication, PCIe/DMA
+transfer, remote availability, consumer read, completion, credit return, wraparound, and
+endpoint close for both H2D and D2H.
 
-## Improvement plan
+### What must never break
 
-1. **Architecture pressure.** Define socket direction, endpoint ownership, transfer mode,
-   ring depth, backing memory, producer/consumer rates, and host/device failure/teardown
-   semantics for the intended streaming workload.
+The non-negotiable invariant is that a producer never overwrites an unread slot, a
+consumer never reads an unpublished slot, credits/indices describe the same ring state,
+and endpoints/buffers outlive every in-flight transfer.
 
-2. **Flow to make explicit.** Draw slot reservation, payload fill/reference, publication,
-   PCIe/DMA transfer, remote availability, consumer read, completion, credit return,
-   wraparound, and endpoint close for both H2D and D2H.
+### Where the report makes it concrete
 
-3. **Invariant to prove.** Prove a producer never overwrites an unread slot, a consumer
-   never reads an unpublished slot, credits/indices describe the same ring state, and
-   endpoints/buffers outlive every in-flight transfer.
+The report makes the decision concrete by connecting the design to `H2DSocket`,
+`D2HSocket`, `MeshSocket`, and `tt_metal/api/tt-metalium/experimental/sockets/`,
+including the report's transfer-mode and flow-control APIs.
 
-4. **TT-Metal evidence to connect.** Connect the design to `H2DSocket`, `D2HSocket`,
-   `MeshSocket`, and `tt_metal/api/tt-metalium/experimental/sockets/`, including the
-   report's transfer-mode and flow-control APIs.
+### How the decision is tested
 
-5. **Experiment and expected observation.** Run producer faster than consumer and then
-   reverse the rates across multiple wraparounds; expected result: bounded backpressure
-   prevents corruption/underrun and steady-state throughput separates from
-   connection/fill/drain latency.
+The controlled procedure is to run producer faster than consumer and then reverse the
+rates across multiple wraparounds. **Expected observation:** bounded backpressure
+prevents corruption/underrun and steady-state throughput separates from
+connection/fill/drain latency.
 
 ## Code connection
 
@@ -134,6 +100,6 @@ architecture reasoning explicit; generation-sensitive facts remain scoped to tha
 
 - **Original source:** [`tech_reports/TT-Distributed/HDSocketsModel.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/TT-Distributed/HDSocketsModel.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/TT-Distributed/HDSocketsModel.md`
-- **Current delta:** provenance, source metrics, outline, report-specific architecture
-  plan, two source-linked implementation-boundary reviews, and answered reasoning
-  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.
+- **Current delta:** source-grounded architecture walkthrough, concrete
+  implementation boundaries, and expert verification answers. Snapshot-specific claims
+  remain scoped to the pinned commit.

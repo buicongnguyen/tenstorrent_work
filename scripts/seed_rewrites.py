@@ -20,22 +20,6 @@ def title_for(text: str, path: Path) -> str:
     return path.stem.replace("_", " ").replace("-", " ").title()
 
 
-def outline_for(text: str) -> list[str]:
-    headings: list[str] = []
-    in_fence = False
-    for line in text.splitlines():
-        if line.lstrip().startswith("```"):
-            in_fence = not in_fence
-            continue
-        if in_fence:
-            continue
-        match = re.match(r"^(#{2,4})\s+(.+?)\s*$", line)
-        if match:
-            heading = re.sub(r"\s+#+$", "", match.group(2)).replace("|", r"\|")
-            headings.append(f"{'  ' * (len(match.group(1)) - 2)}- {heading}")
-    return headings
-
-
 def seed_page(source: Path) -> str:
     text = source.read_text(encoding="utf-8", errors="replace")
     relative = source.relative_to(UPSTREAM)
@@ -45,15 +29,6 @@ def seed_page(source: Path) -> str:
         "https://github.com/tenstorrent/tt-metal/blob/"
         f"{COMMIT}/tech_reports/{path}"
     )
-    outline = outline_for(text)
-    outline_block = "\n".join(outline[:24]) if outline else "- The source has no section headings yet."
-    if len(outline) > 24:
-        outline_block += f"\n- … {len(outline) - 24} additional headings in the original"
-
-    line_count = len(text.splitlines())
-    code_blocks = text.count("```") // 2
-    images = len(re.findall(r"!\[[^\]]*\]\([^)]+\)", text))
-
     return f"""<!-- rewrite-status: seed -->
 # {title}
 
@@ -66,28 +41,15 @@ def seed_page(source: Path) -> str:
 !!! info "What ‘seed’ means"
     The official report and its assets are preserved verbatim under
     <code>upstream/tt-metal/tech_reports/{path}</code>. This learner page
-    establishes provenance and a reading map. Its report-specific architecture
-    explanation and evidence plan must be authored before publication.
+    is intentionally blocked from publication until its report-specific architecture
+    explanation, implementation evidence, and answered checks are authored.
 
-## Original report map
+## Architecture walkthrough
 
-| Signal | Pinned-source value |
-|---|---:|
-| Lines | {line_count} |
-| Section headings | {len(outline)} |
-| Fenced code examples | {code_blocks} |
-| Markdown images | {images} |
-
-### Section outline
-
-{outline_block}
-
-## Improvement plan
-
-SOURCE-SPECIFIC PLAN REQUIRED. This generated page intentionally cannot pass
-documentation validation until an author replaces this marker with five
-report-grounded items: architecture pressure, explicit flow, proved invariant,
-concrete TT-Metal evidence, and a falsifiable experiment with its expected result.
+SOURCE-SPECIFIC WALKTHROUGH REQUIRED. Replace this marker with direct, declarative
+explanations of the design pressure, data/control flow, correctness invariant,
+implementation evidence, and a falsifiable decision test. Do not publish source
+statistics, an outline dump, or future-tense authoring instructions as learner content.
 
 ## Code connection
 

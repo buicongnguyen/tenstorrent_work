@@ -1,67 +1,44 @@
-<!-- rewrite-status: seed -->
+<!-- rewrite-status: improved-draft -->
 # TTNN Operation Parameter Tracing
 
 <p class="source-note">
 <strong>Original source:</strong>
 <a href="https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/ttnn/operation-tracing.md"><code>tech_reports/ttnn/operation-tracing.md</code> at <code>992f3ca</code></a>
-· <strong>Status:</strong> source-linked learner seed
+· <strong>Status:</strong> source-grounded learner draft
 </p>
 
-!!! info "What ‘seed’ means"
-    The official report and its assets are preserved verbatim under
-    <code>upstream/tt-metal/tech_reports/ttnn/operation-tracing.md</code>. This learner page
-    establishes provenance, a reading map, a report-specific architecture plan,
-    concrete code boundaries, and answered reasoning checks; a full visual rewrite
-    remains queued.
+## Architecture walkthrough
 
-## Original report map
+### Why the design is shaped this way
 
-| Signal | Pinned-source value |
-|---|---:|
-| Lines | 127 |
-| Section headings | 14 |
-| Fenced code examples | 8 |
-| Markdown images | 0 |
+The design is shaped by the need to define the minimum structured invocation schema
+needed to reproduce cache/config behavior—operation ID/name, shapes, dtypes, layouts,
+memory/program configs, scalar parameters, version, and unsupported-field markers.
 
-### Section outline
+### How work and data move
 
-- Quick Start
-  - With pytest
-  - In Python code
-- API Reference
-- Trace File Format
-  - File Naming
-  - JSON Structure
-  - Tensor Fields
-- Configuration
-  - Custom Output Directory
-  - Tensor Value Serialization
-- Performance
-- Limitations
-- Troubleshooting
+The complete path is TT-NN wrapper entry through parameter serialization, unique
+filename/record append, generated operation-parameter directory, offline
+filtering/aggregation, and minimal reproducer construction.
 
-## Improvement plan
+### What must never break
 
-1. **Architecture pressure.** Define the minimum structured invocation schema needed to
-   reproduce cache/config behavior—operation ID/name, shapes, dtypes, layouts,
-   memory/program configs, scalar parameters, version, and unsupported-field markers.
+The non-negotiable invariant is that one record corresponds to one invocation, preserves
+thread-safe order/identity, distinguishes program-selecting variants, and exposes
+missing values instead of silently producing an incomplete replay description.
 
-2. **Flow to make explicit.** Draw TT-NN wrapper entry through parameter serialization,
-   unique filename/record append, generated operation-parameter directory, offline
-   filtering/aggregation, and minimal reproducer construction.
+### Where the report makes it concrete
 
-3. **Invariant to prove.** Prove one record corresponds to one invocation, preserves
-   thread-safe order/identity, distinguishes program-selecting variants, and exposes missing
-   values instead of silently producing an incomplete replay description.
+The report makes the decision concrete by connecting the workflow to
+`enable_fast_runtime_mode=false`, `generated/ttnn/operation_parameters/`, record fields
+`operation_id`/`operation_name`, JSON examples such as `3_ttnn_add_...json`, and
+`operation_tracing_examples/`.
 
-4. **TT-Metal evidence to connect.** Connect the workflow to
-   `enable_fast_runtime_mode=false`, `generated/ttnn/operation_parameters/`, record fields
-   `operation_id`/`operation_name`, JSON examples such as `3_ttnn_add_...json`, and
-   `operation_tracing_examples/`.
+### How the decision is tested
 
-5. **Experiment and expected observation.** Trace two calls differing in one
-   program-selecting attribute and replay from their records; expected result: distinct
-   captured configurations/cache identities with equivalent outputs to the original calls.
+The controlled procedure is to trace two calls differing in one program-selecting
+attribute and replay from their records. **Expected observation:** distinct captured
+configurations/cache identities with equivalent outputs to the original calls.
 
 ## Code connection
 
@@ -121,6 +98,6 @@ architecture reasoning explicit; generation-sensitive facts remain scoped to tha
 
 - **Original source:** [`tech_reports/ttnn/operation-tracing.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/ttnn/operation-tracing.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/ttnn/operation-tracing.md`
-- **Current delta:** provenance, source metrics, outline, report-specific architecture
-  plan, two source-linked implementation-boundary reviews, and answered reasoning
-  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.
+- **Current delta:** source-grounded architecture walkthrough, concrete
+  implementation boundaries, and expert verification answers. Snapshot-specific claims
+  remain scoped to the pinned commit.

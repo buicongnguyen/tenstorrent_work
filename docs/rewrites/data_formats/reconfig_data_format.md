@@ -1,59 +1,45 @@
-<!-- rewrite-status: seed -->
+<!-- rewrite-status: improved-draft -->
 # Reconfiguring hardware for different DataFormats
 
 <p class="source-note">
 <strong>Original source:</strong>
 <a href="https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/data_formats/reconfig_data_format.md"><code>tech_reports/data_formats/reconfig_data_format.md</code> at <code>992f3ca</code></a>
-· <strong>Status:</strong> source-linked learner seed
+· <strong>Status:</strong> source-grounded learner draft
 </p>
 
-!!! info "What ‘seed’ means"
-    The official report and its assets are preserved verbatim under
-    <code>upstream/tt-metal/tech_reports/data_formats/reconfig_data_format.md</code>. This learner page
-    establishes provenance, a reading map, a report-specific architecture plan,
-    concrete code boundaries, and answered reasoning checks; a full visual rewrite
-    remains queued.
+## Architecture walkthrough
 
-## Original report map
+### Why the design is shaped this way
 
-| Signal | Pinned-source value |
-|---|---:|
-| Lines | 65 |
-| Section headings | 4 |
-| Fenced code examples | 2 |
-| Markdown images | 0 |
+The design is shaped by the need to specify which fused kernel consumes or produces
+multiple CB data formats and why a separate conversion kernel would add material traffic
+or dispatch. Name the exact safe points where Unpack or Pack state must change.
 
-### Section outline
+### How work and data move
 
-- `reconfig_data_format`
-- `pack_reconfig_data_format`
-- Usage guidelines
-- Examples:
+The complete path is `producer CB format A → wait/ownership →
+reconfig_data_format(_srca/_srcb) → Unpack/compute → pack_reconfig_data_format →
+destination CB format B → publish`, including completion of work using the old
+configuration.
 
-## Improvement plan
+### What must never break
 
-1. **Architecture pressure.** Specify which fused kernel consumes or produces multiple CB
-   data formats and why a separate conversion kernel would add material traffic or dispatch.
-   Name the exact safe points where Unpack or Pack state must change.
+The non-negotiable invariant is that each tile's physical bytes agree with active
+Unpack/Pack interpretation and that reconfiguration occurs after prior-format work
+completes but before the next tile is consumed or published.
 
-2. **Flow to make explicit.** Draw `producer CB format A → wait/ownership →
-   reconfig_data_format(_srca/_srcb) → Unpack/compute → pack_reconfig_data_format →
-   destination CB format B → publish`, including completion of work using the old
-   configuration.
+### Where the report makes it concrete
 
-3. **Invariant to prove.** Prove that each tile's physical bytes agree with active
-   Unpack/Pack interpretation and that reconfiguration occurs after prior-format work
-   completes but before the next tile is consumed or published.
+The report makes the decision concrete by connecting examples to `reconfig_data_format`,
+`reconfig_data_format_srca`, `reconfig_data_format_srcb`, and
+`pack_reconfig_data_format`, then trace the corresponding LLK/configuration path for the
+target Tensix generation.
 
-4. **TT-Metal evidence to connect.** Connect examples to `reconfig_data_format`,
-   `reconfig_data_format_srca`, `reconfig_data_format_srcb`, and
-   `pack_reconfig_data_format`, then trace the corresponding LLK/configuration path for the
-   target Tensix generation.
+### How the decision is tested
 
-5. **Experiment and expected observation.** Alternate two supported input/output formats in
-   one controlled kernel and compare with fixed-format reference kernels; expected result:
-   identical decoded values and fewer materialized conversion boundaries, with no corruption
-   at the reconfiguration transition.
+The controlled procedure is to alternate two supported input/output formats in one
+controlled kernel and compare with fixed-format reference kernels. **Expected observation:** identical decoded values and fewer materialized conversion boundaries,
+with no corruption at the reconfiguration transition.
 
 ## Code connection
 
@@ -114,6 +100,6 @@ architecture reasoning explicit; generation-sensitive facts remain scoped to tha
 
 - **Original source:** [`tech_reports/data_formats/reconfig_data_format.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/data_formats/reconfig_data_format.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/data_formats/reconfig_data_format.md`
-- **Current delta:** provenance, source metrics, outline, report-specific architecture
-  plan, two source-linked implementation-boundary reviews, and answered reasoning
-  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.
+- **Current delta:** source-grounded architecture walkthrough, concrete
+  implementation boundaries, and expert verification answers. Snapshot-specific claims
+  remain scoped to the pinned commit.

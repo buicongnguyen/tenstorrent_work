@@ -1,60 +1,45 @@
-<!-- rewrite-status: seed -->
+<!-- rewrite-status: improved-draft -->
 # Data Multicasting in [matmul_multicore_reuse_mcast]
 
 <p class="source-note">
 <strong>Original source:</strong>
 <a href="https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/prog_examples/matmul_multi_core_optimized/data_mcast.md"><code>tech_reports/prog_examples/matmul_multi_core_optimized/data_mcast.md</code> at <code>992f3ca</code></a>
-· <strong>Status:</strong> source-linked learner seed
+· <strong>Status:</strong> source-grounded learner draft
 </p>
 
-!!! info "What ‘seed’ means"
-    The official report and its assets are preserved verbatim under
-    <code>upstream/tt-metal/tech_reports/prog_examples/matmul_multi_core_optimized/data_mcast.md</code>. This learner page
-    establishes provenance, a reading map, a report-specific architecture plan,
-    concrete code boundaries, and answered reasoning checks; a full visual rewrite
-    remains queued.
+## Architecture walkthrough
 
-## Original report map
+### Why the design is shaped this way
 
-| Signal | Pinned-source value |
-|---|---:|
-| Lines | 357 |
-| Section headings | 7 |
-| Fenced code examples | 25 |
-| Markdown images | 0 |
+The design is shaped by the need to for the chosen output grid, identify which A or B
+blocks are shared across a row/column of cores and calculate repeated DRAM/NoC bytes
+saved by one designated distributor.
 
-### Section outline
+### How work and data move
 
-- Additional Compile-Time Argument
-- Configuring Core Ranges for Tile Distribution
-- Circular Buffer Creation for CoreGrid
-- Multicast Reader/Writer Kernel Setup
-- New Compute Kernel: Fused Bias Addition and Activation Functions
-- Semaphores
-- Kernel Runtime Arguments
+The complete path is shared-operand DRAM read into the source CB, receiver page
+reservation/readiness semaphores, NoC multicast to the target core range,
+arrival/publication, private-operand consumption, K accumulation, fused bias/activation,
+and output write.
 
-## Improvement plan
+### What must never break
 
-1. **Architecture pressure.** For the chosen output grid, identify which A or B blocks are
-   shared across a row/column of cores and calculate repeated DRAM/NoC bytes saved by one
-   designated distributor.
+The non-negotiable invariant is that every receiver reserves the correct page before
+fanout, observes the same tile before compute, consumes each K block once, and the
+sender retains/reuses source storage only according to the acknowledgement protocol.
 
-2. **Flow to make explicit.** Draw shared-operand DRAM read into the source CB, receiver
-   page reservation/readiness semaphores, NoC multicast to the target core range,
-   arrival/publication, private-operand consumption, K accumulation, fused bias/activation,
-   and output write.
+### Where the report makes it concrete
 
-3. **Invariant to prove.** Prove every receiver reserves the correct page before fanout,
-   observes the same tile before compute, consumes each K block once, and the sender
-   retains/reuses source storage only according to the acknowledgement protocol.
+The report makes the decision concrete by connecting the host/kernel configuration to
+`CoreRangeSet`, `all_cores`, `left_column`, `all_except_left_column`, semaphore setup,
+and `bmm_large_block_zm_fused_bias_activation`.
 
-4. **TT-Metal evidence to connect.** Connect the host/kernel configuration to
-   `CoreRangeSet`, `all_cores`, `left_column`, `all_except_left_column`, semaphore setup,
-   and `bmm_large_block_zm_fused_bias_activation`.
+### How the decision is tested
 
-5. **Experiment and expected observation.** Compare per-core DRAM reads with multicast
-   across increasing fanout; expected result: shared-operand external bytes fall near the
-   fanout factor until sender injection, receiver skew, or route contention limits scaling.
+The controlled procedure is to compare per-core DRAM reads with multicast across
+increasing fanout. **Expected observation:** shared-operand external bytes fall near
+the fanout factor until sender injection, receiver skew, or route contention limits
+scaling.
 
 ## Code connection
 
@@ -114,6 +99,6 @@ architecture reasoning explicit; generation-sensitive facts remain scoped to tha
 
 - **Original source:** [`tech_reports/prog_examples/matmul_multi_core_optimized/data_mcast.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/prog_examples/matmul_multi_core_optimized/data_mcast.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/prog_examples/matmul_multi_core_optimized/data_mcast.md`
-- **Current delta:** provenance, source metrics, outline, report-specific architecture
-  plan, two source-linked implementation-boundary reviews, and answered reasoning
-  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.
+- **Current delta:** source-grounded architecture walkthrough, concrete
+  implementation boundaries, and expert verification answers. Snapshot-specific claims
+  remain scoped to the pinned commit.

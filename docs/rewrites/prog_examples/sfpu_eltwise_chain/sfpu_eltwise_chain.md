@@ -1,70 +1,44 @@
-<!-- rewrite-status: seed -->
+<!-- rewrite-status: improved-draft -->
 # SFPU Eltwise Chain
 
 <p class="source-note">
 <strong>Original source:</strong>
 <a href="https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/prog_examples/sfpu_eltwise_chain/sfpu_eltwise_chain.md"><code>tech_reports/prog_examples/sfpu_eltwise_chain/sfpu_eltwise_chain.md</code> at <code>992f3ca</code></a>
-· <strong>Status:</strong> source-linked learner seed
+· <strong>Status:</strong> source-grounded learner draft
 </p>
 
-!!! info "What ‘seed’ means"
-    The official report and its assets are preserved verbatim under
-    <code>upstream/tt-metal/tech_reports/prog_examples/sfpu_eltwise_chain/sfpu_eltwise_chain.md</code>. This learner page
-    establishes provenance, a reading map, a report-specific architecture plan,
-    concrete code boundaries, and answered reasoning checks; a full visual rewrite
-    remains queued.
+## Architecture walkthrough
 
-## Original report map
+### Why the design is shaped this way
 
-| Signal | Pinned-source value |
-|---|---:|
-| Lines | 299 |
-| Section headings | 17 |
-| Fenced code examples | 13 |
-| Markdown images | 0 |
+The design is shaped by the need to list the exact ordered elementwise chain and
+intermediate consumers, then calculate pack/write/read/unpack bytes and launches
+eliminated when the intermediate tile remains live in SFPU state.
 
-### Section outline
+### How work and data move
 
-- Building and Running the Example
-- Main Program Overview
-  - Device and Program Setup
-  - Core Configuration
-  - Input Data Preparation
-  - Memory Buffers
-  - Circular Buffers
-  - Kernel Setup
-  - Running and Validation
-- Kernel Descriptions
-  - Reader Kernel
-  - Writer Kernel
-  - Compute Kernel - The SFPU Chaining
-  - Key SFPU Chaining Concepts
-- Expected Output
-- Benefits of SFPU Chaining
-  - Important Notes on SFPU Precision
+The complete path is input reader/CB publication, Unpack, ordered SFPU operations such
+as exp/log/softplus composition, final Pack, output CB publication, writer, and host
+comparison.
 
-## Improvement plan
+### What must never break
 
-1. **Architecture pressure.** List the exact ordered elementwise chain and intermediate
-   consumers, then calculate pack/write/read/unpack bytes and launches eliminated when the
-   intermediate tile remains live in SFPU state.
+The non-negotiable invariant is that fused operation order, constants, approximation
+mode, input/output formats, and final rounding implement the same function; the tile
+remains compute-owned until all operations finish.
 
-2. **Flow to make explicit.** Draw input reader/CB publication, Unpack, ordered SFPU
-   operations such as exp/log/softplus composition, final Pack, output CB publication,
-   writer, and host comparison.
+### Where the report makes it concrete
 
-3. **Invariant to prove.** Prove fused operation order, constants, approximation mode,
-   input/output formats, and final rounding implement the same function; the tile remains
-   compute-owned until all operations finish.
+The report makes the decision concrete by connecting the plan to
+`sfpu_eltwise_chain.cpp`, `softplus(x) = log(1 + exp(x))`, `ttnn::exp`, `ttnn::log`,
+`float_to_bfloat16`, `bfloat16`, and its reader/compute/writer kernels.
 
-4. **TT-Metal evidence to connect.** Connect the plan to `sfpu_eltwise_chain.cpp`,
-   `softplus(x) = log(1 + exp(x))`, `ttnn::exp`, `ttnn::log`, `float_to_bfloat16`,
-   `bfloat16`, and its reader/compute/writer kernels.
+### How the decision is tested
 
-5. **Experiment and expected observation.** Compare fused and separate-kernel chains across
-   representative magnitudes; expected result: identical tolerated output with fewer
-   intermediate bytes/launch gaps unless register pressure or lost pipeline overlap becomes
-   limiting.
+The controlled procedure is to compare fused and separate-kernel chains across
+representative magnitudes. **Expected observation:** identical tolerated output with
+fewer intermediate bytes/launch gaps unless register pressure or lost pipeline overlap
+becomes limiting.
 
 ## Code connection
 
@@ -123,6 +97,6 @@ architecture reasoning explicit; generation-sensitive facts remain scoped to tha
 
 - **Original source:** [`tech_reports/prog_examples/sfpu_eltwise_chain/sfpu_eltwise_chain.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/prog_examples/sfpu_eltwise_chain/sfpu_eltwise_chain.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/prog_examples/sfpu_eltwise_chain/sfpu_eltwise_chain.md`
-- **Current delta:** provenance, source metrics, outline, report-specific architecture
-  plan, two source-linked implementation-boundary reviews, and answered reasoning
-  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.
+- **Current delta:** source-grounded architecture walkthrough, concrete
+  implementation boundaries, and expert verification answers. Snapshot-specific claims
+  remain scoped to the pinned commit.

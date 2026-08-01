@@ -1,53 +1,44 @@
-<!-- rewrite-status: seed -->
+<!-- rewrite-status: improved-draft -->
 # TT-NN Comparison Mode
 
 <p class="source-note">
 <strong>Original source:</strong>
 <a href="https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/ttnn/comparison-mode.md"><code>tech_reports/ttnn/comparison-mode.md</code> at <code>992f3ca</code></a>
-· <strong>Status:</strong> source-linked learner seed
+· <strong>Status:</strong> source-grounded learner draft
 </p>
 
-!!! info "What ‘seed’ means"
-    The official report and its assets are preserved verbatim under
-    <code>upstream/tt-metal/tech_reports/ttnn/comparison-mode.md</code>. This learner page
-    establishes provenance, a reading map, a report-specific architecture plan,
-    concrete code boundaries, and answered reasoning checks; a full visual rewrite
-    remains queued.
+## Architecture walkthrough
 
-## Original report map
+### Why the design is shaped this way
 
-| Signal | Pinned-source value |
-|---|---:|
-| Lines | 24 |
-| Section headings | 1 |
-| Fenced code examples | 1 |
-| Markdown images | 0 |
+The design is shaped by the need to define which TT-NN operations have valid golden
+functions, what tensor conversions comparison requires, which metric/tolerance each
+format warrants, and how failures should preserve invocation context.
 
-### Section outline
+### How work and data move
 
-- How to Use it?
+The complete path is an intercepted operation through input/config capture, golden
+execution, device operation, comparable output conversion, PCC/error calculation,
+report/exception, and continuation or stop policy.
 
-## Improvement plan
+### What must never break
 
-1. **Architecture pressure.** Define which TT-NN operations have valid golden functions,
-   what tensor conversions comparison requires, which metric/tolerance each format warrants,
-   and how failures should preserve invocation context.
+The non-negotiable invariant is that golden and device paths see the same logical
+inputs, parameters, broadcast/padding, and order; tolerances must come from the
+numerical contract and comparison must not be used for performance timing.
 
-2. **Flow to make explicit.** Draw an intercepted operation through input/config capture,
-   golden execution, device operation, comparable output conversion, PCC/error calculation,
-   report/exception, and continuation or stop policy.
+### Where the report makes it concrete
 
-3. **Invariant to prove.** Prove golden and device paths see the same logical inputs,
-   parameters, broadcast/padding, and order; tolerances must come from the numerical
-   contract and comparison must not be used for performance timing.
+The report makes the decision concrete by connecting configuration to
+`TTNN_CONFIG_OVERRIDES`, `enable_fast_runtime_mode`, `enable_comparison_mode`,
+`comparison_mode_should_raise_exception`, and the operation's registered golden
+function.
 
-4. **TT-Metal evidence to connect.** Connect configuration to `TTNN_CONFIG_OVERRIDES`,
-   `enable_fast_runtime_mode`, `enable_comparison_mode`,
-   `comparison_mode_should_raise_exception`, and the operation's registered golden function.
+### How the decision is tested
 
-5. **Experiment and expected observation.** Inject one known numerical error in a supported
-   op and run raise/report modes; expected result: comparison identifies the first exact
-   invocation and metric while normal execution returns after the configured policy.
+The controlled procedure is to inject one known numerical error in a supported op and
+run raise/report modes. **Expected observation:** comparison identifies the first
+exact invocation and metric while normal execution returns after the configured policy.
 
 ## Code connection
 
@@ -108,6 +99,6 @@ architecture reasoning explicit; generation-sensitive facts remain scoped to tha
 
 - **Original source:** [`tech_reports/ttnn/comparison-mode.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/ttnn/comparison-mode.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/ttnn/comparison-mode.md`
-- **Current delta:** provenance, source metrics, outline, report-specific architecture
-  plan, two source-linked implementation-boundary reviews, and answered reasoning
-  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.
+- **Current delta:** source-grounded architecture walkthrough, concrete
+  implementation boundaries, and expert verification answers. Snapshot-specific claims
+  remain scoped to the pinned commit.

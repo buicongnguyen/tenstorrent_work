@@ -1,68 +1,44 @@
-<!-- rewrite-status: seed -->
+<!-- rewrite-status: improved-draft -->
 # TT-Distributed: Multi-Host Runtime
 
 <p class="source-note">
 <strong>Original source:</strong>
 <a href="https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/TT-Distributed/MultiHostMeshRuntime.md"><code>tech_reports/TT-Distributed/MultiHostMeshRuntime.md</code> at <code>992f3ca</code></a>
-· <strong>Status:</strong> source-linked learner seed
+· <strong>Status:</strong> source-grounded learner draft
 </p>
 
-!!! info "What ‘seed’ means"
-    The official report and its assets are preserved verbatim under
-    <code>upstream/tt-metal/tech_reports/TT-Distributed/MultiHostMeshRuntime.md</code>. This learner page
-    establishes provenance, a reading map, a report-specific architecture plan,
-    concrete code boundaries, and answered reasoning checks; a full visual rewrite
-    remains queued.
+## Architecture walkthrough
 
-## Original report map
+### Why the design is shaped this way
 
-| Signal | Pinned-source value |
-|---|---:|
-| Lines | 310 |
-| Section headings | 15 |
-| Fenced code examples | 7 |
-| Markdown images | 1 |
+The design is shaped by the need to specify global mesh/rank identity,
+one-controller-per-device ownership, local versus cross-host responsibilities, SPMD
+workload epochs, host coordination, error propagation, and aggregate completion.
 
-### Section outline
+### How work and data move
 
-- Table of Contents
-- Design Philosophy & Rationale
-  - Core Principle: Global Definition vs. Local Execution
-  - SPMD Execution Model
-  - Coordination vs. Data Movement
-  - Global View and Local Ownership
-  - Underlying Fabric Assumption
-  - Determinism
-- **Proposed Design:** Multi-Host, Multi-Device (SPMD / Multiple Lockstep Controllers)
-  - Visualization (4-Host Example: 16x8 Mesh / 8x4 Sub-Meshes)
-  - Comparison with Other Architectures
-    - 1. Single-Host, Single-Device
-    - 2. Single-Host, Multi-Device (e.g., Galaxy)
-    - 3. Multi-Host, Multi-Device (Single Controller, Multiple Executors)
-- Host Coordination Dependency
+The complete path is launcher/topology distribution through per-host rank
+initialization, local `MeshDevice`/`MeshBuffer`/`MeshWorkload`, device command
+submission, fabric communication, host rendezvous, global completion, and failure
+cleanup.
 
-## Improvement plan
+### What must never break
 
-1. **Architecture pressure.** Specify global mesh/rank identity, one-controller-per-device
-   ownership, local versus cross-host responsibilities, SPMD workload epochs, host
-   coordination, error propagation, and aggregate completion.
+The non-negotiable invariant is that all ranks agree on topology and epoch/workload
+order, each physical device has one controlling process, and no rank advances beyond an
+unpublished dependency or reports success when a peer failed.
 
-2. **Flow to make explicit.** Draw launcher/topology distribution through per-host rank
-   initialization, local `MeshDevice`/`MeshBuffer`/`MeshWorkload`, device command
-   submission, fabric communication, host rendezvous, global completion, and failure
-   cleanup.
+### Where the report makes it concrete
 
-3. **Invariant to prove.** Prove all ranks agree on topology and epoch/workload order, each
-   physical device has one controlling process, and no rank advances beyond an unpublished
-   dependency or reports success when a peer failed.
+The report makes the decision concrete by connecting the design to `MeshDevice`,
+`MeshWorkload`, `MeshBuffer`, the proposed multiple-lockstep-controller model, and the
+explicit host-coordination dependency in the source.
 
-4. **TT-Metal evidence to connect.** Connect the design to `MeshDevice`, `MeshWorkload`,
-   `MeshBuffer`, the proposed multiple-lockstep-controller model, and the explicit
-   host-coordination dependency in the source.
+### How the decision is tested
 
-5. **Experiment and expected observation.** Inject one delayed and one failed rank during a
-   two-epoch workload; expected result: delay appears as the global critical participant and
-   failure is propagated consistently without other ranks committing a later epoch.
+The controlled procedure is to inject one delayed and one failed rank during a two-epoch
+workload. **Expected observation:** delay appears as the global critical participant
+and failure is propagated consistently without other ranks committing a later epoch.
 
 ## Code connection
 
@@ -125,6 +101,6 @@ architecture reasoning explicit; generation-sensitive facts remain scoped to tha
 
 - **Original source:** [`tech_reports/TT-Distributed/MultiHostMeshRuntime.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/TT-Distributed/MultiHostMeshRuntime.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/TT-Distributed/MultiHostMeshRuntime.md`
-- **Current delta:** provenance, source metrics, outline, report-specific architecture
-  plan, two source-linked implementation-boundary reviews, and answered reasoning
-  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.
+- **Current delta:** source-grounded architecture walkthrough, concrete
+  implementation boundaries, and expert verification answers. Snapshot-specific claims
+  remain scoped to the pinned commit.

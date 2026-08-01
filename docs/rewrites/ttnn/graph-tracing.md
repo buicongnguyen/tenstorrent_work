@@ -1,78 +1,45 @@
-<!-- rewrite-status: seed -->
+<!-- rewrite-status: improved-draft -->
 # TT-NN Graph Tracing
 
 <p class="source-note">
 <strong>Original source:</strong>
 <a href="https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/ttnn/graph-tracing.md"><code>tech_reports/ttnn/graph-tracing.md</code> at <code>992f3ca</code></a>
-· <strong>Status:</strong> source-linked learner seed
+· <strong>Status:</strong> source-grounded learner draft
 </p>
 
-!!! info "What ‘seed’ means"
-    The official report and its assets are preserved verbatim under
-    <code>upstream/tt-metal/tech_reports/ttnn/graph-tracing.md</code>. This learner page
-    establishes provenance, a reading map, a report-specific architecture plan,
-    concrete code boundaries, and answered reasoning checks; a full visual rewrite
-    remains queued.
+## Architecture walkthrough
 
-## Original report map
+### Why the design is shaped this way
 
-| Signal | Pinned-source value |
-|---|---:|
-| Lines | 938 |
-| Section headings | 48 |
-| Fenced code examples | 31 |
-| Markdown images | 2 |
+The design is shaped by the need to specify the structural questions requiring
+capture—unexpected operation, tensor fan-out, allocation lifetime, graph break, stack
+origin—and choose slow/full or fast capture fields accordingly; do not call it a device
+stall profiler.
 
-### Section outline
+### How work and data move
 
-- Table of Contents
-- Quick Start
-  - Python (5 lines)
-  - C++
-  - Save to File (for ttnn-visualizer)
-- Core Concepts
-  - What Gets Captured
-  - Two-Phase Architecture
-  - How Operations Are Tracked
-  - FastOperation vs Operation
-  - Tensor Connectivity
-  - Run Modes
-- Basic Usage
-  - Extracting Operation Durations
-  - Tracking Memory Usage
-  - Generating Visualizations
-- Saving Reports
-  - Save Complete Report to File
-  - Import into Visualizer Database
-    - Import Behavior
-- Advanced Features
-  - Stack Trace Capture
-  - Buffer Page Capture
-  - Reducing Capture Overhead
-- … 24 additional headings in the original
+The complete path is operation entry through tracer wrapper, parameter/input tensor IDs,
+producer-consumer edge creation, output IDs, optional stack/buffer pages/timing, report
+serialization, database import, and visualizer query.
 
-## Improvement plan
+### What must never break
 
-1. **Architecture pressure.** Specify the structural questions requiring capture—unexpected
-   operation, tensor fan-out, allocation lifetime, graph break, stack origin—and choose
-   slow/full or fast capture fields accordingly; do not call it a device stall profiler.
+The non-negotiable invariant is that every operation/tensor has stable identity, edges
+reflect actual producers/consumers, capture does not change semantics, and omitted or
+overhead-heavy fields are declared when interpreting the result.
 
-2. **Flow to make explicit.** Draw operation entry through tracer wrapper, parameter/input
-   tensor IDs, producer-consumer edge creation, output IDs, optional stack/buffer
-   pages/timing, report serialization, database import, and visualizer query.
+### Where the report makes it concrete
 
-3. **Invariant to prove.** Prove every operation/tensor has stable identity, edges reflect
-   actual producers/consumers, capture does not change semantics, and omitted or
-   overhead-heavy fields are declared when interpreting the result.
+The report makes the decision concrete by connecting modes to `full_graph_capture`,
+`slow_dispatch=True`, `enable_fast_runtime_mode=False`, `Operation`, `FastOperation`,
+and examples such as `ttnn::add` and `ttnn::matmul`.
 
-4. **TT-Metal evidence to connect.** Connect modes to `full_graph_capture`,
-   `slow_dispatch=True`, `enable_fast_runtime_mode=False`, `Operation`, `FastOperation`, and
-   examples such as `ttnn::add` and `ttnn::matmul`.
+### How the decision is tested
 
-5. **Experiment and expected observation.** Capture one branching graph in fast and full
-   modes, then join a chosen operation to profiler identity; expected result: identical
-   graph semantics, declared detail/overhead differences, and no inference of device stalls
-   from structure alone.
+The controlled procedure is to capture one branching graph in fast and full modes, then
+join a chosen operation to profiler identity. **Expected observation:** identical
+graph semantics, declared detail/overhead differences, and no inference of device stalls
+from structure alone.
 
 ## Code connection
 
@@ -134,6 +101,6 @@ architecture reasoning explicit; generation-sensitive facts remain scoped to tha
 
 - **Original source:** [`tech_reports/ttnn/graph-tracing.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/ttnn/graph-tracing.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/ttnn/graph-tracing.md`
-- **Current delta:** provenance, source metrics, outline, report-specific architecture
-  plan, two source-linked implementation-boundary reviews, and answered reasoning
-  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.
+- **Current delta:** source-grounded architecture walkthrough, concrete
+  implementation boundaries, and expert verification answers. Snapshot-specific claims
+  remain scoped to the pinned commit.

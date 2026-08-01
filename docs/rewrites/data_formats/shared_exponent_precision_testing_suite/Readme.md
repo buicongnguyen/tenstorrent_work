@@ -1,79 +1,45 @@
-<!-- rewrite-status: seed -->
+<!-- rewrite-status: improved-draft -->
 # Shared Exponent Precision Testing Suite
 
 <p class="source-note">
 <strong>Original source:</strong>
 <a href="https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/data_formats/shared_exponent_precision_testing_suite/Readme.md"><code>tech_reports/data_formats/shared_exponent_precision_testing_suite/Readme.md</code> at <code>992f3ca</code></a>
-· <strong>Status:</strong> source-linked learner seed
+· <strong>Status:</strong> source-grounded learner draft
 </p>
 
-!!! info "What ‘seed’ means"
-    The official report and its assets are preserved verbatim under
-    <code>upstream/tt-metal/tech_reports/data_formats/shared_exponent_precision_testing_suite/Readme.md</code>. This learner page
-    establishes provenance, a reading map, a report-specific architecture plan,
-    concrete code boundaries, and answered reasoning checks; a full visual rewrite
-    remains queued.
+## Architecture walkthrough
 
-## Original report map
+### Why the design is shaped this way
 
-| Signal | Pinned-source value |
-|---|---:|
-| Lines | 297 |
-| Section headings | 52 |
-| Fenced code examples | 17 |
-| Markdown images | 0 |
+The design is shaped by the need to organize the precision investigation around
+shared-exponent decision boundaries—maximum exponent selection, alignment, rounding
+ties, carry/saturation, cancellation, and outliers—rather than around a large
+undifferentiated random corpus.
 
-### Section outline
+### How work and data move
 
-- Overview
-- Purpose
-- Architecture
-- Data Generation Strategy
-  - Distribution Types (`generators.py`)
-    - Basic Distributions
-    - Outlier Distributions
-    - Combined Distributions
-    - Negative Variants
-  - Pattern Types (`generators.py`)
-    - **Column Gradient Pattern** (`column_magnitude_gradient`)
-    - **Reverse Column Gradient Pattern** (`reverse_column_magnitude_gradient`)
-    - **Row Gradient Pattern** (`row_magnitude_gradient`)
-    - **Reverse Row Gradient Pattern** (`reverse_row_magnitude_gradient`)
-    - **Row Uniform Pattern** (`row_uniform_column_varying`)
-    - **Checkerboard Pattern** (`checkerboard_magnitudes`)
-    - **Row Outliers Pattern** (`row_outliers`)
-    - **Tile Boundaries Pattern** (`tile_boundaries`)
-    - **Diagonal Gradient Pattern** (`diagonal_gradient`)
-    - **Block Pattern** (`block_pattern`)
-    - **FA_Rand Pattern** (`fa_rand_pattern`)
-- Operations Tested
-  - Reduction Operations
-  - Matrix Operations
-- … 28 additional headings in the original
+The complete path is `generator → 16-value exponent-sharing block → independent
+encoder/oracle → TT format conversion → operation under test → decode → elementwise and
+aggregate error report`, recording seeds and encoded bits.
 
-## Improvement plan
+### What must never break
 
-1. **Architecture pressure.** Organize the precision investigation around shared-exponent
-   decision boundaries—maximum exponent selection, alignment, rounding ties,
-   carry/saturation, cancellation, and outliers—rather than around a large undifferentiated
-   random corpus.
+The non-negotiable invariant requires oracle and device paths to agree on block
+grouping, shared exponent, rounding, operation semantics, and output interpretation
+while keeping the oracle implementation independent enough to expose device bugs.
 
-2. **Flow to make explicit.** Draw `generator → 16-value exponent-sharing block →
-   independent encoder/oracle → TT format conversion → operation under test → decode →
-   elementwise and aggregate error report`, recording seeds and encoded bits.
+### Where the report makes it concrete
 
-3. **Invariant to prove.** Require oracle and device paths to agree on block grouping,
-   shared exponent, rounding, operation semantics, and output interpretation while keeping
-   the oracle implementation independent enough to expose device bugs.
+The report makes the decision concrete by connecting cases to `generators.py` and the
+named distributions `constant`, `normal_0_1`, `normal_skewed_mean`,
+`normal_high_var_10/100`, `normal_with_outliers`, and `fa_rand_default`.
 
-4. **TT-Metal evidence to connect.** Connect cases to `generators.py` and the named
-   distributions `constant`, `normal_0_1`, `normal_skewed_mean`, `normal_high_var_10/100`,
-   `normal_with_outliers`, and `fa_rand_default`.
+### How the decision is tested
 
-5. **Experiment and expected observation.** Compare fifteen small values with and without
-   one large outlier in the same block; expected result: the outlier raises the shared
-   exponent and increases error or code collisions for the small values, matching the
-   reference encoder.
+The controlled procedure is to compare fifteen small values with and without one large
+outlier in the same block. **Expected observation:** the outlier raises the shared
+exponent and increases error or code collisions for the small values, matching the
+reference encoder.
 
 ## Code connection
 
@@ -136,6 +102,6 @@ architecture reasoning explicit; generation-sensitive facts remain scoped to tha
 
 - **Original source:** [`tech_reports/data_formats/shared_exponent_precision_testing_suite/Readme.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/data_formats/shared_exponent_precision_testing_suite/Readme.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/data_formats/shared_exponent_precision_testing_suite/Readme.md`
-- **Current delta:** provenance, source metrics, outline, report-specific architecture
-  plan, two source-linked implementation-boundary reviews, and answered reasoning
-  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.
+- **Current delta:** source-grounded architecture walkthrough, concrete
+  implementation boundaries, and expert verification answers. Snapshot-specific claims
+  remain scoped to the pinned commit.

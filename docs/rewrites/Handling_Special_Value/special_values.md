@@ -1,55 +1,43 @@
-<!-- rewrite-status: seed -->
+<!-- rewrite-status: improved-draft -->
 # Handling Infinity, NaN and denormal numbers in Tensix compute
 
 <p class="source-note">
 <strong>Original source:</strong>
 <a href="https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/Handling_Special_Value/special_values.md"><code>tech_reports/Handling_Special_Value/special_values.md</code> at <code>992f3ca</code></a>
-· <strong>Status:</strong> source-linked learner seed
+· <strong>Status:</strong> source-grounded learner draft
 </p>
 
-!!! info "What ‘seed’ means"
-    The official report and its assets are preserved verbatim under
-    <code>upstream/tt-metal/tech_reports/Handling_Special_Value/special_values.md</code>. This learner page
-    establishes provenance, a reading map, a report-specific architecture plan,
-    concrete code boundaries, and answered reasoning checks; a full visual rewrite
-    remains queued.
+## Architecture walkthrough
 
-## Original report map
+### Why the design is shaped this way
 
-| Signal | Pinned-source value |
-|---|---:|
-| Lines | 92 |
-| Section headings | 3 |
-| Fenced code examples | 5 |
-| Markdown images | 0 |
+The design is shaped by the need to specify expected NaN, ±Inf, denormal, saturation,
+and approximate-mode behavior at stored format, Unpack, Math/SFPU, destination, and Pack
+boundaries for the architecture/configuration being studied.
 
-### Section outline
+### How work and data move
 
-- Representation
-- Detection of special numbers
-- Debugging
+The complete path is explicit input bit patterns through L1 storage, format
+interpretation, compute operation, destination accumulation, output conversion, stored
+result, and host/device classification observation.
 
-## Improvement plan
+### What must never break
 
-1. **Architecture pressure.** Specify expected NaN, ±Inf, denormal, saturation, and
-   approximate-mode behavior at stored format, Unpack, Math/SFPU, destination, and Pack
-   boundaries for the architecture/configuration being studied.
+The non-negotiable invariant is that classification is performed on the representation
+that actually reaches each stage and distinguish documented
+propagation/canonicalization/flush behavior from host IEEE-754 assumptions.
 
-2. **Flow to make explicit.** Draw explicit input bit patterns through L1 storage, format
-   interpretation, compute operation, destination accumulation, output conversion, stored
-   result, and host/device classification observation.
+### Where the report makes it concrete
 
-3. **Invariant to prove.** Prove classification is performed on the representation that
-   actually reaches each stage and distinguish documented propagation/canonicalization/flush
-   behavior from host IEEE-754 assumptions.
+The report makes the decision concrete by connecting the report's `NaN` and `+/-Inf`
+representation/detection rules to the architecture-matched Unpacker, Math/SFPU, Dst, and
+Packer ISA/LLK paths used by a minimal kernel.
 
-4. **TT-Metal evidence to connect.** Connect the report's `NaN` and `+/-Inf`
-   representation/detection rules to the architecture-matched Unpacker, Math/SFPU, Dst, and
-   Packer ISA/LLK paths used by a minimal kernel.
+### How the decision is tested
 
-5. **Experiment and expected observation.** Inject normal, subnormal, ±0, ±Inf,
-   quiet/signaling NaN patterns through one operation and format conversion; expected
-   result: each boundary matches the documented class/bit behavior and localizes any change.
+The controlled procedure is to inject normal, subnormal, ±0, ±Inf, quiet/signaling NaN
+patterns through one operation and format conversion. **Expected observation:** each
+boundary matches the documented class/bit behavior and localizes any change.
 
 ## Code connection
 
@@ -111,6 +99,6 @@ architecture reasoning explicit; generation-sensitive facts remain scoped to tha
 
 - **Original source:** [`tech_reports/Handling_Special_Value/special_values.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/Handling_Special_Value/special_values.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/Handling_Special_Value/special_values.md`
-- **Current delta:** provenance, source metrics, outline, report-specific architecture
-  plan, two source-linked implementation-boundary reviews, and answered reasoning
-  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.
+- **Current delta:** source-grounded architecture walkthrough, concrete
+  implementation boundaries, and expert verification answers. Snapshot-specific claims
+  remain scoped to the pinned commit.

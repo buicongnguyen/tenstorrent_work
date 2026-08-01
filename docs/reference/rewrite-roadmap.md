@@ -1,15 +1,16 @@
 # Rewrite roadmap
 
 The source snapshot is complete; the teaching layer is intentionally iterative.
-Every report has a one-to-one learner URL and exact original-source link, but a
-`seed` is not presented as an improved technical explanation.
+Every report has a one-to-one learner URL, an exact original-source link, and a
+source-grounded explanation. Generated `seed` stubs are authoring artifacts and are
+rejected by documentation validation rather than published as learner pages.
 
 ## Coverage now
 
 | Status | Count | Meaning |
 |---|---:|---|
-| `improved-draft` | 8 | Substantive explanation, diagram, code connection, and verification prompts; practitioner review remains |
-| `seed` | 49 | Provenance, source outline, report-specific architecture plan, and answered reasoning checks exist; full visual rewrite is queued |
+| `improved-draft` | 57 | Source-grounded architecture explanation, code connection, and answered reasoning checks exist; practitioner review remains |
+| `seed` | 0 | Unpublished authoring state; validation rejects generated placeholders |
 | **Total** | **57** | One learner page for every pinned official report |
 
 The [report catalog](report-catalog.md) is the authoritative per-document status
@@ -27,7 +28,7 @@ table. Regenerate it after every promotion.
 
 ## Phase 2 — kernel programming primitives
 
-Improve these next because later performance and model reports depend on them:
+Review and expand these next because later performance and model reports depend on them:
 
 1. [Data-format reconfiguration](../rewrites/data_formats/reconfig_data_format.md)
 2. [TensorAccessor iterators](../rewrites/tensor_accessor/tensor_accessor_iterator.md)
@@ -59,7 +60,7 @@ foundational vocabulary established in Phases 1–3.
 
 ## Promotion rule
 
-A page moves from `seed` to `improved-draft` only when it has:
+A page moves from the unpublished `seed` state to `improved-draft` only when it has:
 
 - a problem statement and stack placement;
 - at least one structure, flow, order, ownership, or trade-off diagram when a

@@ -283,16 +283,16 @@ def check_required_sections(errors: list[str]) -> None:
     )
     total_questions = 0
     total_answers = 0
-    improvement_sections: list[tuple[Path, str]] = []
+    architecture_sections: list[tuple[Path, str]] = []
     code_sections: list[tuple[Path, str]] = []
-    improvement_labels = (
-        "**Architecture pressure.**",
-        "**Flow to make explicit.**",
-        "**Invariant to prove.**",
-        "**TT-Metal evidence to connect.**",
-        "**Experiment and expected observation.**",
+    architecture_headings = (
+        "### Why the design is shaped this way",
+        "### How work and data move",
+        "### What must never break",
+        "### Where the report makes it concrete",
+        "### How the decision is tested",
     )
-    forbidden_improvement_text = (
+    forbidden_template_text = (
         "The learner edition should make these parts explicit before it can move beyond",
         "State the problem and the hardware/software boundary involved.",
         "Draw the data or control flow, including ownership and synchronization.",
@@ -300,6 +300,14 @@ def check_required_sections(errors: list[str]) -> None:
         "Connect the concepts to concrete TT-Metal symbols or examples.",
         "Add a small verification exercise with an expected observation.",
         "SOURCE-SPECIFIC PLAN REQUIRED",
+        "SOURCE-SPECIFIC WALKTHROUGH REQUIRED",
+        "## Original report map",
+        "| Signal | Pinned-source value |",
+        "### Section outline",
+        "!!! info \"What ‘seed’ means\"",
+        "source-linked learner seed",
+        "a full visual rewrite remains queued",
+        "## Improvement plan",
     )
     forbidden_code_text = (
         "During the full rewrite, each important symbol will be mapped",
@@ -316,10 +324,10 @@ def check_required_sections(errors: list[str]) -> None:
                 f"{rewrite.relative_to(ROOT)}: contains unanswered seed questions"
             )
 
-        for forbidden in forbidden_improvement_text:
+        for forbidden in forbidden_template_text:
             if forbidden in content:
                 errors.append(
-                    f"{rewrite.relative_to(ROOT)}: contains generic improvement-plan "
+                    f"{rewrite.relative_to(ROOT)}: contains legacy or generic template "
                     f"text {forbidden!r}"
                 )
 
@@ -332,29 +340,28 @@ def check_required_sections(errors: list[str]) -> None:
 
         status_match = STATUS_RE.search(content)
         if status_match and status_match.group(1) == "seed":
-            if "## Improvement plan" not in content:
-                errors.append(
-                    f"{rewrite.relative_to(ROOT)}: seed page is missing its "
-                    "source-specific Improvement plan"
-                )
-            else:
-                improvement_section = content.split(
-                    "## Improvement plan", maxsplit=1
-                )[1].split("\n## ", maxsplit=1)[0]
-                improvement_sections.append((rewrite, improvement_section))
-                for label in improvement_labels:
-                    count = improvement_section.count(label)
-                    if count != 1:
-                        errors.append(
-                            f"{rewrite.relative_to(ROOT)}: Improvement plan must contain "
-                            f"exactly one {label!r}; found {count}"
-                        )
-                word_count = len(re.findall(r"\b[\w'-]+\b", improvement_section))
-                if word_count < 120:
+            errors.append(
+                f"{rewrite.relative_to(ROOT)}: published learner page still has seed status"
+            )
+
+        if "## Architecture walkthrough" in content:
+            architecture_section = content.split(
+                "## Architecture walkthrough", maxsplit=1
+            )[1].split("\n## ", maxsplit=1)[0]
+            architecture_sections.append((rewrite, architecture_section))
+            for heading in architecture_headings:
+                count = architecture_section.count(heading)
+                if count != 1:
                     errors.append(
-                        f"{rewrite.relative_to(ROOT)}: source-specific Improvement plan "
-                        f"is too shallow; found {word_count} words"
+                        f"{rewrite.relative_to(ROOT)}: Architecture walkthrough must "
+                        f"contain exactly one {heading!r}; found {count}"
                     )
+            word_count = len(re.findall(r"\b[\w'-]+\b", architecture_section))
+            if word_count < 160:
+                errors.append(
+                    f"{rewrite.relative_to(ROOT)}: source-specific Architecture "
+                    f"walkthrough is too shallow; found {word_count} words"
+                )
 
             if "## Code connection" in content:
                 code_section = content.split("## Code connection", maxsplit=1)[1].split(
@@ -362,7 +369,9 @@ def check_required_sections(errors: list[str]) -> None:
                 )[0]
                 code_sections.append((rewrite, code_section))
                 bullets = len(
-                    re.findall(r"^- \*\*[^*]+\.\*\*", code_section, flags=re.MULTILINE)
+                    re.findall(
+                        r"^- \*\*[^*]+\.\*\*", code_section, flags=re.MULTILINE
+                    )
                 )
                 if bullets != 2:
                     errors.append(
@@ -416,20 +425,20 @@ def check_required_sections(errors: list[str]) -> None:
             f"answers; found {total_questions} questions and {total_answers} answers"
         )
 
-    if len(improvement_sections) != 49:
+    if len(architecture_sections) != 49:
         errors.append(
-            "rewrite curriculum must retain 49 source-specific Improvement plans; "
-            f"found {len(improvement_sections)}"
+            "rewrite curriculum must retain 49 source-specific Architecture "
+            f"walkthroughs; found {len(architecture_sections)}"
         )
 
-    normalized_plans: dict[str, list[Path]] = {}
-    for rewrite, section in improvement_sections:
+    normalized_walkthroughs: dict[str, list[Path]] = {}
+    for rewrite, section in architecture_sections:
         normalized = re.sub(r"\s+", " ", section).strip()
-        normalized_plans.setdefault(normalized, []).append(rewrite)
-    for duplicates in normalized_plans.values():
+        normalized_walkthroughs.setdefault(normalized, []).append(rewrite)
+    for duplicates in normalized_walkthroughs.values():
         if len(duplicates) > 1:
             paths = ", ".join(str(path.relative_to(ROOT)) for path in duplicates)
-            errors.append(f"duplicate Improvement plans found: {paths}")
+            errors.append(f"duplicate Architecture walkthroughs found: {paths}")
 
     if len(code_sections) != 49:
         errors.append(

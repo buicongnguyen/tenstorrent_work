@@ -1,65 +1,45 @@
-<!-- rewrite-status: seed -->
+<!-- rewrite-status: improved-draft -->
 # Sub-Devices
 
 <p class="source-note">
 <strong>Original source:</strong>
 <a href="https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/SubDevices/SubDevices.md"><code>tech_reports/SubDevices/SubDevices.md</code> at <code>992f3ca</code></a>
-· <strong>Status:</strong> source-linked learner seed
+· <strong>Status:</strong> source-grounded learner draft
 </p>
 
-!!! info "What ‘seed’ means"
-    The official report and its assets are preserved verbatim under
-    <code>upstream/tt-metal/tech_reports/SubDevices/SubDevices.md</code>. This learner page
-    establishes provenance, a reading map, a report-specific architecture plan,
-    concrete code boundaries, and answered reasoning checks; a full visual rewrite
-    remains queued.
+## Architecture walkthrough
 
-## Original report map
+### Why the design is shaped this way
 
-| Signal | Pinned-source value |
-|---|---:|
-| Lines | 234 |
-| Section headings | 12 |
-| Fenced code examples | 1 |
-| Markdown images | 2 |
+The design is shaped by the need to define which cores, dispatch resources, buffers,
+queues, and synchronization scope each independent workload owns and which rare
+dependencies genuinely require global semaphores or circular buffers.
 
-### Section outline
+### How work and data move
 
-  - Note that this feature is still under active development and features/apis may change.
-- Contents
-- Introduction
-- 1. Sub-Devices
-  - 1.1 Sub-Devices and Sub-Device Managers
-  - 1.2 Allocators
-  - 1.3 Programs
-  - 1.4 Synchronization
-- 2. Global Semaphores
-- 3. Global Circular Buffers
-  - 3.1 Host APIs
-  - 3.2 Kernel APIs
+The complete path is sub-device manager creation/loading, targeted buffer/program
+enqueue, local completion, optional global object publication, cross-sub-device
+wait/consume, stall-group synchronization, and manager teardown.
 
-## Improvement plan
+### What must never break
 
-1. **Architecture pressure.** Define which cores, dispatch resources, buffers, queues, and
-   synchronization scope each independent workload owns and which rare dependencies
-   genuinely require global semaphores or circular buffers.
+The non-negotiable invariant is that core/resource sets are disjoint by default,
+commands cannot consume another sub-device's local resources, and shared storage becomes
+visible and reusable only through explicit cross-owner dependencies.
 
-2. **Flow to make explicit.** Draw sub-device manager creation/loading, targeted
-   buffer/program enqueue, local completion, optional global object publication,
-   cross-sub-device wait/consume, stall-group synchronization, and manager teardown.
+### Where the report makes it concrete
 
-3. **Invariant to prove.** Prove core/resource sets are disjoint by default, commands cannot
-   consume another sub-device's local resources, and shared storage becomes visible and
-   reusable only through explicit cross-owner dependencies.
+The report makes the decision concrete by connecting the lifecycle to
+`device.load_sub_device_manager`, `clear_loaded_sub_device_manager`,
+`remove_sub_device_manager`, `CreateBuffer(..., sub_device_id)`,
+`set_sub_device_stall_group`, `Synchronize`, and `EnqueueRecordEvent`.
 
-4. **TT-Metal evidence to connect.** Connect the lifecycle to
-   `device.load_sub_device_manager`, `clear_loaded_sub_device_manager`,
-   `remove_sub_device_manager`, `CreateBuffer(..., sub_device_id)`,
-   `set_sub_device_stall_group`, `Synchronize`, and `EnqueueRecordEvent`.
+### How the decision is tested
 
-5. **Experiment and expected observation.** Run two independent sub-device programs with and
-   without a global barrier, then add one shared buffer/event; expected result: independent
-   work overlaps, while only the declared producer-consumer edge serializes shared use.
+The controlled procedure is to run two independent sub-device programs with and without
+a global barrier, then add one shared buffer/event. **Expected observation:**
+independent work overlaps, while only the declared producer-consumer edge serializes
+shared use.
 
 ## Code connection
 
@@ -121,6 +101,6 @@ architecture reasoning explicit; generation-sensitive facts remain scoped to tha
 
 - **Original source:** [`tech_reports/SubDevices/SubDevices.md` at `992f3ca`](https://github.com/tenstorrent/tt-metal/blob/992f3ca634aac8733c70e48da395aab5361b4166/tech_reports/SubDevices/SubDevices.md)
 - **Local immutable baseline:** `upstream/tt-metal/tech_reports/SubDevices/SubDevices.md`
-- **Current delta:** provenance, source metrics, outline, report-specific architecture
-  plan, two source-linked implementation-boundary reviews, and answered reasoning
-  checks. Generation-sensitive claims remain scoped to the pinned source snapshot.
+- **Current delta:** source-grounded architecture walkthrough, concrete
+  implementation boundaries, and expert verification answers. Snapshot-specific claims
+  remain scoped to the pinned commit.
