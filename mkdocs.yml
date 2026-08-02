@@ -76,6 +76,16 @@ nav:
       - Learning path: start/learning-path.md
       - Performance optimization track: start/optimization-path.md
       - Architecture mental model: start/architecture-mental-model.md
+  - Executable ttsim Labs:
+      - Course overview: labs/ttsim/index.md
+      - WSL2 setup: labs/ttsim/setup-wsl2.md
+      - "Lab 1 · RISC-V dispatch": labs/ttsim/lab-01-riscv-dispatch.md
+      - "Lab 2 · Compute and circular buffers": labs/ttsim/lab-02-compute-circular-buffers.md
+      - "Lab 3 · SFPU and special values": labs/ttsim/lab-03-sfpu-special-values.md
+      - "Lab 4 · Matmul reuse and NoC": labs/ttsim/lab-04-matmul-reuse-noc.md
+      - "Lab 5 · Debugging synchronization": labs/ttsim/lab-05-debugging-synchronization.md
+      - "Lab 6 · Two-chip mesh": labs/ttsim/lab-06-mesh-multichip.md
+      - Evidence and hardware limits: labs/ttsim/evidence-and-hardware-limits.md
   - Reports by layer:
       - Layer overview (all 57): reference/report-catalog.md
       - "Level 0 · Orientation":

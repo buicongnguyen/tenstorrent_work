@@ -847,6 +847,77 @@ def check_architecture_review_guide(errors: list[str]) -> None:
         )
 
 
+def check_ttsim_labs(errors: list[str]) -> None:
+    """Keep the simulator course reproducible, executable, and evidence-led."""
+    lab_root = DOCS / "labs" / "ttsim"
+    pages = (
+        "index.md",
+        "setup-wsl2.md",
+        "lab-01-riscv-dispatch.md",
+        "lab-02-compute-circular-buffers.md",
+        "lab-03-sfpu-special-values.md",
+        "lab-04-matmul-reuse-noc.md",
+        "lab-05-debugging-synchronization.md",
+        "lab-06-mesh-multichip.md",
+        "evidence-and-hardware-limits.md",
+    )
+    navigation = (ROOT / "mkdocs.yml").read_text(encoding="utf-8")
+    for filename in pages:
+        path = lab_root / filename
+        if not path.is_file():
+            errors.append(f"ttsim course is missing {filename}")
+            continue
+        nav_path = f"labs/ttsim/{filename}"
+        if nav_path not in navigation:
+            errors.append(f"ttsim course navigation is missing {nav_path}")
+
+    shared_markers = (
+        "<p class=\"source-note\">",
+        "## Questions and expert answers",
+        "## Completion gate",
+    )
+    experiment_pages = pages[2:8]
+    for filename in experiment_pages:
+        path = lab_root / filename
+        if not path.is_file():
+            continue
+        content = path.read_text(encoding="utf-8")
+        for marker in shared_markers + ("## Run the baseline", "## Controlled experiment"):
+            if marker not in content:
+                errors.append(f"ttsim {filename} is missing {marker!r}")
+        answers = content.count('???+ note "Expert answer — reasoning"')
+        if answers < 3:
+            errors.append(
+                f"ttsim {filename} must contain at least three expert answers; "
+                f"found {answers}"
+            )
+        words = len(re.findall(r"\b[\w'-]+\b", content))
+        if words < 650:
+            errors.append(
+                f"ttsim {filename} is too shallow: expected at least 650 words, "
+                f"found {words}"
+            )
+
+    combined = "\n".join(
+        (lab_root / filename).read_text(encoding="utf-8")
+        for filename in pages
+        if (lab_root / filename).is_file()
+    )
+    required = (
+        "5611c4891b55eb883bd050fa197b3ee9bac80475",
+        "ttsim/releases/tag/v1.9.7",
+        "0ccad3b68be8f2340f5c0bfcebf8ceec7f3edbbb11f66dda01e43c35a05d92b7",
+        "0fc0f3c6cbc488fc560d88c3d43d3fd979998c1d30e565a60389885c60dc583d",
+        "TT_METAL_SLOW_DISPATCH_MODE=1",
+        "TT_METAL_DISABLE_SFPLOADMACRO=1",
+        "ttsim-twenty-and-ten",
+        "What it does not prove",
+    )
+    for marker in required:
+        if marker not in combined:
+            errors.append(f"ttsim course is missing reproducibility marker {marker!r}")
+
+
 def main() -> int:
     errors: list[str] = []
     check_navigation_and_structure(errors)
@@ -864,6 +935,7 @@ def main() -> int:
     check_source_verification_guide(errors)
     check_resource_investigation_guide(errors)
     check_architecture_review_guide(errors)
+    check_ttsim_labs(errors)
 
     if errors:
         print("Documentation validation failed:")

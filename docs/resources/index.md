@@ -10,6 +10,11 @@ This page teaches how to select and combine the resources in this section. For
 the general rules behind authority, version matching, and falsifiable claims,
 read [Source trust and claim verification](../reference/provenance.md).
 
+To turn the source-selection method into runnable experiments on Windows WSL2,
+use the [Executable ttsim Labs](../labs/ttsim/index.md). Every lab preserves the
+original URL, pins the executed TT-Metal revision and simulator artifact, and
+requires source, execution, and reasoning evidence before advancing.
+
 ![How the official and community sources relate](../assets/diagrams/source-map.svg){ .atlas-diagram }
 
 <small>[Open full-size diagram](../assets/diagrams/source-map.svg) · [Diagram source](https://github.com/buicongnguyen/tenstorrent_work/blob/main/diagram_sources/source-map.mmd)</small>

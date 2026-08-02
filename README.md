@@ -29,6 +29,8 @@ official source, and upstream updates never silently overwrite learner notes.
 - Eight source-grounded levels from models and runtime through memory, kernels,
   performance, distributed systems, TT-LLK, and ISA
 - Architecture dependency, source-verification, and claim-review guides
+- A WSL2-first executable `ttsim` course with pinned artifacts, six progressive
+  source-linked labs, controlled failure experiments, and hardware-evidence limits
 - GitHub Pages-ready MkDocs Material site
 - Automated link/content checks and deployment workflow
 - Sidebar resource guides for the Corsix series and the official ISA hierarchy

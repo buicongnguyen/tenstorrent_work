@@ -8,6 +8,7 @@
   </p>
   <div class="hero-actions">
     <a class="md-button md-button--primary" href="start/learning-path/">Start the learning path</a>
+    <a class="md-button" href="labs/ttsim/">Run ttsim labs</a>
     <a class="md-button" href="start/optimization-path/">Study optimization</a>
     <a class="md-button" href="reference/report-catalog/">Browse reports by layer</a>
     <a class="md-button" href="resources/">Explore external &amp; ISA sources</a>
@@ -82,6 +83,12 @@ questions for any operator:
 ## Recommended next page
 
 [Build the architecture mental model →](start/architecture-mental-model.md)
+
+If you use Windows with WSL2 and do not yet have a Tenstorrent card, start the
+[executable ttsim course](labs/ttsim/index.md). Its six progressive labs pair
+every command with the pinned TT-Metal host/kernel source, an ownership or
+completion invariant, a controlled perturbation, and an expert answer. The
+course ends by separating simulator evidence from claims that require silicon.
 
 If you already know the stack and want an evidence-driven performance route,
 open the [performance optimization learning track](start/optimization-path.md).

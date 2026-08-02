@@ -26,6 +26,20 @@ Levels **0 → 4 → 7** are the main descent from high-level software to the
 lowest layer. Levels **5** and **6** are advanced branches: they require the
 lower concepts, but are not themselves always lower abstractions.
 
+## Make the path executable without a card
+
+Use the [Executable ttsim Labs](../labs/ttsim/index.md) beside this reading path
+when working in WSL2. The course fixes a compatible TT-Metal/ttsim pair and turns
+the concepts below into six source-grounded experiments:
+
+`host dispatch → CB pipeline → SFPU/register lifetime → reuse/multicast → synchronization debugging → two-chip mesh`
+
+Each lab links its exact official host and kernel sources, asks for a prediction,
+runs a baseline, makes one reversible change, and supplies expert answers. Use
+the reading levels to explain the mechanism and the labs to test whether your
+explanation predicts an observable result. Simulator elapsed time is never used
+as proof of hardware performance.
+
 ## Level 0 — orient yourself
 
 **Goal:** distinguish TT-NN, TT-Metalium host code, device kernels, TT-LLK,
